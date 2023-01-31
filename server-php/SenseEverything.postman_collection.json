@@ -1,0 +1,33 @@
+{
+	"info": {
+		"_postman_id": "144022ba-8dcc-433c-ac4e-e28febeca9d5",
+		"name": "SenseEverything",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3198042"
+	},
+	"item": [
+		{
+			"name": "SenseEverything Server Test",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"clientDeviceId\":\"test\",\r\n\"data\":{\r\n    \"lululu\":\"hallo\",\r\n    \"moreData\":[23,44,12,0,-1]\r\n}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost",
+					"host": [
+						"localhost"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
