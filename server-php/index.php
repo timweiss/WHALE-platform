@@ -39,7 +39,11 @@ else
 }
 
 
-$result = $GLOBAL_SQL_Con->query('INSERT INTO `'.$GLOBAL_TBL_STUDY1.'` (`client_device_id`, `data`, `timestamp_server`) VALUES ("'.$clientDeviceId.'", "'.$GLOBAL_SQL_Con->real_escape_string($dataString).'", NOW())');
+$stmt = $GLOBAL_SQL_Con->prepare('INSERT INTO `'.$GLOBAL_TBL_STUDY1.'` (`client_device_id`, `data`, `timestamp_server`) VALUES (?,?,NOW())');
+$escapedDataString = $GLOBAL_SQL_Con->real_escape_string($dataString);
+$stmt->bind_param('ss', $clientDeviceId, $escapedDataString);
+$result = $stmt->execute();
+
 echo '{"result":'.$result.', "dataKey":'.$dataKey.'}';
 
 ?>
