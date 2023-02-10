@@ -6,7 +6,7 @@ android {
     buildToolsVersion android_version
 
     defaultConfig {
-        applicationId "org.hcilab.projects.logeverything"
+        applicationId "de.mimuc.senseeverything"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
         versionCode 7
@@ -34,4 +34,8 @@ dependencies {
     implementation "com.google.android.gms:play-services-location:$gms_library_version"
     implementation "com.google.code.gson:gson:$gson_library_version"
     implementation 'androidx.preference:preference:1.1.1'
+
+    implementation "androidx.room:room-runtime:2.5.0"
+    annotationProcessor "androidx.room:room-compiler:2.5.0"
+
 }

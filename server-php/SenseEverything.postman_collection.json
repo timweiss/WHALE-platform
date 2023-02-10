@@ -28,6 +28,64 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "SenseEverything Server Test [Hetzner2]",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"clientDeviceId\":\"test\", \r\n\"dataKey\":\"42\",\r\n\"data\":{\r\n    \"lululu\":\"hallo\",\r\n    \"moreData\":[23,44,12,0,-1]\r\n}}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://analysis.phonestudy.medien.ifi.lmu.de/apache/senseeverything/index.php",
+					"protocol": "https",
+					"host": [
+						"analysis",
+						"phonestudy",
+						"medien",
+						"ifi",
+						"lmu",
+						"de"
+					],
+					"path": [
+						"apache",
+						"senseeverything",
+						"index.php"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET phpinfo",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://analysis.phonestudy.medien.ifi.lmu.de/apache/test.php",
+					"protocol": "https",
+					"host": [
+						"analysis",
+						"phonestudy",
+						"medien",
+						"ifi",
+						"lmu",
+						"de"
+					],
+					"path": [
+						"apache",
+						"test.php"
+					]
+				}
+			},
+			"response": []
 		}
 	]
 }
