@@ -38,12 +38,18 @@ else
     $dataKey = -1;
 }
 
+$GLOBAL_SQL_Con->begin_transaction();
 
 $stmt = $GLOBAL_SQL_Con->prepare('INSERT INTO `'.$GLOBAL_TBL_STUDY1.'` (`client_device_id`, `data`, `timestamp_server`) VALUES (?,?,NOW())');
-$escapedDataString = $GLOBAL_SQL_Con->real_escape_string($dataString);
-$stmt->bind_param('ss', $clientDeviceId, $escapedDataString);
-$result = $stmt->execute();
 
+$escapedDataString = $GLOBAL_SQL_Con->real_escape_string($dataString);
+
+foreach ($data['data'] as $aData) {
+    $aDataString = json_encode($aData);
+    $stmt->bind_param('ss', $clientDeviceId, $aDataString);
+    $stmt->execute();
+}
+$result = $GLOBAL_SQL_Con->commit();
 echo '{"result":'.$result.', "dataKey":'.$dataKey.'}';
 
 ?>
