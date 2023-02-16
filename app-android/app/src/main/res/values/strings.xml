@@ -21,6 +21,7 @@
 	
 	<string name="saving_to">Saving logs to</string>
 	<string name="accessibility_service_description">TEST</string>
+	<string name="accessibility_service_description_dat">Deep Activity Tracking</string>
 	<string name="accessibility_button">Accessibility</string>
 	<string name="accessibility_button_On">Enabled Accessibility</string>
 	<string name="accessibility_button_Off">Disabled Accessibility</string>
