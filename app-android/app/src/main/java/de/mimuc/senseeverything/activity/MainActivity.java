@@ -4,7 +4,10 @@ import static android.os.Build.VERSION.SDK_INT;
 
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.adapter.SensorAdapter;
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.db.LogData;
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
+import de.mimuc.senseeverything.network.UploadJobService;
 import de.mimuc.senseeverything.sensor.SensorList;
 import de.mimuc.senseeverything.service.AccessibilityLogService;
 import de.mimuc.senseeverything.service.LogService;
@@ -13,6 +16,9 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -37,6 +43,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.room.Room;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
 	private Button m_ButtonAccessibility;
 	private Button m_ButtonStart;
 	private Button m_ButtonStop;
+	private Button m_ButtonSync;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
 		m_ButtonStart = findViewById(R.id.start_button);
 		m_ButtonStop = findViewById(R.id.stop_button);
 		m_ButtonAccessibility = findViewById(R.id.accessibility_button);
+		m_ButtonSync = findViewById(R.id.sync_button);
 		setAccessibilityButtonState ();
 		
 		SensorDatabaseHelper db = new SensorDatabaseHelper(this);
@@ -73,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
 		m_ButtonStart.setOnClickListener(onStartButtonClick);
 		m_ButtonStop.setOnClickListener(onStopButtonClick);
 		m_ButtonAccessibility.setOnClickListener(onAccessibilityButtonClick);
+		m_ButtonSync.setOnClickListener(onSyncButtonClick);
 
 		isPermissionGranted(Manifest.permission.WAKE_LOCK);
 		isPermissionGranted(Manifest.permission.RECORD_AUDIO);
@@ -203,6 +213,31 @@ public class MainActivity extends AppCompatActivity {
 			setAccessibilityButtonState ();				
 		}
 	};
+
+	private final OnClickListener onSyncButtonClick = new OnClickListener() {
+		@Override
+		public void onClick(View v) {
+			Log.i(TAG,"syncButton onClick");
+
+			new Thread(){
+				@Override
+				public void run() {
+					super.run();
+					AppDatabase db = Room.databaseBuilder(getApplicationContext(),
+							AppDatabase.class, "senseeverything-roomdb").build();
+					db.logDataDao().insertAll(new LogData(System.currentTimeMillis(),"MainActivity","this is some test data"));
+				}
+			}.start();
+
+
+			JobScheduler jobScheduler =
+					(JobScheduler) getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
+			jobScheduler.schedule(new JobInfo.Builder(UploadJobService.TAG.hashCode(), new ComponentName(getApplicationContext(), UploadJobService.class))
+					.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+					.setOverrideDeadline(1000)
+					.build());
+		}
+;	};
 	
 	private void setAccessibilityButtonState ()
 	{

@@ -44,4 +44,12 @@
             android:layout_margin="5dp"
             android:text="@string/stop_button" />
 
+        <Button
+            android:id="@+id/sync_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_margin="5dp"
+            android:text="@string/sync_button" />
+
 </LinearLayout>

@@ -9,7 +9,8 @@
    
    <string name="start_button">Start Logging</string>
    <string name="stop_button">Stop Logging</string>
-   
+   <string name="sync_button">Sync Now</string>
+
    <string name="sensor_settings_save">Save</string>
 	<string name="sensor_settings_cancel">Cancel</string>  
 	<string name="sensor_settings_none">No settings available for this sensor</string>  
