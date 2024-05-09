@@ -4,6 +4,7 @@ import java.util.List;
 
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SensorList;
+import de.mimuc.senseeverything.sensor.SingletonSensorList;
 
 import android.content.Intent;
 import android.util.Log;
@@ -21,16 +22,15 @@ public class LogService extends AbstractService {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		int ret = super.onStartCommand(intent, flags, startId);
-		
-		sensorList = SensorList.getList(this);
+
+		// use the singleton list because we want to keep our sensor's state inbetween activations
+		sensorList = SingletonSensorList.getList(this);
 		
 		Log.d(TAG, "size: "+sensorList.size());
 		for(AbstractSensor sensor : sensorList) {
 			if (sensor.isEnabled() && sensor.isAvailable(this))
 			{
 				sensor.start(this);
-				//if(sensor instanceof MyAccelerometerSensor) ((MyAccelerometerSensor)sensor).start(this);
-				//if(sensor instanceof AppSensor) ((AppSensor)sensor).start(this);
 
 				Log.d(TAG, sensor.getSensorName() + " turned on");
 			}
