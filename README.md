@@ -2,10 +2,10 @@
 Simple logging app for Android.
 
 ## Tasks
-- [] Integrate AudioSampleService to use default content pipeline
-- [] Create simple backend that receives pushed data (audio and other sample readings)
-- [] Use WorkManager to schedule backend pushes
-- [] Add study enrolment interface
+- [ ] Integrate AudioSampleService to use default content pipeline
+- [ ] Create simple backend that receives pushed data (audio and other sample readings)
+- [ ] Use WorkManager to schedule backend pushes
+- [ ] Add study enrolment interface
 
 ## Lifecycle
 [LogService](app-android/app/src/main/java/de/mimuc/senseeverything/service/LogService.java) is responsible for starting the [Sensors](app-android/app/src/main/java/de/mimuc/senseeverything/sensor).
@@ -18,4 +18,4 @@ Simple logging app for Android.
 * [SingletonSensorList](app-android/app/src/main/java/de/mimuc/senseeverything/sensor/SingletonSensorList.java): For long-running tasks, we want to reuse the existing sensor instances, and clean them up manually
 
 ## Things I'm not sure about yet
-* Why does [ForegroundService]() require a wakelock? I don't think it's necessary for it to do so (see [Foreground services](https://developer.android.com/develop/background-work/services/foreground-services))
+* Why does [ForegroundService](app-android/app/src/main/java/de/mimuc/senseeverything/service/ForegroundService.java) require a wakelock? I don't think it's necessary for it to do so (see [Foreground services](https://developer.android.com/develop/background-work/services/foreground-services))
