@@ -7,7 +7,6 @@ import android.util.Log;
 import android.view.View;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.UUID;
 
 import de.mimuc.senseeverything.sensor.AbstractSensor;
@@ -23,7 +22,7 @@ public class AudioSampleSensor extends AbstractSensor {
 	private MediaRecorder mediaRecorder;
 	private boolean shouldRecord = true;
 	private final Context context;
-	private String guid = UUID.randomUUID().toString();
+	private final String guid = UUID.randomUUID().toString();
 
 	public AudioSampleSensor(Context applicationContext) {
 		super(applicationContext);

@@ -10,7 +10,7 @@ import de.mimuc.senseeverything.sensor.implementation.AudioSampleSensor;
 
 public class SingletonSensorList {
 	private static SingletonSensorList instance;
-	private List<AbstractSensor> list = new ArrayList<>();
+	private final List<AbstractSensor> list = new ArrayList<>();
 
 	private SingletonSensorList() {
 	}
@@ -41,7 +41,7 @@ public class SingletonSensorList {
 	}
 
 	public List<AbstractSensor> getOrInitializeList(Context pContext) {
-		if (this.list == null || this.list.isEmpty()) {
+		if (this.list.isEmpty()) {
 			initializeList(pContext);
 		}
 

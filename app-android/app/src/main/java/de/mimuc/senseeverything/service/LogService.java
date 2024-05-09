@@ -3,7 +3,6 @@ package de.mimuc.senseeverything.service;
 import java.util.List;
 
 import de.mimuc.senseeverything.sensor.AbstractSensor;
-import de.mimuc.senseeverything.sensor.SensorList;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 
 import android.content.Intent;
