@@ -43,8 +43,7 @@ public class WifiSensor extends AbstractSensor {
 		WifiInfo wifiInfo = wifiManager.getConnectionInfo();		
 		String ssid = (wifiInfo.getSSID() == null) ? "NONE" : wifiInfo.getSSID();
 		try {
-			m_OutputStream.write((t + "," + ssid +"\n").getBytes());
-			m_OutputStream.flush();
+			onLogDataItem(t, ssid);
 		} catch (Exception e) {
 			Log.e(TAG, e.toString());
 		}
@@ -55,14 +54,7 @@ public class WifiSensor extends AbstractSensor {
 	public void stop() {
 		if(m_IsRunning) {
 			m_IsRunning = false;
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}		
+			closeDataSource();
 		}
-	}	
-	
+	}
 }

@@ -66,12 +66,8 @@ public class StillAliveSensor extends AbstractSensor {
 		if(count % 15 != 0) {
 			return;
 		}
-		
-		try {
-			m_OutputStream.write((t + "\n").getBytes());
-		} catch (Exception e) {
-			Log.e(TAG, e.toString());
-		}
+
+		onLogDataItem(t, "");
 		
 		if(isNetworkAvailable(context)) {
 			//Log.d(TAG, "Network available");
@@ -81,11 +77,7 @@ public class StillAliveSensor extends AbstractSensor {
 
 	@Override
 	public void stop() {
-		try {
-			m_OutputStream.close();
-		} catch (Exception e) {
-			Log.e(TAG, e.toString());
-		}
+		closeDataSource();
 	}
 
 	private boolean isNetworkAvailable(Context context) {

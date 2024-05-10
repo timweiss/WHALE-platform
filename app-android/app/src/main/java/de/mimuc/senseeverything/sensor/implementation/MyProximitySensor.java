@@ -78,17 +78,10 @@ public class MyProximitySensor extends AbstractSensor implements SensorEventList
 	
 	@Override
 	public void stop() {
-		
 		if(m_IsRunning) {
 			m_IsRunning = false;
 			sensorManager.unregisterListener(this);
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (IOException e) {
-				Log.e(TAG, e.toString());
-			}
+			closeDataSource();
 		}	
 	}
 
@@ -100,19 +93,10 @@ public class MyProximitySensor extends AbstractSensor implements SensorEventList
 	public void onSensorChanged(SensorEvent event) {
 		Long t = System.currentTimeMillis();
 		if(m_IsRunning) {
-			try {
-				count++;
-				if(event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
-					m_OutputStream.write((t + "," + CONST.numberFormat.format(event.values[0]) + ",false\n").getBytes());
-				} else {
-					m_OutputStream.write((t + "," + CONST.numberFormat.format(event.values[0]) + ",true\n").getBytes());
-				}
-				int flushLevel = 100;
-				if(count % flushLevel == 0) {
-					m_OutputStream.flush();
-				}				
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
+			if (event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+				onLogDataItem(t, CONST.numberFormat.format(event.values[0]) + ",false");
+			} else {
+				onLogDataItem(t, CONST.numberFormat.format(event.values[0]) + ",true");
 			}
 		}
 	}

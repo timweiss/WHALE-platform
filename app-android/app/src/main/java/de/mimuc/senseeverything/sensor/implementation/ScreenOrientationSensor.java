@@ -44,25 +44,22 @@ public class ScreenOrientationSensor extends AbstractSensor {
 			return;
 		
 		m_context = pContext;
-		if (this.m_OutputStream == null)
-		{
-			try {
-				if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE){
-		            m_OutputStream.write((t + ",LANDSCAPE\n").getBytes());
-		        }
-		        else if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
-		            m_OutputStream.write((t + ",PORTRAIT\n").getBytes());
-		        }
-		        else if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_SQUARE){
-		            m_OutputStream.write((t + ",SQUARE\n").getBytes());
-		        }
-		        else {
-		            m_OutputStream.write((t + ",UNDEFINED\n").getBytes());
-		        }
-				m_OutputStream.flush();
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}	
+
+		try {
+			if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE){
+				onLogDataItem(t, "LANDSCAPE");
+			}
+			else if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
+				onLogDataItem(t, "PORTRAIT");
+			}
+			else if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_SQUARE){
+				onLogDataItem(t, "SQUARE");
+			}
+			else {
+				onLogDataItem(t, "UNDEFINED");
+			}
+		} catch (Exception e) {
+			Log.e(TAG, e.toString());
 		}
 		
 		IntentFilter filter = new IntentFilter();
@@ -83,13 +80,7 @@ public class ScreenOrientationSensor extends AbstractSensor {
 		if(m_IsRunning) {
 			m_IsRunning = false;
 			m_context.unregisterReceiver(m_Receiver);	
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}		
+			closeDataSource();
 		}	
 	}
 	
@@ -101,18 +92,17 @@ public class ScreenOrientationSensor extends AbstractSensor {
 				if (intent.getAction().equals(Intent.ACTION_CONFIGURATION_CHANGED) ) {
 	                try {
 		                if(context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE){
-							m_OutputStream.write((t + ",LANDSCAPE\n").getBytes());
+							onLogDataItem(t, "LANDSCAPE");
 		                }
 		                else if(context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
-							m_OutputStream.write((t + ",PORTRAIT\n").getBytes());
+							onLogDataItem(t, "PORTRAIT");
 		                }
 						else if(context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_SQUARE){
-							m_OutputStream.write((t + ",SQUARE\n").getBytes());
+							onLogDataItem(t, "SQUARE");
 						}
 		                else {
-							m_OutputStream.write((t + ",UNDEFINED\n").getBytes());
+							onLogDataItem(t, "UNDEFINED");
 		                }
-						m_OutputStream.flush();
 	                } catch (Exception e) {
 						Log.e(TAG, e.toString());
 					}

@@ -35,8 +35,6 @@ public abstract class AbstractSensor implements Serializable  {
 				AppDatabase.class, "senseeverything-roomdb").build();
 
 	}
-
-	protected OutputStream m_OutputStream = null;
 	
 	protected boolean m_IsRunning = false;
 
@@ -72,11 +70,6 @@ public abstract class AbstractSensor implements Serializable  {
 			Log.i(TAG, "Sensor not available");
 
 		dataSource = new SensorReadingDiskDataSource(context, getSensorName());
-		initFile();
-	}
-
-	public void initFile() {
-		m_OutputStream = dataSource.getOutputStream();
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){

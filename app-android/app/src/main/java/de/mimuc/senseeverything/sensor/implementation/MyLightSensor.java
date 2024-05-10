@@ -80,14 +80,7 @@ public class MyLightSensor extends AbstractSensor implements SensorEventListener
 		if(m_IsRunning) {
 			m_IsRunning = false;
 			sensorManager.unregisterListener(this);
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (IOException e) {
-				Log.e(TAG, e.toString());
-			} catch (NullPointerException ignored) {
-			}
+			closeDataSource();
 		}	
 	}
 

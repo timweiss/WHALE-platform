@@ -69,13 +69,7 @@ public class TouchSensor extends AbstractSensor implements HandlerListener {
 	public void stop() {
 		if(m_IsRunning) {
 			m_IsRunning = false;
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}		
+			closeDataSource();
 			m_ServiceHandler.stop();
 			m_ServiceHandler = null;
 		}
@@ -84,17 +78,8 @@ public class TouchSensor extends AbstractSensor implements HandlerListener {
 	@Override
 	public void sendMessage(String msg) {
 		if(m_IsRunning) {
-			try {
-				Log.d(TAG, "#"+msg);
-				m_OutputStream.write((msg + "\n").getBytes());
-				count++;
-				int flushLevel = 100;
-				if (count % flushLevel == 0) {
-					m_OutputStream.flush();
-				}
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}	
+			Log.d(TAG, "#"+msg);
+			onLogDataItem(System.currentTimeMillis(), msg);
 		}
 		else
 		{

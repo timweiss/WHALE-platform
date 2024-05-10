@@ -48,11 +48,10 @@ public class ScreenOnOffSensor extends AbstractSensor {
 		this.m_context = context;
 		try {			
 			if(isScreenOn) {
-				m_OutputStream.write((t + ",on\n").getBytes());
+				onLogDataItem(t, "on");
 			} else {
-				m_OutputStream.write((t + ",off\n").getBytes());
+				onLogDataItem(t, "off");
 			}
-			m_OutputStream.flush();
 		} catch (Exception e) {
 			Log.e(TAG, e.toString());
 		}
@@ -78,9 +77,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
 			m_IsRunning = false;
 			m_context.unregisterReceiver(mReceiver);	
 			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
+				closeDataSource();
 			} catch (Exception e) {
 				Log.e(TAG, e.toString());
 			}	
@@ -93,20 +90,13 @@ public class ScreenOnOffSensor extends AbstractSensor {
 		public void onReceive(Context context, Intent intent) {
 			Long t = System.currentTimeMillis();
 			if(m_IsRunning) {
-			//	try {
-					if(intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-						onLogDataItem(t,",off");
-						//m_OutputStream.write((t + ",off\n").getBytes());
-						wasScreenOn = false;
-					} else if(intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
-						onLogDataItem(t,",on");
-					//	m_OutputStream.write((t + ",on\n").getBytes());
-						wasScreenOn = true;
-					}
-					//m_OutputStream.flush();
-//				} catch (Exception e) {
-//					Log.e(TAG, e.toString());
-//				}
+				if(intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+					onLogDataItem(t,"off");
+					wasScreenOn = false;
+				} else if(intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+					onLogDataItem(t,"on");
+					wasScreenOn = true;
+				}
 			}
 			
 		}		
@@ -118,12 +108,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
         // WHEN THE SCREEN IS ABOUT TO TURN OFF
 	        if (wasScreenOn) {
 	            // THIS IS THE CASE WHEN ONPAUSE() IS CALLED BY THE SYSTEM DUE TO A SCREEN STATE CHANGE
-	        	try {
-					m_OutputStream.write((t + ",off\n").getBytes());
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					Log.e(TAG, e.toString());
-				}
+				onLogDataItem(System.currentTimeMillis(), "off");
 	        }
     	}
     }
@@ -134,12 +119,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
 	        // ONLY WHEN SCREEN TURNS ON
 	        if (!wasScreenOn) {
 	            // THIS IS WHEN ONRESUME() IS CALLED DUE TO A SCREEN STATE CHANGE
-	        	try {
-					m_OutputStream.write((t + ",on\n").getBytes());
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					Log.e(TAG, e.toString());
-				}
+				onLogDataItem(System.currentTimeMillis(), "on");
 	        }
     	}
     }

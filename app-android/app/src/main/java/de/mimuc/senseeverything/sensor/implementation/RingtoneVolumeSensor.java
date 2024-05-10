@@ -40,12 +40,7 @@ public class RingtoneVolumeSensor extends AbstractSensor {
 
 		AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 		int currentVolume = audio.getStreamVolume(AudioManager.STREAM_RING);
-		try {
-			m_OutputStream.write((t + "," + currentVolume + "\n").getBytes());
-			m_OutputStream.flush();
-		} catch (Exception e) {
-			Log.e(TAG, e.toString());
-		}
+		onLogDataItem(t, String.valueOf(currentVolume));
 		m_IsRunning = true;
 	}
 
@@ -53,13 +48,7 @@ public class RingtoneVolumeSensor extends AbstractSensor {
 	public void stop() {
 		if(m_IsRunning) {
 			m_IsRunning = false;
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}		
+			closeDataSource();
 		}
 	}
 

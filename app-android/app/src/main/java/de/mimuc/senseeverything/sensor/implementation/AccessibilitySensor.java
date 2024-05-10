@@ -18,7 +18,6 @@ public class AccessibilitySensor extends AbstractSensor {
 	
 	private Context m_Context = null;
 	private Intent m_Intent;
-	private long m_Count;
 
 	private DataUpdateReceiver m_Receiver;
 	
@@ -82,17 +81,7 @@ public class AccessibilitySensor extends AbstractSensor {
         public void onReceive(Context context, Intent intent) {
 	        if (intent.getAction().equals(AccessibilityLogService.TAG)) {
 	        	if(m_IsRunning) {
-	        		try {
-		    			m_Count++;
-		    			m_OutputStream.write((intent.getStringExtra(android.content.Intent.EXTRA_TEXT)).getBytes());
-						int flushLevel = 50;
-						if(m_Count % flushLevel == 0) {
-		    				m_OutputStream.flush();
-		    				m_Count = 1;
-		    			}
-	        		} catch (IOException e) {
-	        			Log.e(TAG, e.toString());
-					}
+					onLogDataItem(System.currentTimeMillis(), intent.getStringExtra(android.content.Intent.EXTRA_TEXT));
 	        	}
         	}
         }

@@ -48,21 +48,12 @@ public class AppSensor extends AbstractSensor {
 		if (!m_isSensorAvailable)
 			return;
 
-		if (m_OutputStream == null){
-			Log.e(TAG, "FileWriter is null");
-		}
-
 		String info = getForegroundApp(context);
-		try {
-			if (info == null) {
-				m_OutputStream.write((t  + ",NULL").getBytes());
-			} else {
-				m_OutputStream.write((t + "," + info).getBytes());
-			}
-			m_OutputStream.write(("\n").getBytes());
-			m_OutputStream.flush();
-		} catch (Exception e) {
-			Log.e(TAG, e.toString());
+
+		if (info == null) {
+			onLogDataItem(t, "NULL");
+		} else {
+			onLogDataItem(t, info);
 		}
 		m_IsRunning = true;
 	}
@@ -71,13 +62,7 @@ public class AppSensor extends AbstractSensor {
 	public void stop() {
 		if (m_IsRunning) {
 			m_IsRunning = false;
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}
+			closeDataSource();
 		}
 	}
 

@@ -42,15 +42,10 @@ public class AirplaneModeSensor extends AbstractSensor {
 		if (!m_isSensorAvailable)
 			return;
 
-		try {		
-			if(isAirplaneModeOn(context)) {
-				m_OutputStream.write((t + ",on\n").getBytes());
-			} else {
-				m_OutputStream.write((t + ",off\n").getBytes());
-			}
-			m_OutputStream.flush();
-		} catch (Exception e) {
-			Log.e(TAG, e.toString());
+		if(isAirplaneModeOn(context)) {
+			onLogDataItem(t, "on\n");
+		} else {
+			onLogDataItem(t, "off\n");
 		}
 		m_IsRunning = true;
 	}
@@ -59,14 +54,7 @@ public class AirplaneModeSensor extends AbstractSensor {
 	public void stop() {
 		if(m_IsRunning) {
 			m_IsRunning = false;
-			try {
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
-			} catch (Exception e) {
-				Log.e(TAG, e.toString());
-			}		
-			
+			closeDataSource();
 		}	
 	}
 
