@@ -15,14 +15,14 @@ public class AudioSampleSensor extends AbstractSensor {
 	private static final long serialVersionUID = 1L;
 
 	private static final int RECORDING_TIME = 1000 * 60; // one minute
-	// private static final int COOLDOWN_TIME = 1000 * 60 * 10; // 10 minutes
-	private static final int COOLDOWN_TIME = 1000 * 60 * 3; // 10 minutes
+	private static final int COOLDOWN_TIME = 1000 * 60 * 10; // 10 minutes
 
 	private final Handler handler = new Handler();
 	private MediaRecorder mediaRecorder;
 	private boolean shouldRecord = true;
 	private final Context context;
 	private final String guid = UUID.randomUUID().toString();
+	private String currentRecordingFilename;
 
 	public AudioSampleSensor(Context applicationContext) {
 		super(applicationContext);
@@ -75,7 +75,6 @@ public class AudioSampleSensor extends AbstractSensor {
 				}
 			};
 			recordJob.run();
-			m_OutputStream.flush();
 		} catch (Exception e) {
 			Log.e(TAG, e.toString());
 		}
@@ -94,6 +93,10 @@ public class AudioSampleSensor extends AbstractSensor {
 		mediaRecorder.release();
 		mediaRecorder = null;
 		shouldRecord = true;
+
+		// write data
+		Long t = System.currentTimeMillis();
+		onLogDataItem(t, currentRecordingFilename);
 	}
 
 	private void startRecording() {
@@ -101,6 +104,7 @@ public class AudioSampleSensor extends AbstractSensor {
 			String filename = getFilenameForSampleStorage();
 			mediaRecorder.setOutputFile(filename);
 			Log.i(TAG, "saving recording at location " + filename);
+			currentRecordingFilename = filename;
 			mediaRecorder.prepare();
 			mediaRecorder.start();
 			shouldRecord = false;
@@ -139,13 +143,10 @@ public class AudioSampleSensor extends AbstractSensor {
 			m_IsRunning = false;
 			try {
 				stopRecording();
-				m_OutputStream.flush();
-				m_OutputStream.close();
-				m_OutputStream = null;
+				closeDataSource();
 			} catch (Exception e) {
 				Log.e(TAG, e.toString());
 			}
-
 		}	
 	}	
 }
