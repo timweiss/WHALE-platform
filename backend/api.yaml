@@ -1,0 +1,281 @@
+openapi: 3.0.3
+info:
+  title: Social Interaction Sensing API
+  description: API for the Social Interaction Sensing project.
+  version: 1.0.0
+servers:
+  - url: 'https://localhost:8080/v1/'
+    description: Local Server
+  - url: 'https://siapi.timweiss.dev/v1/'
+    description: Tim's Test Server
+paths:
+  /study:
+    get:
+      description:
+        Gets a list of all available studies in the system.
+      responses:
+        '200':
+          description: A list of all available studies.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Study'
+    post:
+      description:
+        Creates a new study in the system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Study'
+      responses:
+        '201':
+          description: The study was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Study'
+  /study/{study_id}:
+    get:
+      description:
+        Gets a specific study by ID.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study to get.
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The study was found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Study'
+        '404':
+          description: The study was not found.
+  /enrolment:
+    post:
+        description:
+            Enrols a participant in a study through the enrolment key.
+        requestBody:
+            required: true
+            content:
+              application/json:
+                  schema:
+                    type: object
+                    required:
+                      - enrolment_key
+                    properties:
+                      enrolment_key:
+                        type: string
+                        description: The enrolment key for the study.
+        responses:
+            '201':
+              description: The enrolment was created successfully.
+              content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        participant_id:
+                          type: string
+                          description: The unique identifier for the participant.
+                        token:
+                          type: string
+                          description: The authentication token for the participant.
+            '400':
+              description: The enrolment key was invalid (typo or study does not exist).
+  /enrolment/{participant_id}:
+    post:
+      description:
+        Re-enrols a participant through their participant ID.
+      parameters:
+        - name: participant_id
+          in: path
+          description: The ID of the participant to re-enrol.
+          required: true
+          schema:
+            type: string
+      responses:
+          '201':
+              description: Successfully re-enrolled.
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: The authentication token for the participant.
+          '400':
+              description: The participant ID was invalid (does not exist).
+  /reading:
+    post:
+      description:
+        Adds a new singular sensor reading to the system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensorReading'
+      security:
+        - token: [ ]
+      responses:
+        '201':
+          description: The sensor reading was added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensorReading'
+        '400':
+          description: The sensor reading was invalid (missing data).
+        '403':
+          description: The sensor reading was not allowed (participant not enrolled).
+        '401':
+          description: The participant is not authenticated.
+  /reading/batch:
+    post:
+      description:
+        Adds a batch of sensor readings to the system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/SensorReading'
+      security:
+        - token: [ ]
+      responses:
+        '201':
+          description: The sensor readings were added successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SensorReading'
+        '400':
+          description: The sensor readings were invalid (missing data).
+        '403':
+          description: The sensor readings were not allowed (participant not enrolled).
+        '401':
+          description: The participant is not authenticated.
+  /reading/{reading_id}/file:
+    post:
+      description:
+        Adds a file to a specific reading.
+      parameters:
+        - name: reading_id
+          in: path
+          description: The ID of the reading to attach the file to.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/File'
+      security:
+        - token: []
+      responses:
+        '201':
+          description: The file was attached successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+        '400':
+          description: The file was invalid (missing data).
+        '403':
+          description: The file was not allowed (participant not enrolled).
+        '401':
+          description: The participant is not authenticated.
+
+components:
+  securitySchemes:
+    token:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    File:
+      description: Attached file for a reading
+      type: object
+      required:
+          - reading_id
+          - filename
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the file.
+        reading_id:
+          type: integer
+          description: The database ID for the reading.
+        filename:
+          type: string
+          description: The name of the file.
+        path:
+          type: string
+          description: The path to the file on the server.
+
+    SensorReading:
+      description: An atomic reading of a sensor. Tied to a specific participant and study.
+      type: object
+      required:
+        - enrolment_id
+        - sensor_type
+        - data
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the sensor reading.
+        enrolment_id:
+          type: integer
+          description: The database ID for the enrolment.
+        sensor_type:
+          type: string
+          description: The type of sensor that generated the reading.
+        data:
+          type: object
+          description: The data from the sensor reading.
+
+    Enrolment:
+      type: object
+      description: A single enrolment in a study.
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the enrolment.
+        study_id:
+          type: integer
+          description: The database ID for the study.
+        participant_id:
+          type: string
+          description: The unique identifier for the participant. Can be used to re-identify the participant.
+
+    Study:
+      type: object
+      description: A study in the system.
+      required:
+        - name
+        - enrolment_key
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the study.
+        name:
+            type: string
+            description: The name of the study.
+        enrolment_key:
+            type: string
+            description: The enrolment key for the study. Needs to be unique across all studies.
