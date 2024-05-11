@@ -1,5 +1,5 @@
 # SenseEverything (for Social Interaction Sensing)
-Simple logging app for Android.
+Social Sensing environment.
 
 ## Tasks
 - [ ] Integrate AudioSampleService to use default content pipeline
@@ -7,15 +7,14 @@ Simple logging app for Android.
 - [ ] Use WorkManager to schedule backend pushes
 - [ ] Add study enrolment interface
 
-## Lifecycle
-[LogService](app-android/app/src/main/java/de/mimuc/senseeverything/service/LogService.java) is responsible for starting the [Sensors](app-android/app/src/main/java/de/mimuc/senseeverything/sensor).
+## Components
+* [Android App](app-android): The app that records sensor data. Needs to be installed on participant's devices
+* [Backend](backend): The backend that allows for data storage. Deployed on a server.
 
-### Sampling methodology
-* The LogService is activated every **60 seconds** through an AlarmService in `startLogService` (MainActivity)
-    * This "wakes up" each enabled sensor through their `start` method
-    * Sensors are only stopped through `stop` when the entire sampling process is stopped (through the UI)
-* [AudioSampleService](app-android/app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AudioSampleSensor.java): We need to record in different intervals (eg. 60 seconds for every 10 minutes), so it does not "reactivate" through the default sampling method
-* [SingletonSensorList](app-android/app/src/main/java/de/mimuc/senseeverything/sensor/SingletonSensorList.java): For long-running tasks, we want to reuse the existing sensor instances, and clean them up manually
+> [!NOTE]  
+> See the component's respective READMEs for more information.
 
-## Things I'm not sure about yet
-* Why does [ForegroundService](app-android/app/src/main/java/de/mimuc/senseeverything/service/ForegroundService.java) require a wakelock? I don't think it's necessary for it to do so (see [Foreground services](https://developer.android.com/develop/background-work/services/foreground-services))
+## Acknowledgements & References
+Based on the [SenseEverything](https://github.com/mimuc/SenseEverything) app.
+
+* Weber, D., & Mayer, S. (2014). LogEverything. GitHub Repository. Retrieved from https://github.com/hcilab-org/LogEverything/
