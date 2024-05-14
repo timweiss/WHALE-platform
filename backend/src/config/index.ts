@@ -6,4 +6,8 @@ export const Config = {
   database: {
     connectionString: process.env.DB_CONNECTION || 'localhost:5432',
   },
+  auth: {
+    jwtSecret:
+      process.env.AUTH_JWT_SECRET || 'change this or suffer the consequences',
+  },
 };

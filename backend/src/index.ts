@@ -3,6 +3,7 @@ import { usePool } from './config/database';
 import { Config } from './config';
 import { createStudyController } from './controllers/study';
 import { Repository } from './data/repository';
+import { createEnrolmentController } from './controllers/enrolment';
 
 const app = express();
 
@@ -18,16 +19,18 @@ async function main() {
   });
 
   createStudyController(repository, app);
+  createEnrolmentController(repository, app);
 
   app.listen(Config.app.port, () => {
-    console.log(`Server running on http://${Config.app.hostname}:${Config.app.port}`);
+    console.log(
+      `Server running on http://${Config.app.hostname}:${Config.app.port}`,
+    );
   });
 
   return app;
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

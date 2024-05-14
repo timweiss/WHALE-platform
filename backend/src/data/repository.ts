@@ -10,7 +10,7 @@ export interface Study {
 export interface Enrolment {
   id: number;
   studyId: number;
-  participantId: number;
+  participantId: string;
 }
 
 type SensorType = string;
@@ -37,15 +37,28 @@ export interface IRepository {
 
   getStudyById(id: number): Promise<Study>;
 
-  createEnrolment(enrolmentKey: string): Promise<Enrolment>;
+  getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study>;
+
+  createEnrolment(
+    enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
+  ): Promise<Enrolment>;
 
   getEnrolmentByParticipantKey(participantKey: string): Promise<Enrolment>;
 
-  createSensorReading(enrolmentId: number, reading: Pick<SensorReading, 'sensorType' | 'data'>): Promise<SensorReading>;
+  createSensorReading(
+    enrolmentId: number,
+    reading: Pick<SensorReading, 'sensorType' | 'data'>,
+  ): Promise<SensorReading>;
 
-  createSensorReadingBatched(enrolmentId: number, readings: Pick<SensorReading, 'sensorType' | 'data'>[]): Promise<SensorReading[]>;
+  createSensorReadingBatched(
+    enrolmentId: number,
+    readings: Pick<SensorReading, 'sensorType' | 'data'>[],
+  ): Promise<SensorReading[]>;
 
-  createFile(readingId: number, file: Pick<UploadFile, 'filename' | 'path'>): Promise<File>;
+  createFile(
+    readingId: number,
+    file: Pick<UploadFile, 'filename' | 'path'>,
+  ): Promise<File>;
 }
 
 export class Repository implements IRepository {
@@ -55,24 +68,39 @@ export class Repository implements IRepository {
     this.pool = pool;
   }
 
-  createEnrolment(enrolmentKey: string): Promise<Enrolment> {
+  getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study> {
+    throw new Error('Method not implemented.');
+  }
+
+  createFile(
+    readingId: number,
+    file: Pick<UploadFile, 'filename' | 'path'>,
+  ): Promise<File> {
     throw new NotImplementedError();
   }
 
-  createFile(readingId: number, file: Pick<UploadFile, 'filename' | 'path'>): Promise<File> {
+  createSensorReading(
+    enrolmentId: number,
+    reading: Pick<SensorReading, 'sensorType' | 'data'>,
+  ): Promise<SensorReading> {
     throw new NotImplementedError();
   }
 
-  createSensorReading(enrolmentId: number, reading: Pick<SensorReading, 'sensorType' | 'data'>): Promise<SensorReading> {
-    throw new NotImplementedError();
-  }
-
-  createSensorReadingBatched(enrolmentId: number, readings: Pick<SensorReading, 'sensorType' | 'data'>[]): Promise<SensorReading[]> {
+  createSensorReadingBatched(
+    enrolmentId: number,
+    readings: Pick<SensorReading, 'sensorType' | 'data'>[],
+  ): Promise<SensorReading[]> {
     throw new NotImplementedError();
   }
 
   createStudy(study: Pick<Study, 'name' | 'enrolmentKey'>): Promise<Study> {
     throw new NotImplementedError();
+  }
+
+  createEnrolment(
+    enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
+  ): Promise<Enrolment> {
+    throw new Error('Method not implemented.');
   }
 
   getEnrolmentByParticipantKey(participantKey: string): Promise<Enrolment> {
