@@ -6,6 +6,7 @@ type UserRole = 'participant' | 'admin';
 
 export interface UserPayload {
   role: UserRole;
+  enrolmentId?: number;
 }
 
 export type RequestUser = UserPayload | JwtPayload;

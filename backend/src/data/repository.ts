@@ -43,7 +43,7 @@ export interface IRepository {
     enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
   ): Promise<Enrolment>;
 
-  getEnrolmentByParticipantKey(participantKey: string): Promise<Enrolment>;
+  getEnrolmentByParticipantId(participantId: string): Promise<Enrolment>;
 
   createSensorReading(
     enrolmentId: number,
@@ -103,7 +103,7 @@ export class Repository implements IRepository {
     throw new Error('Method not implemented.');
   }
 
-  getEnrolmentByParticipantKey(participantKey: string): Promise<Enrolment> {
+  getEnrolmentByParticipantId(participantId: string): Promise<Enrolment> {
     throw new NotImplementedError();
   }
 

@@ -1,6 +1,9 @@
 import { Enrolment, IRepository } from '../data/repository';
 import { Express } from 'express';
 import ksuid from 'ksuid';
+import { UserPayload } from '../middleware/authenticate';
+import { Config } from '../config';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 
 export function createEnrolmentController(
   repository: IRepository,
@@ -16,15 +19,47 @@ export function createEnrolmentController(
     }
 
     const participantId = (await ksuid.random()).string;
-    let enrolment: Pick<Enrolment, 'studyId' | 'participantId'> = {
+    const newEnrolment: Pick<Enrolment, 'studyId' | 'participantId'> = {
       studyId: study.id,
       participantId: participantId,
     };
 
-    enrolment = await repository.createEnrolment(enrolment);
+    const enrolment = await repository.createEnrolment(newEnrolment);
 
-    // todo: generate token
+    const token = generateTokenForEnrolment(enrolment.id);
 
-    res.json(enrolment);
+    res.json({ participantId, token });
+  });
+
+  app.post('/v1/enrolment/:participantId', async (req, res) => {
+    const enrolment = await repository.getEnrolmentByParticipantId(
+      req.params.participantId,
+    );
+    if (!enrolment) {
+      return res.status(404).send({ error: 'Enrolment not found' });
+    }
+
+    const token = generateTokenForEnrolment(enrolment.id);
+
+    res.json({ participantId: enrolment.participantId, token });
+  });
+
+  console.log('loaded enrolment controller');
+}
+
+function generateTokenForEnrolment(enrolmentId: number) {
+  const payload: UserPayload = {
+    role: 'participant',
+    enrolmentId: enrolmentId,
+  };
+
+  const token: JwtPayload = {
+    iss: Config.app.hostname,
+    sub: enrolmentId.toString(),
+    iat: Date.now(),
+  };
+
+  return jwt.sign(Object.assign({}, payload, token), Config.auth.jwtSecret, {
+    expiresIn: '30d',
   });
 }

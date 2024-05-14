@@ -5,11 +5,10 @@ import { createStudyController } from './controllers/study';
 import { Repository } from './data/repository';
 import { createEnrolmentController } from './controllers/enrolment';
 
-const app = express();
-
-app.use(express.json());
-
 async function main() {
+  const app = express();
+  app.use(express.json());
+
   const pool = await usePool();
   const repository = new Repository(pool);
   console.log('connected to database');
