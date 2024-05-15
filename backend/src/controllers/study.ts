@@ -9,6 +9,12 @@ export function createStudyController(repository: IRepository, app: Express) {
   });
 
   app.post('/v1/study', authenticate, requireAdmin, async (req, res) => {
+    if (!req.body.enrolmentKey || !req.body.name) {
+      return res
+        .status(400)
+        .send({ error: 'Missing required fields (enrolmentKey or name)' });
+    }
+
     const existing = await repository.getStudyByEnrolmentKey(
       req.body.enrolmentKey,
     );
@@ -23,7 +29,12 @@ export function createStudyController(repository: IRepository, app: Express) {
   });
 
   app.get('/v1/study/:id', async (req, res) => {
-    const study = await repository.getStudyById(parseInt(req.params.id));
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).send({ error: 'Invalid study ID' });
+    }
+
+    const study = await repository.getStudyById(id);
     if (!study) {
       return res.status(404).send({ error: 'Study not found' });
     }

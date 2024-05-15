@@ -25,6 +25,8 @@ paths:
     post:
       description:
         Creates a new study in the system.
+      security:
+        - token: [ ]
       requestBody:
         required: true
         content:

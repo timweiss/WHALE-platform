@@ -1,10 +1,16 @@
-import { IRepository } from '../data/repository';
+import { IRepository, SensorReading } from '../data/repository';
 import { Express } from 'express';
 import { authenticate, RequestUser } from '../middleware/authenticate';
 import { upload } from '../middleware/upload';
 
 export function createReadingController(repository: IRepository, app: Express) {
   app.post('/v1/reading', authenticate, async (req, res) => {
+    if (!req.body.sensorType || !req.body.data) {
+      return res
+        .status(400)
+        .send({ error: 'Missing required fields (sensorType or data)' });
+    }
+
     const enrolment = await repository.getEnrolmentById(
       (req.user as RequestUser).enrolmentId,
     );
@@ -14,13 +20,21 @@ export function createReadingController(repository: IRepository, app: Express) {
 
     const reading = await repository.createSensorReading(enrolment.id, {
       sensorType: req.body.sensorType,
-      data: req.body.value,
+      data: req.body.data,
     });
 
     res.json(reading);
   });
 
   app.post('/v1/reading/batch', authenticate, async (req, res) => {
+    if (
+      req.body.filter((r: SensorReading) => !r.sensorType || !r.data).length > 0
+    ) {
+      return res
+        .status(400)
+        .send({ error: 'Missing required fields (sensorType or data)' });
+    }
+
     const enrolment = await repository.getEnrolmentById(
       (req.user as RequestUser).enrolmentId,
     );

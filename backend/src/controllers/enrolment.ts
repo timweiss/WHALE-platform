@@ -11,6 +11,12 @@ export function createEnrolmentController(
 ) {
   // creates an enrolment and generates a token
   app.post('/v1/enrolment', async (req, res) => {
+    if (!req.body.enrolmentKey) {
+      return res
+        .status(400)
+        .send({ error: 'Missing required fields (enrolmentKey)' });
+    }
+
     const study = await repository.getStudyByEnrolmentKey(
       req.body.enrolmentKey,
     );
