@@ -4,6 +4,7 @@ import { Config } from './config';
 import { createStudyController } from './controllers/study';
 import { Repository } from './data/repository';
 import { createEnrolmentController } from './controllers/enrolment';
+import { createReadingController } from './controllers/reading';
 
 async function main() {
   const app = express();
@@ -19,6 +20,7 @@ async function main() {
 
   createStudyController(repository, app);
   createEnrolmentController(repository, app);
+  createReadingController(repository, app);
 
   app.listen(Config.app.port, () => {
     console.log(

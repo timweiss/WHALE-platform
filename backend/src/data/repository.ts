@@ -45,6 +45,8 @@ export interface IRepository {
 
   getEnrolmentByParticipantId(participantId: string): Promise<Enrolment>;
 
+  getEnrolmentById(id: number): Promise<Enrolment>;
+
   createSensorReading(
     enrolmentId: number,
     reading: Pick<SensorReading, 'sensorType' | 'data'>,
@@ -66,6 +68,10 @@ export class Repository implements IRepository {
 
   constructor(pool: Pool) {
     this.pool = pool;
+  }
+
+  getEnrolmentById(id: number): Promise<Enrolment> {
+    throw new Error('Method not implemented.');
   }
 
   getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study> {
