@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { NotImplementedError } from '../config/errors';
+import { DatabaseError } from '../config/errors';
 
 export interface Study {
   id: number;
@@ -35,17 +35,17 @@ export interface IRepository {
 
   createStudy(study: Pick<Study, 'name' | 'enrolmentKey'>): Promise<Study>;
 
-  getStudyById(id: number): Promise<Study>;
+  getStudyById(id: number): Promise<Study | null>;
 
-  getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study>;
+  getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study | null>;
 
   createEnrolment(
     enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
   ): Promise<Enrolment>;
 
-  getEnrolmentByParticipantId(participantId: string): Promise<Enrolment>;
+  getEnrolmentByParticipantId(participantId: string): Promise<Enrolment | null>;
 
-  getEnrolmentById(id: number): Promise<Enrolment>;
+  getEnrolmentById(id: number): Promise<Enrolment | null>;
 
   createSensorReading(
     enrolmentId: number,
@@ -60,7 +60,7 @@ export interface IRepository {
   createFile(
     readingId: number,
     file: Pick<UploadFile, 'filename' | 'path'>,
-  ): Promise<File>;
+  ): Promise<UploadFile>;
 }
 
 export class Repository implements IRepository {
@@ -70,54 +70,191 @@ export class Repository implements IRepository {
     this.pool = pool;
   }
 
-  getEnrolmentById(id: number): Promise<Enrolment> {
-    throw new Error('Method not implemented.');
+  async getEnrolmentById(id: number): Promise<Enrolment | null> {
+    try {
+      const res = await this.pool.query(
+        'SELECT * FROM enrolments WHERE id = $1',
+        [id],
+      );
+      if (res.rows.length === 0) {
+        return null;
+      }
+      return {
+        id: res.rows[0].id,
+        studyId: res.rows[0].study_id,
+        participantId: res.rows[0].participant_id,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study> {
-    throw new Error('Method not implemented.');
+  async getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study | null> {
+    try {
+      const res = await this.pool.query(
+        'SELECT * FROM studies WHERE enrolment_key = $1',
+        [enrolmentKey],
+      );
+      if (res.rows.length === 0) {
+        return null;
+      }
+      return {
+        id: res.rows[0].id,
+        name: res.rows[0].name,
+        enrolmentKey: res.rows[0].enrolment_key,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  createFile(
+  async createFile(
     readingId: number,
     file: Pick<UploadFile, 'filename' | 'path'>,
-  ): Promise<File> {
-    throw new NotImplementedError();
+  ): Promise<UploadFile> {
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO upload_files (reading_id, filename, path) VALUES ($1, $2, $3) RETURNING *',
+        [readingId, file.filename, file.path],
+      );
+      return {
+        id: res.rows[0].id,
+        readingId: res.rows[0].reading_id,
+        filename: res.rows[0].filename,
+        path: res.rows[0].path,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  createSensorReading(
+  async createSensorReading(
     enrolmentId: number,
     reading: Pick<SensorReading, 'sensorType' | 'data'>,
   ): Promise<SensorReading> {
-    throw new NotImplementedError();
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO sensor_readings (enrolment_id, sensor_type, data) VALUES ($1, $2, $3) RETURNING *',
+        [enrolmentId, reading.sensorType, reading.data],
+      );
+      return {
+        id: res.rows[0].id,
+        enrolmentId: res.rows[0].enrolment_id,
+        sensorType: res.rows[0].sensor_type,
+        data: res.rows[0].data,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  createSensorReadingBatched(
+  async createSensorReadingBatched(
     enrolmentId: number,
     readings: Pick<SensorReading, 'sensorType' | 'data'>[],
   ): Promise<SensorReading[]> {
-    throw new NotImplementedError();
+    try {
+      const batched = await Promise.all(
+        readings.map((reading) =>
+          this.pool.query(
+            'INSERT INTO sensor_readings (enrolment_id, sensor_type, data) VALUES ($1, $2, $3) RETURNING *',
+            [enrolmentId, reading.sensorType, reading.data],
+          ),
+        ),
+      );
+
+      return batched.map((res) => ({
+        id: res.rows[0].id,
+        enrolmentId: res.rows[0].enrolment_id,
+        sensorType: res.rows[0].sensor_type,
+        data: res.rows[0].data,
+      }));
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  createStudy(study: Pick<Study, 'name' | 'enrolmentKey'>): Promise<Study> {
-    throw new NotImplementedError();
+  async createStudy(
+    study: Pick<Study, 'name' | 'enrolmentKey'>,
+  ): Promise<Study> {
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO studies (name, enrolment_key) VALUES ($1, $2) RETURNING *',
+        [study.name, study.enrolmentKey],
+      );
+      return {
+        id: res.rows[0].id,
+        name: res.rows[0].name,
+        enrolmentKey: res.rows[0].enrolment_key,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  createEnrolment(
+  async createEnrolment(
     enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
   ): Promise<Enrolment> {
-    throw new Error('Method not implemented.');
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO enrolments (study_id, participant_id) VALUES ($1, $2) RETURNING *',
+        [enrolment.studyId, enrolment.participantId],
+      );
+      return {
+        id: res.rows[0].id,
+        studyId: res.rows[0].study_id,
+        participantId: res.rows[0].participant_id,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  getEnrolmentByParticipantId(participantId: string): Promise<Enrolment> {
-    throw new NotImplementedError();
+  async getEnrolmentByParticipantId(
+    participantId: string,
+  ): Promise<Enrolment | null> {
+    try {
+      const res = await this.pool.query(
+        'SELECT * FROM enrolments WHERE participant_id = $1',
+        [participantId],
+      );
+      if (res.rows.length === 0) {
+        return null;
+      }
+      return {
+        id: res.rows[0].id,
+        studyId: res.rows[0].study_id,
+        participantId: res.rows[0].participant_id,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  getStudies(): Promise<Study[]> {
-    throw new NotImplementedError();
+  async getStudies(): Promise<Study[]> {
+    try {
+      const res = await this.pool.query('SELECT * FROM studies');
+      return res.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        enrolmentKey: row.enrolment_key,
+      }));
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 
-  getStudyById(id: number): Promise<Study> {
-    throw new NotImplementedError();
+  async getStudyById(id: number): Promise<Study> {
+    try {
+      const res = await this.pool.query('SELECT * FROM studies WHERE id = $1', [
+        id,
+      ]);
+      return {
+        id: res.rows[0].id,
+        name: res.rows[0].name,
+        enrolmentKey: res.rows[0].enrolment_key,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
   }
 }
