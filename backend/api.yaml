@@ -4,7 +4,7 @@ info:
   description: API for the Social Interaction Sensing project.
   version: 1.0.0
 servers:
-  - url: 'https://localhost:8080/v1/'
+  - url: 'http://localhost:8080/v1/'
     description: Local Server
   - url: 'https://siapi.timweiss.dev/v1/'
     description: Tim's Test Server
@@ -212,13 +212,13 @@ components:
       description: Attached file for a reading
       type: object
       required:
-          - reading_id
+        - readingId
           - filename
       properties:
         id:
           type: integer
           description: The unique identifier for the file.
-        reading_id:
+        readingId:
           type: integer
           description: The database ID for the reading.
         filename:
@@ -232,17 +232,17 @@ components:
       description: An atomic reading of a sensor. Tied to a specific participant and study.
       type: object
       required:
-        - enrolment_id
-        - sensor_type
+        - enrolmentId
+        - sensorType
         - data
       properties:
         id:
           type: integer
           description: The unique identifier for the sensor reading.
-        enrolment_id:
+        enrolmentId:
           type: integer
           description: The database ID for the enrolment.
-        sensor_type:
+        sensorType:
           type: string
           description: The type of sensor that generated the reading.
         data:
@@ -256,10 +256,10 @@ components:
         id:
           type: integer
           description: The unique identifier for the enrolment.
-        study_id:
+        studyId:
           type: integer
           description: The database ID for the study.
-        participant_id:
+        participantId:
           type: string
           description: The unique identifier for the participant. Can be used to re-identify the participant.
 
@@ -268,7 +268,7 @@ components:
       description: A study in the system.
       required:
         - name
-        - enrolment_key
+        - enrolmentKey
       properties:
         id:
           type: integer
@@ -276,6 +276,6 @@ components:
         name:
             type: string
             description: The name of the study.
-        enrolment_key:
+        enrolmentKey:
             type: string
             description: The enrolment key for the study. Needs to be unique across all studies.

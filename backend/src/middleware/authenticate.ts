@@ -16,7 +16,7 @@ export const authenticate = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.get('Authorization');
 
   if (authHeader) {
     const token = authHeader.replace('Bearer ', '');

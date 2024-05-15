@@ -1,7 +1,7 @@
 export const Config = {
   app: {
     hostname: process.env.APP_HOSTNAME || 'localhost',
-    port: process.env.APP_PORT || 3000,
+    port: process.env.APP_PORT || 8080,
     uploadLocation: process.env.APP_UPLOAD_LOCATION || './uploads',
   },
   database: {
