@@ -42,12 +42,15 @@ export function createReadingController(repository: IRepository, app: Express) {
       return res.status(403).send({ error: 'Enrolment not found' });
     }
 
-    const readings = await repository.createSensorReadingBatched(
-      enrolment.id,
-      req.body,
-    );
-
-    res.json(readings);
+    try {
+      const readings = await repository.createSensorReadingBatched(
+        enrolment.id,
+        req.body,
+      );
+      res.json(readings);
+    } catch (e) {
+      res.status(500).send({ error: 'Error creating readings' });
+    }
   });
 
   app.post(

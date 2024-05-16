@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint ./src"
+    "lint": "eslint ./src",
+    "test": "jest --detectOpenHandles"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +32,7 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "ksuid": "^3.0.0",

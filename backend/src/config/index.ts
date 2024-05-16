@@ -1,3 +1,10 @@
+import dotenv from 'dotenv';
+
+if (process.env.NODE_ENV === 'test') {
+  console.log('loading test environment');
+  dotenv.config({ path: '.test.env' });
+}
+
 export const Config = {
   app: {
     hostname: process.env.APP_HOSTNAME || 'localhost',

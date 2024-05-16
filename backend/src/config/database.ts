@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { Config } from './index';
 
-export async function usePool() {
+export function usePool() {
   const pool = new Pool({
     connectionString: Config.database.connectionString,
   });
