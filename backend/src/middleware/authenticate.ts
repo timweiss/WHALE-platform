@@ -20,14 +20,19 @@ export const authenticate = async (
 
   if (authHeader) {
     const token = authHeader.replace('Bearer ', '');
-    const data = jwt.verify(token, Config.auth.jwtSecret);
-    if (!data) {
-      return res
-        .status(401)
-        .send({ error: 'Not authorized to access this resource' });
+    try {
+      const data = jwt.verify(token, Config.auth.jwtSecret);
+      if (!data) {
+        return res
+          .status(401)
+          .send({ error: 'Not authorized to access this resource' });
+      }
+      req.user = data;
+      next();
+    } catch (e) {
+      console.log('error verifying token' + e);
+      return res.sendStatus(401);
     }
-    req.user = data;
-    next();
   } else {
     return res.sendStatus(401);
   }
