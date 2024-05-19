@@ -23,6 +23,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+    namespace 'de.mimuc.senseeverything'
 }
 
 dependencies {
