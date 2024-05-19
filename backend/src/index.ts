@@ -27,8 +27,17 @@ export async function main() {
   const repository = new Repository(pool);
   const app = makeExpressApp(pool, repository);
 
-  app.listen(Config.app.port, () => {
+  const server = app.listen(Config.app.port, () => {
     console.log(`Server listening on port ${Config.app.port}`);
+  });
+
+  // close the pool when app shuts down
+  process.on('SIGTERM', () => {
+    pool.end();
+    server.close(() => {
+      console.log('HTTP server closed');
+    });
+    process.exit(0);
   });
 }
 
