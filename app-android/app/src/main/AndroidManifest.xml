@@ -33,9 +33,6 @@
             android:label="@string/title_activity_study_enrolment"
             android:theme="@style/Theme.MyApplication" />
         <activity
-            android:name=".activity.EnrolmentActivity"
-            android:exported="false" />
-        <activity
             android:name=".activity.MainActivity"
             android:label="@string/app_name"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar">
