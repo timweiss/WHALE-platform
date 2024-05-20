@@ -5,14 +5,19 @@ import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class DataStoreManager(context: Context) {
-    private val USER_PREFERENCES_NAME = "user_preferences"
+private val USER_PREFERENCES_NAME = "user_preferences"
 
-    private val Context.dataStore by preferencesDataStore(
-            name = USER_PREFERENCES_NAME
-    )
+private val Context.dataStore by preferencesDataStore(
+        name = USER_PREFERENCES_NAME
+)
+
+@Singleton
+class DataStoreManager @Inject constructor(@ApplicationContext context: Context) {
 
     companion object {
         val TOKEN = stringPreferencesKey("token")

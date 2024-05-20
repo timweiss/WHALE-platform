@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.activity;
 
 import static android.os.Build.VERSION.SDK_INT;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.adapter.SensorAdapter;
 import de.mimuc.senseeverything.db.AppDatabase;
@@ -45,6 +46,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.room.Room;
 
+@AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
 	private final String TAG = getClass().getName();

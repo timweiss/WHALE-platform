@@ -41,6 +41,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.volley.Response
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -52,9 +54,11 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
+@AndroidEntryPoint
 class StudyEnrolment : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,9 +72,11 @@ class StudyEnrolment : ComponentActivity() {
     }
 }
 
-class EnrolmentViewModel(application: Application) : AndroidViewModel(application) {
-    private val dataStoreManager = DataStoreManager(application)
-
+@HiltViewModel
+class EnrolmentViewModel @Inject constructor(
+        application: Application,
+        private val dataStoreManager: DataStoreManager
+) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> get() = _isLoading
 
@@ -124,8 +130,6 @@ class EnrolmentViewModel(application: Application) : AndroidViewModel(applicatio
                 _isLoading.value = false
                 _isEnrolled.value = true
                 _participantId.value = participantId
-
-                Log.d("EnrolmentViewModel", "participantId: $participantId")
 
                 dataStoreManager.saveTokenAndParticipantId(token, participantId)
             }

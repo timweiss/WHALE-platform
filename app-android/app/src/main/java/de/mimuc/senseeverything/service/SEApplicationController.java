@@ -6,6 +6,9 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 
+import dagger.hilt.android.HiltAndroidApp;
+
+@HiltAndroidApp
 public class SEApplicationController extends Application {
 
     private static final String TAG = "SEApplicationController";
