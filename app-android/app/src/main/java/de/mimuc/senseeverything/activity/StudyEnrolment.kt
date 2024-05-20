@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package de.mimuc.senseeverything.activity
 
 import android.app.Application
@@ -8,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,10 +21,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -64,8 +71,20 @@ class StudyEnrolment : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             AppandroidTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    EnrolmentScreen()
+                Scaffold(
+                        topBar = {
+                            TopAppBar(
+                                    colors = TopAppBarDefaults.topAppBarColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            titleContentColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                    title = {
+                                        Text("Enrolment")
+                                    }
+                            )
+                        }
+                ) { innerPadding ->
+                    EnrolmentScreen(innerPadding = innerPadding)
                 }
             }
         }
@@ -146,7 +165,7 @@ class EnrolmentViewModel @Inject constructor(
 }
 
 @Composable
-fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel()) {
+fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : PaddingValues) {
     val textState = remember { mutableStateOf("") }
     val isLoading = viewModel.isLoading.collectAsState()
     val isEnrolled = viewModel.isEnrolled.collectAsState()
@@ -154,10 +173,7 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel()) {
     val context = LocalContext.current
 
     Column(
-            modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.Top
+        modifier = Modifier.padding(innerPadding).padding(16.dp)
     ) {
         if (!isEnrolled.value) {
             TextField(
@@ -202,6 +218,6 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel()) {
 @Composable
 fun GreetingPreview() {
     AppandroidTheme {
-        EnrolmentScreen()
+        EnrolmentScreen(innerPadding = PaddingValues(16.dp))
     }
 }
