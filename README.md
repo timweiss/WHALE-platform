@@ -6,8 +6,8 @@ Social Sensing environment.
 - [ ] Use WorkManager to schedule backend pushes
 - [ ] Implement API in app (pushing data, showing study name)
 - [ ] Add radio frequency sensor
-- [ x ] Create simple backend that receives pushed data (audio and other sample readings)
-- [ x ] Add (crude) study enrolment interface
+- [x] Create simple backend that receives pushed data (audio and other sample readings)
+- [x] Add (crude) study enrolment interface
 
 ## Components
 * [Android App](app-android): The app that records sensor data. Needs to be installed on participant's devices
