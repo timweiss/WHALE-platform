@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
 	private Button m_ButtonStart;
 	private Button m_ButtonStop;
 	private Button m_ButtonSync;
+	private Button m_ButtonEnrolment;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
 		m_ButtonStop = findViewById(R.id.stop_button);
 		m_ButtonAccessibility = findViewById(R.id.accessibility_button);
 		m_ButtonSync = findViewById(R.id.sync_button);
+		m_ButtonEnrolment = findViewById(R.id.enrolment_button);
 		setAccessibilityButtonState ();
 		
 		SensorDatabaseHelper db = new SensorDatabaseHelper(this);
@@ -83,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
 		m_ButtonStop.setOnClickListener(onStopButtonClick);
 		m_ButtonAccessibility.setOnClickListener(onAccessibilityButtonClick);
 		m_ButtonSync.setOnClickListener(onSyncButtonClick);
+		m_ButtonEnrolment.setOnClickListener(onEnrolmentButtonClick);
 
 		isPermissionGranted(Manifest.permission.WAKE_LOCK);
 		isPermissionGranted(Manifest.permission.RECORD_AUDIO);
@@ -92,13 +95,9 @@ public class MainActivity extends AppCompatActivity {
 		isPermissionGranted(Manifest.permission.ACCESS_NETWORK_STATE);
 		isPermissionGranted(Manifest.permission.FOREGROUND_SERVICE);
 
-		if(checkPermission()) {
+		if (checkPermission()) {
 			requestPermission();
 		}
-
-		//Thread threadUdp = new Thread(new UDPReceiver(7001, view));
-		//threadUdp.start();
-
 	}
 
 	private boolean checkPermission() {
@@ -238,6 +237,12 @@ public class MainActivity extends AppCompatActivity {
 					.build());
 		}
 ;	};
+
+	private final OnClickListener onEnrolmentButtonClick = view -> {
+        Log.i(TAG,"enrolmentButton onClick");
+        Intent intent = new Intent(MainActivity.this, StudyEnrolment.class);
+        startActivity(intent);
+    };
 	
 	private void setAccessibilityButtonState ()
 	{
