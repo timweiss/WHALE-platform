@@ -3,9 +3,11 @@ Social Sensing environment.
 
 ## Tasks
 - [ ] Integrate AudioSampleService to use default content pipeline
-- [ ] Create simple backend that receives pushed data (audio and other sample readings)
 - [ ] Use WorkManager to schedule backend pushes
-- [ ] Add study enrolment interface
+- [ ] Implement API in app (pushing data, showing study name)
+- [ ] Add radio frequency sensor
+- [ x ] Create simple backend that receives pushed data (audio and other sample readings)
+- [ x ] Add (crude) study enrolment interface
 
 ## Components
 * [Android App](app-android): The app that records sensor data. Needs to be installed on participant's devices
