@@ -53,12 +53,9 @@ public class UploadJobService extends JobService {
         db = Room.databaseBuilder(getApplicationContext(),
                 AppDatabase.class, "senseeverything-roomdb").build();
 
-        myExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                // do stuff here
-                syncNextNActivities(10);
-            }
+        myExecutor.execute(() -> {
+            // do stuff here
+            syncNextNActivities(10, jobParameters);
         });
 
         return true;
@@ -71,10 +68,13 @@ public class UploadJobService extends JobService {
         return false;
     }
 
-    private void syncNextNActivities(int batchSize) {
+    private void syncNextNActivities(int batchSize, JobParameters jobParameters) {
         List<LogData> data = db.logDataDao().getNextNUnsynced(batchSize);
         Log.i(TAG, "found data items: " + data.size());
         if (data.isEmpty()) {
+            jobFinished(jobParameters, false);
+            myExecutor.shutdown();
+            Log.i(TAG, "finished");
             return;
         }
 
@@ -114,47 +114,12 @@ public class UploadJobService extends JobService {
                                 db.logDataDao().updateLogData(data.toArray(new LogData[data.size()]));
                                 Log.i(TAG, "batch synced successful");
 
-                                // count files to be synced
-                                int filesToSync = 0;
-                                for (LogData logData : data) {
-                                    if (logData.hasFile) {
-                                        filesToSync++;
-                                    }
-                                }
-
-                                if (filesToSync == 0) {
-                                    // No files to sync, proceed to next batch
-                                    syncNextNActivities(batchSize);
-                                    Log.i(TAG, "Next batch sync initiated");
-                                    return;
-                                }
-
-                                CountDownLatch latch = new CountDownLatch(filesToSync);
-
-                                // upload files if we need to
-                                for (LogData logData : data) {
-                                    if (logData.hasFile) {
-                                        JSONObject reading = findReading(response, logData);
-                                        if (reading != null) {
-                                            try {
-                                                Log.i(TAG, "syncing file: " + reading.toString());
-                                                syncRequiredFile(logData, reading.getInt("id"), latch);
-                                            } catch (JSONException e) {
-                                                Log.e(TAG, "Error syncing file: " + e.getMessage(), e);
-                                                latch.countDown();
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Wait for all file syncs to complete
-                                latch.await();
-                                Log.i(TAG, "All files synced");
+                                uploadFilesFromBatch(data, response, batchSize);
                             } catch (Exception e) {
                                 Log.e(TAG, "Error in AsyncTask: " + e.getMessage(), e);
                             } finally {
                                 // Next batch
-                                syncNextNActivities(batchSize);
+                                syncNextNActivities(batchSize, jobParameters);
                                 Log.i(TAG, "Next batch sync initiated");
                             }
                         });
@@ -162,6 +127,42 @@ public class UploadJobService extends JobService {
 
             return Unit.INSTANCE;
         });
+    }
+
+    private void uploadFilesFromBatch(List<LogData> data, JSONArray backendReadings, int batchSize) throws InterruptedException {
+        // count files to be synced
+        int filesToSync = 0;
+        for (LogData logData : data) {
+            if (logData.hasFile) {
+                filesToSync++;
+            }
+        }
+
+        if (filesToSync == 0) {
+            return;
+        }
+
+        CountDownLatch latch = new CountDownLatch(filesToSync);
+
+        // upload files if we need to
+        for (LogData logData : data) {
+            if (logData.hasFile) {
+                JSONObject reading = findReading(backendReadings, logData);
+                if (reading != null) {
+                    try {
+                        Log.i(TAG, "syncing file: " + reading.toString());
+                        syncRequiredFile(logData, reading.getInt("id"), latch);
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error syncing file: " + e.getMessage(), e);
+                        latch.countDown();
+                    }
+                }
+            }
+        }
+
+        // Wait for all file syncs to complete
+        latch.await();
+        Log.i(TAG, "All files synced");
     }
 
     private void syncRequiredFile(LogData data, int readingId, CountDownLatch latch) {
@@ -187,7 +188,6 @@ public class UploadJobService extends JobService {
                 HashMap<String, String> headers = new HashMap<>();
                 headers.put("Authorization", "Bearer " + token);
 
-
                 client.postFile(
                         "https://siapi.timweiss.dev/v1/reading/" + readingId + "/file",
                         file.getName(),
@@ -196,7 +196,7 @@ public class UploadJobService extends JobService {
                         formData,
                         headers,
                         response -> {
-                            Log.d(TAG, response.toString());
+                            Log.d(TAG, "uploaded reading file: " + response.toString());
                             latch.countDown();
                         },
                         error -> {
