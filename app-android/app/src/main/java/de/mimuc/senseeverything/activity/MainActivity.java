@@ -226,7 +226,7 @@ public class MainActivity extends AppCompatActivity {
 					super.run();
 					AppDatabase db = Room.databaseBuilder(getApplicationContext(),
 							AppDatabase.class, "senseeverything-roomdb").build();
-					db.logDataDao().insertAll(new LogData(System.currentTimeMillis(),"MainActivity","this is some test data"));
+					// db.logDataDao().insertAll(new LogData(System.currentTimeMillis(),"MainActivity","this is some test data"));
 				}
 			}.start();
 

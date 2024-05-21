@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.api;
 
 import android.content.Context;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -9,7 +10,10 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.Map;
 
 public class ApiClient {
     private static ApiClient instance;
@@ -37,8 +41,25 @@ public class ApiClient {
     }
 
     // POST request
-    public void post(String url, JSONObject jsonRequest, Response.Listener<JSONObject> listener, Response.ErrorListener errorListener) {
+    public void post(String url, JSONObject jsonRequest, Map<String, String> headers, Response.Listener<JSONObject> listener, Response.ErrorListener errorListener) {
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, jsonRequest, listener, errorListener);
+        if (!headers.isEmpty()) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                try {
+                    jsonObjectRequest.getHeaders().put(entry.getKey(), entry.getValue());
+                } catch (AuthFailureError e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
         addToRequestQueue(jsonObjectRequest);
+    }
+
+    public void postArray(String url, JSONArray jsonRequest, Map<String, String> headers, Response.Listener<JSONArray> listener, Response.ErrorListener errorListener) {
+        MyJsonArrayRequest request = new MyJsonArrayRequest(Request.Method.POST, url, jsonRequest, listener, errorListener);
+        if (!headers.isEmpty()) {
+            request.setHeaders(headers);
+        }
+        addToRequestQueue(request);
     }
 }
