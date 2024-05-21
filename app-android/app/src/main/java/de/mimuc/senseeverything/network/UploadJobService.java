@@ -119,7 +119,7 @@ public class UploadJobService extends JobService {
 
             client.postArray("https://siapi.timweiss.dev/v1/reading/batch", jsonReadings, headers
                     , response -> {
-                        Log.d("VolleyResponse", response.toString());
+                        Log.d(TAG, response.toString());
                         for (LogData logData : data) {
                             logData.synced = true;
                         }
@@ -130,9 +130,8 @@ public class UploadJobService extends JobService {
 
                             // upload files if we need to
                             for (LogData logData : data) {
-                                // todo: this should not use the sensor name!!!
-                                if (logData.sensorName.equals("Audio Sample")) {
-                                    JSONObject reading = findReading(response, logData.data);
+                                if (logData.hasFile) {
+                                    JSONObject reading = findReading(response, logData);
                                     if (reading != null) {
                                         try {
                                             Log.i(TAG, "syncing file: " + reading.toString());
@@ -144,18 +143,19 @@ public class UploadJobService extends JobService {
                                 }
                             }
 
+                            Log.i(TAG, "all files synced");
+
                             // next batch
                             syncNextNActivities(batchSize);
                         });
-                    }, error -> Log.e("VolleyError", error.toString()));
+                    }, error -> Log.e(TAG, error.toString()));
 
             return Unit.INSTANCE;
         });
     }
 
     private void syncRequiredFile(LogData data, int readingId) {
-        // lets assume that data just contains the file path for now
-        String filePath = data.data;
+        String filePath = data.filePath;
 
         try {
             File file = new File(filePath);
@@ -182,9 +182,9 @@ public class UploadJobService extends JobService {
                         formData,
                         headers,
                         response -> {
-                            Log.d("VolleyResponse", response.toString());
+                            Log.d(TAG, response.toString());
                         },
-                        error -> Log.e("VolleyError", error.toString())
+                        error -> Log.e(TAG, error.toString())
                 );
 
                 return Unit.INSTANCE;
@@ -196,20 +196,18 @@ public class UploadJobService extends JobService {
 
     private byte[] readFileBytes(File file) throws IOException {
         byte[] bytes = new byte[(int) file.length()];
-        BufferedInputStream bis = null;
-
-        bis = new BufferedInputStream(new FileInputStream(file));
+        BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
         DataInputStream dis = new DataInputStream(bis);
         dis.readFully(bytes);
 
         return bytes;
     }
 
-    private JSONObject findReading(JSONArray array, String sensorData) {
+    private JSONObject findReading(JSONArray array, LogData logData) {
         for (int i = 0; i < array.length(); i++) {
             try {
                 JSONObject o = array.getJSONObject(i);
-                if (o.getString("data").equals(sensorData)) {
+                if (o.getString("data").equals(logData.data)) {
                     return o;
                 }
             } catch (JSONException e) {

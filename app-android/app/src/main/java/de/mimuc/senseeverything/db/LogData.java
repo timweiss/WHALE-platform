@@ -17,6 +17,10 @@ public class LogData {
 
     public String data;
 
+    public boolean hasFile;
+
+    public String filePath;
+
     public LogData(){}
 
     public LogData(long timestamp, String sensorName, String data){
@@ -26,4 +30,11 @@ public class LogData {
         this.synced = false;
     }
 
+    public LogData(long timestamp, String sensorName, String data, boolean hasFile, String filePath) {
+        this.timestamp = timestamp;
+        this.sensorName = sensorName;
+        this.data = data;
+        this.hasFile = hasFile;
+        this.filePath = filePath;
+    }
 }
