@@ -62,7 +62,7 @@ export function createReadingController(repository: IRepository, app: Express) {
         return res.status(400).send({ error: 'No file uploaded' });
       }
       const uploaded = await repository.createFile(
-        parseInt(req.body.readingId),
+        parseInt(req.params.readingId),
         {
           filename: req.file.filename,
           path: req.file.path,
