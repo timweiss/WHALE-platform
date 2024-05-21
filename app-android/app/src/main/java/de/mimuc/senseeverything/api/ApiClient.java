@@ -3,16 +3,20 @@ package de.mimuc.senseeverything.api;
 import android.content.Context;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
+import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class ApiClient {
@@ -57,6 +61,39 @@ public class ApiClient {
 
     public void postArray(String url, JSONArray jsonRequest, Map<String, String> headers, Response.Listener<JSONArray> listener, Response.ErrorListener errorListener) {
         MyJsonArrayRequest request = new MyJsonArrayRequest(Request.Method.POST, url, jsonRequest, listener, errorListener);
+        if (!headers.isEmpty()) {
+            request.setHeaders(headers);
+        }
+        addToRequestQueue(request);
+    }
+
+    public void postFile(String url, String fileName, String contentType, byte[] fileData, Map<String, String> formData, Map<String, String> headers, Response.Listener<JSONObject> listener, Response.ErrorListener errorListener) {
+        MyMultipartRequest request = new MyMultipartRequest(Request.Method.POST, url, new Response.Listener<NetworkResponse>() {
+            @Override
+            public void onResponse(NetworkResponse response) {
+                String resultResponse = new String(response.data);
+                try {
+                    JSONObject result = new JSONObject(resultResponse);
+
+                    listener.onResponse(result);
+                } catch (JSONException e) {
+                    errorListener.onErrorResponse(new VolleyError("could not parse response"));
+                }
+            }
+        }, errorListener) {
+            @Override
+            protected Map<String, String> getParams() {
+                return formData;
+            }
+
+            @Override
+            protected Map<String, DataPart> getByteData() {
+                Map<String, DataPart> params = new HashMap<>();
+                params.put("file", new DataPart(fileName, fileData, contentType));
+                return params;
+            }
+        };
+
         if (!headers.isEmpty()) {
             request.setHeaders(headers);
         }
