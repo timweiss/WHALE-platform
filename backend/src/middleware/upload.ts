@@ -1,10 +1,11 @@
 import multer, { FileFilterCallback } from 'multer';
 import { Config } from '../config';
 import { Request } from 'express';
+import path from 'node:path';
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, Config.app.uploadLocation);
+    cb(null, path.join(process.cwd(), Config.app.uploadLocation));
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
