@@ -1,23 +1,11 @@
 package de.mimuc.senseeverything.network;
 
-import android.app.Service;
 import android.app.job.JobParameters;
 import android.app.job.JobService;
 import android.os.AsyncTask;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Looper;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.room.Room;
-
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.google.android.gms.common.api.Api;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -27,12 +15,11 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,8 +31,6 @@ import de.mimuc.senseeverything.data.DataStoreManager;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.db.LogData;
 import kotlin.Unit;
-import kotlin.coroutines.Continuation;
-import kotlinx.coroutines.flow.FlowCollector;
 
 @AndroidEntryPoint
 public class UploadJobService extends JobService {
@@ -108,7 +93,7 @@ public class UploadJobService extends JobService {
 
         ApiClient client = ApiClient.getInstance(getApplicationContext());
 
-        dataStore.tokenBlocking((token) -> {
+        dataStore.getTokenSync((token) -> {
             if (token.isEmpty()) {
                 Log.e(TAG, "no token found");
                 return Unit.INSTANCE;
@@ -125,28 +110,53 @@ public class UploadJobService extends JobService {
                         }
 
                         AsyncTask.execute(() -> {
-                            db.logDataDao().updateLogData(data.toArray(new LogData[data.size()]));
-                            Log.i(TAG, "batch synced successful");
+                            try {
+                                db.logDataDao().updateLogData(data.toArray(new LogData[data.size()]));
+                                Log.i(TAG, "batch synced successful");
 
-                            // upload files if we need to
-                            for (LogData logData : data) {
-                                if (logData.hasFile) {
-                                    JSONObject reading = findReading(response, logData);
-                                    if (reading != null) {
-                                        try {
-                                            Log.i(TAG, "syncing file: " + reading.toString());
-                                            syncRequiredFile(logData, reading.getInt("id"));
-                                        } catch (JSONException e) {
-                                            throw new RuntimeException(e);
+                                // count files to be synced
+                                int filesToSync = 0;
+                                for (LogData logData : data) {
+                                    if (logData.hasFile) {
+                                        filesToSync++;
+                                    }
+                                }
+
+                                if (filesToSync == 0) {
+                                    // No files to sync, proceed to next batch
+                                    syncNextNActivities(batchSize);
+                                    Log.i(TAG, "Next batch sync initiated");
+                                    return;
+                                }
+
+                                CountDownLatch latch = new CountDownLatch(filesToSync);
+
+                                // upload files if we need to
+                                for (LogData logData : data) {
+                                    if (logData.hasFile) {
+                                        JSONObject reading = findReading(response, logData);
+                                        if (reading != null) {
+                                            try {
+                                                Log.i(TAG, "syncing file: " + reading.toString());
+                                                syncRequiredFile(logData, reading.getInt("id"), latch);
+                                            } catch (JSONException e) {
+                                                Log.e(TAG, "Error syncing file: " + e.getMessage(), e);
+                                                latch.countDown();
+                                            }
                                         }
                                     }
                                 }
+
+                                // Wait for all file syncs to complete
+                                latch.await();
+                                Log.i(TAG, "All files synced");
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error in AsyncTask: " + e.getMessage(), e);
+                            } finally {
+                                // Next batch
+                                syncNextNActivities(batchSize);
+                                Log.i(TAG, "Next batch sync initiated");
                             }
-
-                            Log.i(TAG, "all files synced");
-
-                            // next batch
-                            syncNextNActivities(batchSize);
                         });
                     }, error -> Log.e(TAG, error.toString()));
 
@@ -154,14 +164,16 @@ public class UploadJobService extends JobService {
         });
     }
 
-    private void syncRequiredFile(LogData data, int readingId) {
+    private void syncRequiredFile(LogData data, int readingId, CountDownLatch latch) {
         String filePath = data.filePath;
 
         try {
             File file = new File(filePath);
             if (!file.exists()) {
                 Log.e(TAG, "file not found: " + filePath);
-                throw new FileNotFoundException();
+
+                latch.countDown();
+                return;
             }
 
             byte[] bytes = readFileBytes(file);
@@ -169,10 +181,12 @@ public class UploadJobService extends JobService {
 
             ApiClient client = ApiClient.getInstance(getApplicationContext());
 
-            dataStore.tokenBlocking(token -> {
+
+            dataStore.getTokenSync(token -> {
                 HashMap<String, String> formData = new HashMap<>();
                 HashMap<String, String> headers = new HashMap<>();
                 headers.put("Authorization", "Bearer " + token);
+
 
                 client.postFile(
                         "https://siapi.timweiss.dev/v1/reading/" + readingId + "/file",
@@ -183,14 +197,22 @@ public class UploadJobService extends JobService {
                         headers,
                         response -> {
                             Log.d(TAG, response.toString());
+                            latch.countDown();
                         },
-                        error -> Log.e(TAG, error.toString())
+                        error -> {
+                            Log.e(TAG, error.toString());
+                            latch.countDown();
+                        }
                 );
+
+                Log.i(TAG, "file sync successful");
+                latch.countDown();
 
                 return Unit.INSTANCE;
             });
         } catch (IOException e) {
             Log.e(TAG, "failed to read file: " + filePath);
+            latch.countDown();
         }
     }
 

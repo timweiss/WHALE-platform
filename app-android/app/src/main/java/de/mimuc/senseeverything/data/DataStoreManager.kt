@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
@@ -37,10 +38,11 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences[TOKEN] ?: ""
     }
 
-    fun tokenBlocking(callback: (String) -> Unit) {
+    fun getTokenSync(callback: (String) -> Unit) {
         runBlocking {
-            tokenFlow.collect { token ->
+            tokenFlow.first { token ->
                 callback(token)
+                true
             }
         }
     }
@@ -56,10 +58,11 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences[PARTICIPANT_ID] ?: ""
     }
 
-    fun participantIdBlocking(callback: (String) -> Unit) {
+    fun getParticipantIdSync(callback: (String) -> Unit) {
         runBlocking {
-            participantIdFlow.collect { participantId ->
+            participantIdFlow.first { participantId ->
                 callback(participantId)
+                true
             }
         }
     }

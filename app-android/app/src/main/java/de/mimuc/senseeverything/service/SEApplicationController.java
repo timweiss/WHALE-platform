@@ -59,5 +59,4 @@ public class SEApplicationController extends Application {
 
         getRequestQueue().add(req);
     }
-
 }
