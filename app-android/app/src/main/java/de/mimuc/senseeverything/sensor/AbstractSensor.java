@@ -9,6 +9,7 @@ import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.db.LogData;
 
 import android.content.Context;
+import android.os.AsyncTask;
 import android.util.Log;
 import android.view.View;
 
@@ -73,10 +74,12 @@ public abstract class AbstractSensor implements Serializable  {
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){
-		dataSource.write(timestamp, data);
+		// dataSource.write(timestamp, data);
 
 		// new: database
-		// db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));
+		AsyncTask.execute(() -> {
+			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));
+		});
 	}
 
 	protected void closeDataSource() {

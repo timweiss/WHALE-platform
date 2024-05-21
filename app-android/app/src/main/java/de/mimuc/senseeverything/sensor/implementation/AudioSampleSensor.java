@@ -142,7 +142,9 @@ public class AudioSampleSensor extends AbstractSensor {
 			Log.d(TAG, "stopped recording by daemon");
 			m_IsRunning = false;
 			try {
-				stopRecording();
+				if (mediaRecorder != null) {
+					stopRecording();
+				}
 				closeDataSource();
 			} catch (Exception e) {
 				Log.e(TAG, e.toString());
