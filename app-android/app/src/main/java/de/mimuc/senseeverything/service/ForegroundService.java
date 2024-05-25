@@ -10,6 +10,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Build;
@@ -69,7 +70,11 @@ public abstract class  ForegroundService extends Service {
 				.setSmallIcon(R.drawable.ic_launcher)
 				.setContentIntent(pendingIntent)
 				.build();
-		startForeground(101, notification);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			startForeground(101, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+		} else {
+			startForeground(101, notification);
+		}
 	}
 
 	@RequiresApi(Build.VERSION_CODES.O)

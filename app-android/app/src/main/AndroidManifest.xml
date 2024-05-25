@@ -67,7 +67,9 @@
         <service
             android:name=".service.LogService"
             android:process=":remote"
-            android:stopWithTask="false">
+            android:stopWithTask="false"
+            android:foregroundServiceType="microphone"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.CONFIGURATION_CHANGED" />
             </intent-filter>
