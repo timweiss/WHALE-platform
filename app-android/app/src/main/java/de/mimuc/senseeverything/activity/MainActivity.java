@@ -6,25 +6,19 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.adapter.SensorAdapter;
 import de.mimuc.senseeverything.db.AppDatabase;
-import de.mimuc.senseeverything.db.LogData;
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.network.UploadJobService;
 import de.mimuc.senseeverything.sensor.SensorList;
 import de.mimuc.senseeverything.service.AccessibilityLogService;
-import de.mimuc.senseeverything.service.LogService;
 import de.mimuc.senseeverything.service.SEApplicationController;
-import de.mimuc.senseeverything.service.SamplingManager;
+import de.mimuc.senseeverything.service.sampling.SamplingManager;
 
 import android.Manifest;
-import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -175,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
 
 		m_List.setEnabled(true);
 
-		if (SamplingManager.isLogServiceRunning(this)){
+		if (SEApplicationController.getInstance().getSamplingManager().isRunning(this)){
 			m_ButtonStart.setVisibility(View.GONE);
 			m_ButtonStop.setVisibility(View.VISIBLE);
 			Log.d(TAG, "RESUME: service active");
@@ -193,7 +187,6 @@ public class MainActivity extends AppCompatActivity {
 			m_ButtonStop.setVisibility(View.VISIBLE);
 			Log.d(TAG, "START TRACKING!");
 			SEApplicationController.getInstance().getSamplingManager().startSampling(MainActivity.this);
-			// startLogService(MainActivity.this);
 		}
 	};
 	
@@ -202,7 +195,6 @@ public class MainActivity extends AppCompatActivity {
 		public void onClick(View v) {
 			m_ButtonStart.setVisibility(View.VISIBLE);
 			m_ButtonStop.setVisibility(View.GONE);
-			// stopLogService(MainActivity.this);
 			SEApplicationController.getInstance().getSamplingManager().stopSampling(MainActivity.this);
 		}
 	};

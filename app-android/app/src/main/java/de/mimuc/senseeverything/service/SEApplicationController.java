@@ -7,6 +7,8 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 
 import dagger.hilt.android.HiltAndroidApp;
+import de.mimuc.senseeverything.service.sampling.PeriodicSamplingStrategy;
+import de.mimuc.senseeverything.service.sampling.SamplingManager;
 
 @HiltAndroidApp
 public class SEApplicationController extends Application {
@@ -64,7 +66,7 @@ public class SEApplicationController extends Application {
 
     public SamplingManager getSamplingManager() {
         if (mSamplingManager == null) {
-            mSamplingManager = new SamplingManager();
+            mSamplingManager = new SamplingManager(new PeriodicSamplingStrategy());
         }
         return mSamplingManager;
     }
