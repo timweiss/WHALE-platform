@@ -23,6 +23,8 @@ public class SEApplicationController extends Application {
      */
     private RequestQueue mRequestQueue;
 
+    private SamplingManager mSamplingManager;
+
     /**
      * Method to access the ApplicationController singleton instance
      * @return ApplicationController singleton instance
@@ -58,5 +60,12 @@ public class SEApplicationController extends Application {
         req.setTag(TAG);
 
         getRequestQueue().add(req);
+    }
+
+    public SamplingManager getSamplingManager() {
+        if (mSamplingManager == null) {
+            mSamplingManager = new SamplingManager();
+        }
+        return mSamplingManager;
     }
 }

@@ -12,6 +12,8 @@ import de.mimuc.senseeverything.network.UploadJobService;
 import de.mimuc.senseeverything.sensor.SensorList;
 import de.mimuc.senseeverything.service.AccessibilityLogService;
 import de.mimuc.senseeverything.service.LogService;
+import de.mimuc.senseeverything.service.SEApplicationController;
+import de.mimuc.senseeverything.service.SamplingManager;
 
 import android.Manifest;
 import android.app.Activity;
@@ -173,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
 
 		m_List.setEnabled(true);
 
-		if (isLogServiceRunning(this)){
+		if (SamplingManager.isLogServiceRunning(this)){
 			m_ButtonStart.setVisibility(View.GONE);
 			m_ButtonStop.setVisibility(View.VISIBLE);
 			Log.d(TAG, "RESUME: service active");
@@ -190,7 +192,8 @@ public class MainActivity extends AppCompatActivity {
 			m_ButtonStart.setVisibility(View.GONE);
 			m_ButtonStop.setVisibility(View.VISIBLE);
 			Log.d(TAG, "START TRACKING!");
-			startLogService(MainActivity.this);
+			SEApplicationController.getInstance().getSamplingManager().startSampling(MainActivity.this);
+			// startLogService(MainActivity.this);
 		}
 	};
 	
@@ -199,7 +202,8 @@ public class MainActivity extends AppCompatActivity {
 		public void onClick(View v) {
 			m_ButtonStart.setVisibility(View.VISIBLE);
 			m_ButtonStop.setVisibility(View.GONE);
-			stopLogService(MainActivity.this);
+			// stopLogService(MainActivity.this);
+			SEApplicationController.getInstance().getSamplingManager().stopSampling(MainActivity.this);
 		}
 	};
 
@@ -258,39 +262,6 @@ public class MainActivity extends AppCompatActivity {
 			m_ButtonAccessibility.setTextColor(Color.GREEN);
 			m_ButtonAccessibility.setText(R.string.accessibility_button_On);
 		}
-	}
-	
-
-	private static PendingIntent getPendingIntent(Context context) {
-		Intent alarmIntent = new Intent(context.getApplicationContext(), LogService.class);
-		return PendingIntent.getService(context, 0, alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-	}
-	
-
-	public static void startLogService(Context context) {
-		Intent intent = new Intent(context, LogService.class);
-		context.startService(intent);
-		AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-		PendingIntent pendingIntent = getPendingIntent(context);
-		long m_AlarmInterval = 60 * 1000;
-		alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + m_AlarmInterval, m_AlarmInterval, pendingIntent);
-		SharedPreferences sp = context.getSharedPreferences(CONST.SP_LOG_EVERYTHING, Activity.MODE_PRIVATE);
-		sp.edit().putBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, true).apply();
-	}
-
-	private void stopLogService(Context context) {
-		Intent intent = new Intent(context, LogService.class);
-		context.stopService(intent);
-		AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-		PendingIntent pendingIntent = getPendingIntent(context);
-		alarmManager.cancel(pendingIntent);
-		SharedPreferences sp = context.getSharedPreferences(CONST.SP_LOG_EVERYTHING, Activity.MODE_PRIVATE);
-		sp.edit().putBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, false).apply();
-	}
-	
-	public static boolean isLogServiceRunning(Context context) {
-		SharedPreferences sp = context.getSharedPreferences(CONST.SP_LOG_EVERYTHING, Activity.MODE_PRIVATE);
-		return sp.getBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, false);
 	}
 
 	private boolean isAccessibilityServiceEnabled(Context context) {
