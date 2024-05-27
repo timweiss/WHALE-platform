@@ -9,6 +9,7 @@ import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.network.UploadJobService;
 import de.mimuc.senseeverything.sensor.SensorList;
+import de.mimuc.senseeverything.sensor.SingletonSensorList;
 import de.mimuc.senseeverything.service.AccessibilityLogService;
 import de.mimuc.senseeverything.service.SEApplicationController;
 import de.mimuc.senseeverything.service.sampling.SamplingManager;
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
 		setAccessibilityButtonState ();
 		
 		SensorDatabaseHelper db = new SensorDatabaseHelper(this);
-		SensorList.getList(this);		
+		SingletonSensorList.getList(this);
 		
 		SensorAdapter adapter = new SensorAdapter(this, db.getCursor());
 		
