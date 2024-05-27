@@ -117,10 +117,9 @@ public abstract class  ForegroundService extends Service {
 		stopForeground(true);
 		super.onDestroy();
 	}
-	
+
 	@Override
 	public IBinder onBind(Intent intent) {
 		return null;
 	}
-
 }
