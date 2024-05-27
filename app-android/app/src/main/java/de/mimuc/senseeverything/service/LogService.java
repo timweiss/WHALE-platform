@@ -6,8 +6,10 @@ import java.util.List;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -18,9 +20,11 @@ import android.util.Log;
 public class LogService extends AbstractService {
 	public static final int START_SENSORS = 0;
 	public static final int STOP_SENSORS = 1;
+	public static final int LISTEN_LOCK_UNLOCK = 2;
 
 	private List<AbstractSensor> sensorList = null;
 	private Messenger mMessenger;
+	private BroadcastReceiver broadcastReceiver;
 
 	@Override
 	public void onCreate() {
@@ -40,6 +44,7 @@ public class LogService extends AbstractService {
 	@Override
 	public void onDestroy() {
 		stopSensors();
+		unregisterReceiver(broadcastReceiver);
 		super.onDestroy();
 	}
 
@@ -68,6 +73,10 @@ public class LogService extends AbstractService {
 						service.stopSensors();
 						break;
 					}
+					case LISTEN_LOCK_UNLOCK: {
+						service.listenForLockUnlock();
+						break;
+					}
 					default:
 						super.handleMessage(msg);
 				}
@@ -75,6 +84,33 @@ public class LogService extends AbstractService {
 				Log.e(TAG, "Service has unexpectedly died");
 			}
 		}
+	}
+
+	/* todo: this behavior is necessary to run inside a ForegroundService
+	    but I generally want to capsule the behavior to how we're sampling the sensors (so in the sampling strategy)
+	    now we're calling it from the OnUnlockSamplingStrategy and would not be if we're periodically sensing, but we want to do both,
+	    so instead we might want to have another ForegroundService for this?
+	 */
+	private void listenForLockUnlock() {
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(Intent.ACTION_USER_PRESENT);
+		filter.addAction(Intent.ACTION_SCREEN_OFF);
+
+		broadcastReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+					Log.d(TAG, "device locked, stopping sampling");
+					stopSensors();
+				} else {
+					Log.d(TAG, "device unlocked, starting sampling");
+					// fixme: handle condition where logging might still be running?
+					startSensors();
+				}
+			}
+		};
+		registerReceiver(broadcastReceiver, filter);
+		Log.d(TAG, "registered broadcast receiver");
 	}
 
 

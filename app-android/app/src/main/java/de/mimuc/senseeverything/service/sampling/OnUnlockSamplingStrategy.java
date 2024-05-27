@@ -1,19 +1,16 @@
 package de.mimuc.senseeverything.service.sampling;
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
+import android.os.RemoteException;
 import android.util.Log;
 
 import de.mimuc.senseeverything.activity.CONST;
@@ -28,28 +25,7 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
 
     @Override
     public void start(Context context) {
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_USER_PRESENT);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-
         startLogService(context);
-
-        // fixme: this will stop working once the application is not visible
-        // and afterwards, it will receive all events at once once the MainActivity is opened up again
-        // probably we'll need another layering of the ForegroundService to allow this
-        context.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-                    Log.d(TAG, "device locked, stopping sampling");
-                    stopSampling();
-                } else {
-                    Log.d(TAG, "device unlocked, starting sampling");
-                    // fixme: handle condition where logging might still be running?
-                    startSampling();
-                }
-            }
-        }, filter);
     }
 
     @Override
@@ -71,7 +47,6 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
         } catch (Exception e) {
             Log.e(TAG, "failed to stop service", e);
         }
-
     }
 
     @Override
@@ -103,22 +78,15 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d(TAG, "LogService connected");
             logServiceMessenger = new Messenger(service);
+
+            // we can only tell it to listen once we've connected to the LogService
+            try {
+                logServiceMessenger.send(Message.obtain(null, LogService.LISTEN_LOCK_UNLOCK, 0, 0));
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
         }
     };
-
-    private void startSampling() {
-        if (logServiceMessenger == null)
-        {
-            Log.e(TAG, "logService is null");
-            return;
-        }
-
-        try {
-            logServiceMessenger.send(Message.obtain(null, LogService.START_SENSORS, 0, 0));
-        } catch (Exception e) {
-            Log.e(TAG, "failed to send message", e);
-        }
-    }
 
     private void stopSampling() {
         if (logServiceMessenger == null)

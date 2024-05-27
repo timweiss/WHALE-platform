@@ -13,13 +13,7 @@ import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class AudioSampleSensor extends AbstractSensor {
 	private static final long serialVersionUID = 1L;
-
-	private static final int RECORDING_TIME = 1000 * 60; // one minute
-	private static final int COOLDOWN_TIME = 1000 * 60 * 10; // 10 minutes
-
-	private final Handler handler = new Handler();
 	private MediaRecorder mediaRecorder;
-	private boolean shouldRecord = true;
 	private final Context context;
 	private final String guid = UUID.randomUUID().toString();
 	private String currentRecordingFilename;
@@ -54,29 +48,9 @@ public class AudioSampleSensor extends AbstractSensor {
 
 		Log.d(TAG, "audioSampleSensor: start called, guid" + guid);
 
-		try {
+		if (initMediaRecorder()) {
+			startRecording();
 			m_IsRunning = true;
-			Runnable recordJob = new Runnable() {
-				@Override
-				public void run() {
-					if (initMediaRecorder()) {
-						Log.d(TAG, "running in loop again with shouldRecord =" + shouldRecord + " guid " + guid);
-						// we start
-						if (m_IsRunning && shouldRecord) {
-							Log.d(TAG, "starting recording, will stop in " + RECORDING_TIME + "ms");
-							startRecording();
-							handler.postDelayed(this, RECORDING_TIME);
-						} else if (m_IsRunning && mediaRecorder != null) {
-							Log.d(TAG, "resetting recording, will start again in " + COOLDOWN_TIME + "ms");
-							stopRecording();
-							handler.postDelayed(this, COOLDOWN_TIME);
-						}
-					}
-				}
-			};
-			recordJob.run();
-		} catch (Exception e) {
-			Log.e(TAG, e.toString());
 		}
 	}
 
@@ -92,11 +66,10 @@ public class AudioSampleSensor extends AbstractSensor {
 		mediaRecorder.reset();
 		mediaRecorder.release();
 		mediaRecorder = null;
-		shouldRecord = true;
 
 		// write data
 		Long t = System.currentTimeMillis();
-		onLogDataItem(t, currentRecordingFilename);
+		onLogDataItemWithFile(t, currentRecordingFilename, currentRecordingFilename);
 	}
 
 	private void startRecording() {
@@ -107,7 +80,6 @@ public class AudioSampleSensor extends AbstractSensor {
 			currentRecordingFilename = filename;
 			mediaRecorder.prepare();
 			mediaRecorder.start();
-			shouldRecord = false;
 		} catch (IOException e) {
 			Log.e(TAG, e.toString());
 		}
