@@ -85,6 +85,7 @@ public class UploadJobService extends JobService {
                 JSONObject o = new JSONObject();
                 o.put("sensorType", logData.sensorName);
                 o.put("data", logData.data);
+                o.put("timestamp", logData.timestamp + ""); // fixme: we might need to resolve the timezone here?
                 jsonReadings.put(o);
             } catch (JSONException e) {
                 throw new RuntimeException(e);

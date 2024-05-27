@@ -21,6 +21,7 @@ export interface SensorReading {
   enrolmentId: number;
   sensorType: SensorType;
   data: SensorData;
+  timestamp: string;
 }
 
 export interface UploadFile {
@@ -130,17 +131,18 @@ export class Repository implements IRepository {
 
   async createSensorReading(
     enrolmentId: number,
-    reading: Pick<SensorReading, 'sensorType' | 'data'>,
+    reading: Pick<SensorReading, 'sensorType' | 'timestamp' | 'data'>,
   ): Promise<SensorReading> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO sensor_readings (enrolment_id, sensor_type, data) VALUES ($1, $2, $3) RETURNING *',
-        [enrolmentId, reading.sensorType, reading.data],
+        'INSERT INTO sensor_readings (enrolment_id, sensor_type, timestamp, data) VALUES ($1, $2, $3, $4) RETURNING *',
+        [enrolmentId, reading.sensorType, reading.timestamp, reading.data],
       );
       return {
         id: res.rows[0].id,
         enrolmentId: res.rows[0].enrolment_id,
         sensorType: res.rows[0].sensor_type,
+        timestamp: res.rows[0].timestamp,
         data: res.rows[0].data,
       };
     } catch (e) {
@@ -150,14 +152,14 @@ export class Repository implements IRepository {
 
   async createSensorReadingBatched(
     enrolmentId: number,
-    readings: Pick<SensorReading, 'sensorType' | 'data'>[],
+    readings: Pick<SensorReading, 'sensorType' | 'timestamp' | 'data'>[],
   ): Promise<SensorReading[]> {
     try {
       const batched = await Promise.all(
         readings.map((reading) =>
           this.pool.query(
-            'INSERT INTO sensor_readings (enrolment_id, sensor_type, data) VALUES ($1, $2, $3) RETURNING *',
-            [enrolmentId, reading.sensorType, reading.data],
+            'INSERT INTO sensor_readings (enrolment_id, sensor_type, timestamp, data) VALUES ($1, $2, $3, $4) RETURNING *',
+            [enrolmentId, reading.sensorType, reading.timestamp, reading.data],
           ),
         ),
       );
@@ -166,6 +168,7 @@ export class Repository implements IRepository {
         id: res.rows[0].id,
         enrolmentId: res.rows[0].enrolment_id,
         sensorType: res.rows[0].sensor_type,
+        timestamp: res.rows[0].timestamp,
         data: res.rows[0].data,
       }));
     } catch (e) {

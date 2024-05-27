@@ -237,6 +237,7 @@ components:
         - enrolmentId
         - sensorType
         - data
+        - timestamp
       properties:
         id:
           type: integer
@@ -250,6 +251,9 @@ components:
         data:
           type: object
           description: The data from the sensor reading.
+        timestamp:
+          type: string
+          description: The timestamp of the reading.
 
     Enrolment:
       type: object
