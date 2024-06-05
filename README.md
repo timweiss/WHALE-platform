@@ -4,10 +4,12 @@ Social Sensing environment.
 ## Tasks
 - [ ] Use WorkManager to schedule backend pushes
 - [ ] Implement API in app (pushing data, showing study name)
-- [ ] Add radio frequency sensor
+- [ ] Revamp AppSensor so it actually retrieves the currently open app (probably with AccessibilityService)
+- [ ] Add radio frequency (maybe Bluetooth and WiFi?) sensor
 - [ ] Add notification sensor
-- [ ] Detect if a conversation happens
+- [ ] Detect if a conversation happens (see openSMILE)
 - [ ] Allow to sample on lock/unlock and continuously in a set interval
+- [x] Sample whenever the device gets unlocked
 - [x] Create simple backend that receives pushed data (audio and other sample readings)
 - [x] Add (crude) study enrolment interface
 - [x] Integrate AudioSampleService to use default content pipeline

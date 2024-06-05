@@ -98,10 +98,6 @@ public abstract class  ForegroundService extends Service {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		super.onStartCommand(intent, flags, startId);
-		
-		if(!m_wakeLock.isHeld()) {
-			m_wakeLock.acquire();
-		}
 				
 		return Service.START_STICKY;
 	}
