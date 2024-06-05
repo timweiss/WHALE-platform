@@ -8,6 +8,8 @@ import java.util.List;
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.sensor.implementation.AppSensor;
 import de.mimuc.senseeverything.sensor.implementation.AudioSampleSensor;
+import de.mimuc.senseeverything.sensor.implementation.MyAccelerometerSensor;
+import de.mimuc.senseeverything.sensor.implementation.MyGyroscopeSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyProximitySensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOnOffSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOrientationSensor;
@@ -38,6 +40,8 @@ public class SingletonSensorList {
 		this.list.add(new AppSensor(aContext));
 		this.list.add(new ScreenOnOffSensor(aContext));
 		this.list.add(new WifiSensor(aContext));
+		this.list.add(new MyAccelerometerSensor(aContext));
+		this.list.add(new MyGyroscopeSensor(aContext));
 
 		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
 

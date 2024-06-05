@@ -55,7 +55,7 @@ public class UploadJobService extends JobService {
 
         myExecutor.execute(() -> {
             // do stuff here
-            syncNextNActivities(10, jobParameters);
+            syncNextNActivities(60, jobParameters);
         });
 
         return true;
