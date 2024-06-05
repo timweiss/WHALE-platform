@@ -14,9 +14,17 @@ Currently, sampling is manually started. It is managed by [SamplingManager](app/
     * for a specific duration after the event
     * until another events stops it
 
+In the future, **both** strategies should be applied:
+* we should be able to define some sensors for each strategy
+* a scheduling service will set up the listeners as well as running the continuous sampling
+
 #### Components
-* [AudioSampleService](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AudioSampleSensor.java): We need to record in different intervals (eg. 60 seconds for every 10 minutes), so it does not "reactivate" through the default sampling method
+* [AudioSampleService](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AudioSampleSensor.java): Will record audio until it is stopped again
 * [SingletonSensorList](app/src/main/java/de/mimuc/senseeverything/sensor/SingletonSensorList.java): For long-running tasks, we want to reuse the existing sensor instances, and clean them up manually
 
-## Things I'm not sure about yet
-* Why does [ForegroundService](app/src/main/java/de/mimuc/senseeverything/service/ForegroundService.java) require a wakelock? I don't think it's necessary for it to do so (see [Foreground services](https://developer.android.com/develop/background-work/services/foreground-services))
+## Known Issues
+* AppSensor does not sample the foreground activity (function was deprecated with Android Lollipop)
+  * **Needs Clarification**: Instead, we could either use the AccessibilityService to sample open apps, but this different modelling of data flow
+  * **Needs Clarification**: We could also use the [UsageStats](https://developer.android.com/reference/android/app/usage/UsageStats) if [`getLastTimeUsed()`](https://developer.android.com/reference/android/app/usage/UsageStats#getLastTimeUsed()) is reliable enough
+* Starting with Android 15, we can [no longer run a foreground service](https://developer.android.com/about/versions/15/changes/foreground-service-types#microphone) that'll record from the microphone
+  * **Needs Clarification**: Instead, we could maybe ask the participants to open the app so the microphone becomes active again? 

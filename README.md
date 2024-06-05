@@ -8,7 +8,7 @@ Social Sensing environment.
 - [ ] Add radio frequency (maybe Bluetooth and WiFi?) sensor
 - [ ] Add notification sensor
 - [ ] Detect if a conversation happens (see openSMILE)
-- [ ] Allow to sample on lock/unlock and continuously in a set interval
+- [ ] Allow to sample on lock/unlock and continuously in a set interval (maybe we can define some sensors to run in a periodic interval and others to sample on interaction)
 - [x] Sample whenever the device gets unlocked
 - [x] Create simple backend that receives pushed data (audio and other sample readings)
 - [x] Add (crude) study enrolment interface
