@@ -31,10 +31,11 @@ public class AppSensor extends AbstractSensor {
 		return true;
 	}
 
-	private static String getForegroundApp(Context context) {
+	private String getForegroundApp(Context context) {
 		try {
+			// fixme: this has been deprecated and always just yields de.mimuc.senseeverything
 			ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-			return activityManager.getRunningTasks(1).get(0).topActivity.getPackageName();
+            return activityManager.getRunningTasks(1).get(0).topActivity.getPackageName();
 		} catch (Exception e) {
 			return null;
 		}

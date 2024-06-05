@@ -93,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
 		isPermissionGranted(Manifest.permission.READ_PHONE_STATE);
 		isPermissionGranted(Manifest.permission.ACCESS_NETWORK_STATE);
 		isPermissionGranted(Manifest.permission.FOREGROUND_SERVICE);
+		isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION);
 
 		if (checkPermission()) {
 			requestPermission();
