@@ -95,6 +95,11 @@ public class MainActivity extends AppCompatActivity {
 		isPermissionGranted(Manifest.permission.FOREGROUND_SERVICE);
 		isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION);
 
+		if (SDK_INT >= Build.VERSION_CODES.S) {
+			isPermissionGranted(Manifest.permission.BLUETOOTH_SCAN);
+//			isPermissionGranted(Manifest.permission.BLUETOOTH_CONNECT);
+		}
+
 		if (checkPermission()) {
 			requestPermission();
 		}

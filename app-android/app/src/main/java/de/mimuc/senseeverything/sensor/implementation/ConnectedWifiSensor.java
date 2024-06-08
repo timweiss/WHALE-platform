@@ -9,11 +9,11 @@ import android.net.wifi.WifiManager;
 import android.util.Log;
 import android.view.View;
 
-public class WifiSensor extends AbstractSensor {
+public class ConnectedWifiSensor extends AbstractSensor {
 	
 	private static final long serialVersionUID = 1L;
 	
-	public WifiSensor(Context applicationContext) {
+	public ConnectedWifiSensor(Context applicationContext) {
 		super(applicationContext);
 		m_IsRunning = false;
 		TAG = getClass().getName();

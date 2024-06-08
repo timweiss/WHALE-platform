@@ -20,8 +20,6 @@ public class AccessibilityLogService extends AccessibilityService {
 	
 	public static final String SERVICE = "de.mimuc.senseeverything/de.mimuc.senseeverything.service.AccessibilityLogService";
 	
-	private PowerManager.WakeLock m_wakeLock;	
-	
 	private final AccessibilityServiceInfo info = new AccessibilityServiceInfo();
 	
 	@Override
@@ -89,11 +87,6 @@ public class AccessibilityLogService extends AccessibilityService {
     @Override
 	public void onDestroy() {
 		Log.d(TAG, "service stopped");
-		
-		if(m_wakeLock.isHeld()) {
-			m_wakeLock.release();			
-		}
-		
 		stopForeground(true);
 		super.onDestroy();
 	}
