@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
+import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
 import de.mimuc.senseeverything.sensor.implementation.AppSensor;
 import de.mimuc.senseeverything.sensor.implementation.AudioSampleSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyAccelerometerSensor;
@@ -37,11 +38,11 @@ public class SingletonSensorList {
 		this.list.add(new AudioSampleSensor(aContext));
 		this.list.add(new ScreenOrientationSensor(aContext));
 		this.list.add(new MyProximitySensor(aContext));
-		this.list.add(new AppSensor(aContext));
 		this.list.add(new ScreenOnOffSensor(aContext));
 		this.list.add(new WifiSensor(aContext));
 		this.list.add(new MyAccelerometerSensor(aContext));
 		this.list.add(new MyGyroscopeSensor(aContext));
+		this.list.add(new AccessibilitySensor(aContext));
 
 		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
 

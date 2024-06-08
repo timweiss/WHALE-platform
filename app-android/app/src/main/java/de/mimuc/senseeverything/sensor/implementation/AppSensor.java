@@ -7,6 +7,10 @@ import android.content.Context;
 import android.util.Log;
 import android.view.View;
 
+@Deprecated
+/**
+ * @deprecated AppSensor uses deprecated APIs that cannot be used anymore, instead AccessibilitySensor can be used to infer app usage.
+ */
 public class AppSensor extends AbstractSensor {
 	
 	private static final long serialVersionUID = 1L;
