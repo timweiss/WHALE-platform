@@ -28,25 +28,7 @@ public class AccessibilityLogService extends AccessibilityService {
     public void onCreate() {
 		super.onCreate();
 		Log.d(TAG, "onCreate");
-		
-		/*Intent notificationIntent = new Intent(this, MainActivity.class);
-		notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
-		NotificationCompat.Builder notification = new NotificationCompat.Builder(
-				getApplicationContext()).setSmallIcon(R.drawable.ic_launcher)
-				.setTicker(getText(R.string.notif_ticker))
-				.setContentTitle(getText(R.string.notif_title))
-				.setContentText(getText(R.string.notif_text))
-				.setContentIntent(pendingIntent).setAutoCancel(true)
-				.setOngoing(true).setContentInfo("");
-
-		startForeground(42, notification.build());*/
-
-		PowerManager powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-		m_wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
 	}
-	
 	
 	@Override
     public void onInterrupt() {
@@ -100,20 +82,7 @@ public class AccessibilityLogService extends AccessibilityService {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		super.onStartCommand(intent, flags, startId);
 		Log.d(TAG, "onStartCommand() was called");
-				
-		if(!m_wakeLock.isHeld()) {
-			m_wakeLock.acquire();
-		}		
-		new Handler().postDelayed(new Runnable() {
-			@Override
-			    public void run() {
-					if(m_wakeLock.isHeld()) {
-						m_wakeLock.release();			
-					}
-			    }
-			},
-			10000);
-		
+
 		return Service.START_STICKY;
 	}
 	    

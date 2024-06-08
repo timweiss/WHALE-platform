@@ -11,6 +11,7 @@ import de.mimuc.senseeverything.sensor.implementation.AppSensor;
 import de.mimuc.senseeverything.sensor.implementation.AudioSampleSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyAccelerometerSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyGyroscopeSensor;
+import de.mimuc.senseeverything.sensor.implementation.MyLightSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyProximitySensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOnOffSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOrientationSensor;
@@ -43,6 +44,7 @@ public class SingletonSensorList {
 		this.list.add(new MyAccelerometerSensor(aContext));
 		this.list.add(new MyGyroscopeSensor(aContext));
 		this.list.add(new AccessibilitySensor(aContext));
+		this.list.add(new MyLightSensor(aContext));
 
 		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
 

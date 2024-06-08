@@ -92,22 +92,11 @@ public class MyLightSensor extends AbstractSensor implements SensorEventListener
 	public void onSensorChanged(SensorEvent event) {
 		Long t = System.currentTimeMillis();
 		if(m_IsRunning) {
-		//	try {
-//				count++;
-				if(event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
-					onLogDataItem(t, CONST.numberFormat.format(event.values[0]) + ",false");
-					//m_OutputStream.write((t + "," + CONST.numberFormat.format(event.values[0]) + ",false\n").getBytes());
-				} else {
-					onLogDataItem(t, CONST.numberFormat.format(event.values[0]) + ",true");
-					//m_OutputStream.write((t + "," + CONST.numberFormat.format(event.values[0]) + ",true\n").getBytes());
-				}
-//				int flushLevel = 100;
-//				if(count % flushLevel == 0) {
-//					m_OutputStream.flush();
-//				}
-//			} catch (Exception e) {
-//				Log.e(TAG, e.toString());
-//			}
+			if(event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+				onLogDataItem(t, CONST.numberFormat.format(event.values[0]) + ",false");
+			} else {
+				onLogDataItem(t, CONST.numberFormat.format(event.values[0]) + ",true");
+			}
 		}
 	}
 	
