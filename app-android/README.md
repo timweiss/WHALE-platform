@@ -24,7 +24,7 @@ In the future, **both** strategies should be applied:
 
 ## Known Issues
 * AppSensor does not sample the foreground activity (function was deprecated with Android Lollipop)
-  * **Needs Clarification**: Instead, we could either use the AccessibilityService to sample open apps, but this different modelling of data flow
-  * **Needs Clarification**: We could also use the [UsageStats](https://developer.android.com/reference/android/app/usage/UsageStats) if [`getLastTimeUsed()`](https://developer.android.com/reference/android/app/usage/UsageStats#getLastTimeUsed()) is reliable enough
+  * **Current Solution** We're using [AccessibilitySensor](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AccessibilitySensor.java) as it yields useful information about app use, which can be post-processed to infer opened apps and interactions
+  * *Alternative*: We could also use the [UsageStats](https://developer.android.com/reference/android/app/usage/UsageStats) if [`getLastTimeUsed()`](https://developer.android.com/reference/android/app/usage/UsageStats#getLastTimeUsed()) is reliable enough
 * Starting with Android 15, we can [no longer run a foreground service](https://developer.android.com/about/versions/15/changes/foreground-service-types#microphone) that'll record from the microphone
   * **Needs Clarification**: Instead, we could maybe ask the participants to open the app so the microphone becomes active again? 
