@@ -20,6 +20,9 @@ import android.widget.ArrayAdapter;
 import androidx.core.app.ActivityCompat;
 
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
@@ -28,6 +31,8 @@ public class BluetoothSensor extends AbstractSensor {
 	private static final long serialVersionUID = 1L;
 
 	private Context context;
+
+	private ExecutorService executor;
 
 	public BluetoothSensor(Context applicationContext) {
 		super(applicationContext);
@@ -69,11 +74,18 @@ public class BluetoothSensor extends AbstractSensor {
 		this.context = context;
 
 		Log.d(TAG, "Starting discovery");
-		BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-		mBluetoothAdapter.startDiscovery();
+		executor = Executors.newFixedThreadPool(1);
+		executor.execute(() -> {
+            BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (!mBluetoothAdapter.startDiscovery()) {
+                Log.e(TAG, "could not start discovery");
+                return;
+            }
 
-		IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-		context.registerReceiver(mReceiver, filter);
+            IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            context.registerReceiver(mReceiver, filter);
+        });
+
 
 		m_IsRunning = true;
 	}
@@ -101,8 +113,11 @@ public class BluetoothSensor extends AbstractSensor {
 	public void stop() {
 		if(m_IsRunning) {
 			m_IsRunning = false;
-			closeDataSource();
+			executor.shutdown();
+			BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+			mBluetoothAdapter.cancelDiscovery();
 			context.unregisterReceiver(mReceiver);
+			closeDataSource();
 		}
 	}
 }

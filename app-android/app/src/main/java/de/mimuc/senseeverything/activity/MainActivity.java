@@ -95,6 +95,9 @@ public class MainActivity extends AppCompatActivity {
 		isPermissionGranted(Manifest.permission.FOREGROUND_SERVICE);
 		isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION);
 
+		// fixme: this will open the settings page, we'll need to embed this into the onboarding process
+		isPermissionGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+
 		if (SDK_INT >= Build.VERSION_CODES.S) {
 			isPermissionGranted(Manifest.permission.BLUETOOTH_SCAN);
 //			isPermissionGranted(Manifest.permission.BLUETOOTH_CONNECT);
