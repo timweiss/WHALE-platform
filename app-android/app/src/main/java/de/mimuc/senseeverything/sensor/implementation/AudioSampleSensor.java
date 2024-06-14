@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 
+import com.audeering.opensmile.OpenSmileAdapter;
+
 import java.io.IOException;
 import java.util.UUID;
 
