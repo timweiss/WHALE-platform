@@ -123,7 +123,7 @@ public class ConversationSensor extends AbstractSensor {
         }*/
 
 		VadReader reader = new VadReader();
-		Log.d(TAG, "speech detected" + reader.detect(filename));
+		Log.d(TAG, "speech detected in frames " + reader.detect(filename).size());
     }
 
 	private void startRecording(Context context) {

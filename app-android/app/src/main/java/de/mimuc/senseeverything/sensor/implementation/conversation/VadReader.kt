@@ -8,8 +8,8 @@ import com.konovalov.vad.webrtc.config.SampleRate
 import java.io.File
 
 class VadReader {
-    fun detect(path: String): String {
-        var output  = ""
+    fun detect(path: String): List<AudioSegment> {
+        val frames = arrayListOf<AudioSegment>()
 
         VadWebRTC(
             sampleRate = SampleRate.SAMPLE_RATE_16K,
@@ -27,25 +27,42 @@ class VadReader {
                 val audioHeader = ByteArray(44).apply { input.read(this) }
                 var speechData = byteArrayOf()
 
+                var position = 0
+                var currentSectionLength = 0
+                var isSpeech = false
+
                 while (input.available() > 0) {
                     val frameChunk = ByteArray(chunkSize).apply { input.read(this) }
-                    Log.d("VadReader", "reading chunk " + frameChunk.size.toString())
 
                     if (vad.isSpeech(frameChunk)) {
-                        speechData += frameChunk
-                        Log.d("VadReader", "chunk with speech " + speechData.size.toString())
-                    } else {
-                        Log.d("VadReader", "chunk no speech " + speechData.size.toString())
-                        if (speechData.isNotEmpty()) {
-                            output += speechData.size.toString() + "speech"
+                        if (!isSpeech) {
+                            frames.add(AudioSegment(position, currentSectionLength, false))
+                            // was no speech, new section arrives
+                            currentSectionLength = 0
+                        }
 
-                            speechData = byteArrayOf()
+                        currentSectionLength += frameChunk.size
+                        isSpeech = true
+                    } else {
+                        if (isSpeech) {
+                            frames.add(AudioSegment(position, currentSectionLength, true))
+                            // was speech, new section arrives
+                            isSpeech = false
+                            currentSectionLength = 0
                         }
                     }
+
+                    position += frameChunk.size
                 }
+
+                // end of data
+                frames.add(AudioSegment(position, currentSectionLength, isSpeech))
+                Log.d("VadReader", "last section: $frames")
             }
         }
 
-        return output
+        return frames
     }
+
+    data class AudioSegment(val position: Int, val length: Int, val hasSpeech: Boolean)
 }
