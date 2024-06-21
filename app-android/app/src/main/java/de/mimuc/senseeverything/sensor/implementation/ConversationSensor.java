@@ -10,17 +10,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import com.konovalov.vad.webrtc.Vad;
-import com.konovalov.vad.webrtc.VadWebRTC;
-import com.konovalov.vad.webrtc.config.FrameSize;
-import com.konovalov.vad.webrtc.config.Mode;
-import com.konovalov.vad.webrtc.config.SampleRate;
-
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,6 +20,7 @@ import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.implementation.conversation.VadReader;
@@ -85,26 +76,23 @@ public class ConversationSensor extends AbstractSensor {
 	}
 
 	private void stopRecording() {
-		/*mediaRecorder.stop();
-		mediaRecorder.reset();
-		mediaRecorder.release();
-		mediaRecorder = null;*/
-
 		runningTask.cancel(true);
-
 		detectSpeechInSample(currentRecordingFilename);
-
-		// write data
-		Long t = System.currentTimeMillis();
-		onLogDataItemWithFile(t, currentRecordingFilename, currentRecordingFilename);
+		deleteFile(currentRecordingFilename);
 	}
 
 	private void detectSpeechInSample(String filename) {
 		VadReader reader = new VadReader();
 		List<VadReader.AudioSegment> segments = reader.detect(filename);
 		double speechPercentage = reader.calculateSpeechPercentage(segments);
+		double lengthInSeconds = reader.calculateLength(segments, 44100, 16);
 
-		Log.d(TAG, "speech detected in frames " + segments.size() + " " + speechPercentage + " of audio is speech");
+		String log = String.format(Locale.GERMAN, "%.2f;%2f", lengthInSeconds, speechPercentage);
+
+		Log.d(TAG, "speech detected in audio " + log);
+
+		Long t = System.currentTimeMillis();
+		onLogDataItem(t, log);
     }
 
 	private void startRecording(Context context) {
@@ -112,6 +100,13 @@ public class ConversationSensor extends AbstractSensor {
 		Log.i(TAG, "saving recording at location " + filename);
 		currentRecordingFilename = filename;
 		runningTask = new RecordWaveTask(context).execute(new File(currentRecordingFilename));
+	}
+
+	private void deleteFile(String filename) {
+		File existing = new File(filename);
+		if (existing.exists()) {
+			existing.delete();
+		}
 	}
 
 	@Override

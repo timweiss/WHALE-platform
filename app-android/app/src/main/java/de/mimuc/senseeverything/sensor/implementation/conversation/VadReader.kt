@@ -82,5 +82,14 @@ class VadReader {
         return speechLength.toDouble() / totalLength.toDouble()
     }
 
+    fun calculateLength(segments: List<AudioSegment>, sampleRate: Int, depth: Int): Double {
+        val totalBytes = segments
+            .fold(0) { acc, segment -> acc + segment.length }
+
+        val byterate = depth * sampleRate / 8
+
+        return totalBytes.toDouble() / byterate.toDouble()
+    }
+
     data class AudioSegment(val position: Int, val length: Int, val hasSpeech: Boolean)
 }
