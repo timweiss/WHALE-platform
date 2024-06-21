@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -99,31 +100,11 @@ public class ConversationSensor extends AbstractSensor {
 	}
 
 	private void detectSpeechInSample(String filename) {
-		/*VadWebRTC vad = Vad.builder()
-				.setSampleRate(SampleRate.SAMPLE_RATE_16K)
-				.setFrameSize(FrameSize.FRAME_SIZE_320)
-				.setMode(Mode.VERY_AGGRESSIVE)
-				.setSilenceDurationMs(300)
-				.setSpeechDurationMs(50)
-				.build();
-
-		File wavefile = new File(filename);
-		byte[] bytes = new byte[(int) wavefile.length()];
-        BufferedInputStream bis = null;
-        try {
-            bis = new BufferedInputStream(new FileInputStream(wavefile));
-			DataInputStream dis = new DataInputStream(bis);
-			byte[] header = new byte[44];
-			dis.read(header, 0, 44);
-
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }*/
-
 		VadReader reader = new VadReader();
-		Log.d(TAG, "speech detected in frames " + reader.detect(filename).size());
+		List<VadReader.AudioSegment> segments = reader.detect(filename);
+		double speechPercentage = reader.calculateSpeechPercentage(segments);
+
+		Log.d(TAG, "speech detected in frames " + segments.size() + " " + speechPercentage + " of audio is speech");
     }
 
 	private void startRecording(Context context) {

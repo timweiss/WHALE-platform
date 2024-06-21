@@ -8,6 +8,8 @@ import com.konovalov.vad.webrtc.config.SampleRate
 import java.io.File
 
 class VadReader {
+    final val TAG = "VadReader"
+
     fun detect(path: String): List<AudioSegment> {
         val frames = arrayListOf<AudioSegment>()
 
@@ -21,7 +23,7 @@ class VadReader {
             val chunkSize = vad.frameSize.value * 2
 
             val file = File(path)
-            Log.d("VadReader", "size of file: " + file.length().toString())
+            Log.d(TAG, "size of file: " + file.length().toString())
 
             File(path).inputStream().use { input ->
                 val audioHeader = ByteArray(44).apply { input.read(this) }
@@ -46,10 +48,11 @@ class VadReader {
                     } else {
                         if (isSpeech) {
                             frames.add(AudioSegment(position, currentSectionLength, true))
-                            // was speech, new section arrives
-                            isSpeech = false
                             currentSectionLength = 0
                         }
+
+                        currentSectionLength += frameChunk.size
+                        isSpeech = false
                     }
 
                     position += frameChunk.size
@@ -57,11 +60,26 @@ class VadReader {
 
                 // end of data
                 frames.add(AudioSegment(position, currentSectionLength, isSpeech))
-                Log.d("VadReader", "last section: $frames")
             }
         }
 
         return frames
+    }
+
+    fun calculateSpeechPercentage(segments: List<AudioSegment>): Double {
+        val totalLength = segments
+            .fold(0) { acc, segment -> acc + segment.length }
+        val speechLength = segments
+            .filter { segment -> segment.hasSpeech }
+            .fold(0) { acc, segment -> acc + segment.length }
+
+        Log.d(TAG, "total $totalLength and speech $speechLength")
+
+        if (totalLength == 0) return 0.0
+
+        if (speechLength == 0) return 0.0
+
+        return speechLength.toDouble() / totalLength.toDouble()
     }
 
     data class AudioSegment(val position: Int, val length: Int, val hasSpeech: Boolean)
