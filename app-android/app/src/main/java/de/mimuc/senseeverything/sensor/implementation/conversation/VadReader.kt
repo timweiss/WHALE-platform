@@ -8,7 +8,7 @@ import com.konovalov.vad.webrtc.config.SampleRate
 import java.io.File
 
 class VadReader {
-    final val TAG = "VadReader"
+    val TAG = "VadReader"
 
     fun detect(path: String): List<AudioSegment> {
         val frames = arrayListOf<AudioSegment>()
