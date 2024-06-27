@@ -31,6 +31,39 @@ export interface UploadFile {
   path: string;
 }
 
+export interface ExperienceSamplingQuestionnaire {
+  id: number;
+  studyId: number;
+  name: string;
+  enabled: boolean;
+  version: number;
+}
+
+type ElementType = string;
+
+export interface ElementConfiguration {}
+
+export interface ExperienceSamplingElement {
+  id: number;
+  questionnaireId: number;
+  type: ElementType;
+  step: number;
+  position: number;
+  configuration: ElementConfiguration;
+}
+
+type TriggerType = string;
+
+export interface TriggerConfiguration {}
+
+export interface ExperienceSamplingTrigger {
+  id: number;
+  questionnaireId: number;
+  type: TriggerType;
+  configuration: TriggerConfiguration;
+  enabled: boolean;
+}
+
 export interface IRepository {
   getStudies(): Promise<Study[]>;
 
@@ -62,6 +95,50 @@ export interface IRepository {
     readingId: number,
     file: Pick<UploadFile, 'filename' | 'path'>,
   ): Promise<UploadFile>;
+
+  // Experience Sampling
+  getESMQuestionnaireById(id: number): Promise<ExperienceSamplingQuestionnaire>;
+
+  getESMQuestionnairesByStudyId(
+    studyId: number,
+  ): Promise<ExperienceSamplingQuestionnaire[]>;
+
+  createESMQuestionnaire(
+    questionnaire: Pick<
+      ExperienceSamplingQuestionnaire,
+      'studyId' | 'name' | 'enabled'
+    >,
+  ): Promise<ExperienceSamplingQuestionnaire>;
+
+  updateESMQuestionnaire(
+    questionnaire: ExperienceSamplingQuestionnaire,
+  ): Promise<ExperienceSamplingQuestionnaire>;
+
+  getESMQuestionnaireTriggersByQuestionnaireId(
+    questionnaireId: number,
+  ): Promise<ExperienceSamplingTrigger[]>;
+
+  createESMQuestionnaireTrigger(
+    trigger: Pick<
+      ExperienceSamplingTrigger,
+      'questionnaireId' | 'type' | 'configuration' | 'enabled'
+    >,
+  ): Promise<ExperienceSamplingTrigger>;
+
+  getESMElementsByQuestionnaireId(
+    questionnaireId: number,
+  ): Promise<ExperienceSamplingElement[]>;
+
+  createESMElement(
+    element: Pick<
+      ExperienceSamplingElement,
+      'questionnaireId' | 'type' | 'step' | 'position' | 'configuration'
+    >,
+  ): Promise<ExperienceSamplingElement>;
+
+  updateESMElement(
+    element: ExperienceSamplingElement,
+  ): Promise<ExperienceSamplingElement>;
 }
 
 export class Repository implements IRepository {
@@ -255,6 +332,233 @@ export class Repository implements IRepository {
         id: res.rows[0].id,
         name: res.rows[0].name,
         enrolmentKey: res.rows[0].enrolment_key,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  // Experience Sampling
+
+  async getESMQuestionnairesByStudyId(
+    studyId: number,
+  ): Promise<ExperienceSamplingQuestionnaire[]> {
+    try {
+      const questionnaires = await this.pool.query(
+        'SELECT * FROM esm_questionnaires WHERE study_id = $1',
+        [studyId],
+      );
+
+      return questionnaires.rows.map((row) => ({
+        id: row.id,
+        studyId: row.study_id,
+        name: row.name,
+        enabled: row.enabled,
+        version: row.version,
+      }));
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async createESMQuestionnaire(
+    questionnaire: Pick<
+      ExperienceSamplingQuestionnaire,
+      'name' | 'studyId' | 'enabled'
+    >,
+  ): Promise<ExperienceSamplingQuestionnaire> {
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO esm_questionnaires (name, study_id, enabled, version) VALUES ($1, $2, $3, 1) RETURNING *',
+        [questionnaire.name, questionnaire.studyId, questionnaire.enabled],
+      );
+
+      return {
+        id: res.rows[0].id,
+        studyId: res.rows[0].study_id,
+        name: res.rows[0].name,
+        enabled: res.rows[0].enabled,
+        version: res.rows[0].version,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async getESMQuestionnaireById(
+    id: number,
+  ): Promise<ExperienceSamplingQuestionnaire> {
+    try {
+      const questionnaire = await this.pool.query(
+        'SELECT * FROM esm_questionnaires WHERE id = $1',
+        [id],
+      );
+
+      return {
+        id: questionnaire.rows[0].id,
+        studyId: questionnaire.rows[0].study_id,
+        name: questionnaire.rows[0].name,
+        enabled: questionnaire.rows[0].enabled,
+        version: questionnaire.rows[0].version,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async updateESMQuestionnaire(
+    questionnaire: ExperienceSamplingQuestionnaire,
+  ): Promise<ExperienceSamplingQuestionnaire> {
+    try {
+      const existing = await this.getESMQuestionnaireById(questionnaire.id);
+
+      const newVersion =
+        existing.version === questionnaire.version
+          ? existing.version + 1
+          : questionnaire.version;
+
+      const updated = await this.pool.query(
+        'UPDATE esm_questionnaires SET name = $1, enabled = $2 WHERE id = $3 RETURNING *',
+        [questionnaire.name, questionnaire.enabled, questionnaire.id],
+      );
+
+      return {
+        id: updated.rows[0].id,
+        studyId: updated.rows[0].study_id,
+        name: updated.rows[0].name,
+        enabled: updated.rows[0].enabled,
+        version: newVersion,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async getESMQuestionnaireTriggersByQuestionnaireId(
+    questionnaireId: number,
+  ): Promise<ExperienceSamplingTrigger[]> {
+    try {
+      const triggers = await this.pool.query(
+        'SELECT * FROM esm_triggers WHERE questionnaire_id = $1',
+        [questionnaireId],
+      );
+
+      return triggers.rows.map((row) => ({
+        id: row.id,
+        questionnaireId: row.questionnaire_id,
+        type: row.type,
+        configuration: row.configuration,
+        enabled: row.enabled,
+      }));
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async createESMQuestionnaireTrigger(
+    trigger: Pick<
+      ExperienceSamplingTrigger,
+      'enabled' | 'questionnaireId' | 'type' | 'configuration'
+    >,
+  ): Promise<ExperienceSamplingTrigger> {
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO esm_triggers (questionnaire_id, type, configuration, enabled) VALUES ($1, $2, $3, $4) RETURNING *',
+        [
+          trigger.questionnaireId,
+          trigger.type,
+          trigger.configuration,
+          trigger.enabled,
+        ],
+      );
+
+      return {
+        id: res.rows[0].id,
+        questionnaireId: res.rows[0].questionnaire_id,
+        type: res.rows[0].type,
+        configuration: res.rows[0].configuration,
+        enabled: res.rows[0].enabled,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async getESMElementsByQuestionnaireId(
+    questionnaireId: number,
+  ): Promise<ExperienceSamplingElement[]> {
+    try {
+      const elements = await this.pool.query(
+        'SELECT * FROM esm_elements WHERE questionnaire_id = $1',
+        [questionnaireId],
+      );
+
+      return elements.rows.map((row) => ({
+        id: row.id,
+        questionnaireId: row.questionnaire_id,
+        type: row.type,
+        step: row.step,
+        position: row.position,
+        configuration: row.configuration,
+      }));
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async createESMElement(
+    element: Pick<
+      ExperienceSamplingElement,
+      'questionnaireId' | 'type' | 'configuration' | 'step' | 'position'
+    >,
+  ): Promise<ExperienceSamplingElement> {
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO esm_elements (questionnaire_id, type, step, position, configuration) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [
+          element.questionnaireId,
+          element.type,
+          element.step,
+          element.position,
+          element.configuration,
+        ],
+      );
+
+      return {
+        id: res.rows[0].id,
+        questionnaireId: res.rows[0].questionnaire_id,
+        type: res.rows[0].type,
+        step: res.rows[0].step,
+        position: res.rows[0].position,
+        configuration: res.rows[0].configuration,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async updateESMElement(
+    element: ExperienceSamplingElement,
+  ): Promise<ExperienceSamplingElement> {
+    try {
+      const updated = await this.pool.query(
+        'UPDATE esm_elements SET type = $1, step = $2, position = $3, configuration = $4 WHERE id = $5 RETURNING *',
+        [
+          element.type,
+          element.step,
+          element.position,
+          element.configuration,
+          element.id,
+        ],
+      );
+
+      return {
+        id: updated.rows[0].id,
+        questionnaireId: updated.rows[0].questionnaire_id,
+        type: updated.rows[0].type,
+        step: updated.rows[0].step,
+        position: updated.rows[0].position,
+        configuration: updated.rows[0].configuration,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());

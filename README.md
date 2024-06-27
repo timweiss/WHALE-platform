@@ -52,15 +52,21 @@ stateDiagram-v2
 
 ### Experience Sampling
 We want to trigger an experience sampling form when specific events happen:
-- user marks a conversation start
-- user marks a conversation end
+- important: **user marks an interaction ended**
 - possibly in a specific interval
 
 A sampling could include the following:
 - content separated in steps (title, position)
-  - displayed: (rich) text
-  - input: text, radio, checkbox, Likert scale, slider, photo and
-    video, audio, affect grid, time
+  - visual/content
+    - (rich) text
+  - input
+    - text
+    - radio
+    - checkbox
+    - Likert scale
+    - slider
+    - affect grid
+    - time/duration
 
 ```mermaid
 ---
@@ -71,10 +77,12 @@ erDiagram
     Questionnaire {
         bool enabled
         string name
+        number version
     }
     Trigger {
         string eventType
         bool enabled
+        object configuration
     }
     Element {
         string type
@@ -82,10 +90,12 @@ erDiagram
         number position
         object configuration
     }
-    Questionnaire ||--|{ Trigger : "triggers"
+    Questionnaire ||--|{ Trigger : "has"
     Questionnaire ||--o{ Study : "belongs to"
     Element ||--o{ Questionnaire : "belongs to"
 ```
+
+After updating any element of the questionnaire, its version needs to be updated. The app will only update the questionnaire if the version is higher than the one currently cached.
 
 ## Acknowledgements & References
 Based on the [SenseEverything](https://github.com/mimuc/SenseEverything) app.
