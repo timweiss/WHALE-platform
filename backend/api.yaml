@@ -60,38 +60,326 @@ paths:
                 $ref: '#/components/schemas/Study'
         '404':
           description: The study was not found.
+  /study/{study_id}/questionnaire:
+    get:
+      description: Gets all available ESM questionnaires for this specific study.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study to get questionnaires for.
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of all available questionnaires for the study.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ESMFullQuestionnaire'
+        '404':
+          description: The study was not found.
+    post:
+      description: Creates a new ESM questionnaire for the study.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study to create the questionnaire for.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ESMQuestionnaire'
+      responses:
+        '201':
+          description: The questionnaire was created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMQuestionnaire'
+        '404':
+          description: The study was not found.
+  /study/{study_id}/questionnaire/{questionnaire_id}:
+    get:
+      description: Gets a specific ESM questionnaire by ID.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study to get the questionnaire for.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire to get.
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The questionnaire was found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMFullQuestionnaire'
+        '404':
+          description: The questionnaire was not found.
+    put:
+      description: Updates an existing ESM questionnaire.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire to update.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ESMQuestionnaire'
+      responses:
+        '200':
+          description: The questionnaire was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMQuestionnaire'
+        '404':
+          description: The questionnaire was not found.
+  /study/{study_id}/questionnaire/{questionnaire_id}/element:
+    post:
+      description: Adds a new element to an existing ESM questionnaire.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire to add the element to.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ESMElement'
+      responses:
+        '201':
+          description: The element was added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMElement'
+        '404':
+          description: The questionnaire was not found.
+  /study/{study_id}/questionnaire/{questionnaire_id}/element/{element_id}:
+    put:
+      description: Updates an existing element in an ESM questionnaire.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire that the element belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: element_id
+          in: path
+          description: The ID of the element to update.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ESMElement'
+      responses:
+        '200':
+          description: The element was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMElement'
+        '404':
+          description: The questionnaire was not found.
+    delete:
+      description: Deletes an existing element from an ESM questionnaire.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire that the element belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: element_id
+          in: path
+          description: The ID of the element to delete.
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: The element was deleted successfully.
+        '404':
+          description: The questionnaire was not found.
+  /study/{study_id}/questionnaire/{questionnaire_id}/trigger:
+    post:
+      description: Adds a new trigger to an existing ESM questionnaire.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire to add the trigger to.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ESMTrigger'
+      responses:
+        '201':
+          description: The trigger was added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMTrigger'
+        '404':
+          description: The questionnaire was not found.
+  /study/{study_id}/questionnaire/{questionnaire_id}/trigger/{trigger_id}:
+    put:
+      description: Updates an existing trigger in an ESM questionnaire.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire that the trigger belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: trigger_id
+          in: path
+          description: The ID of the trigger to update.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ESMTrigger'
+      responses:
+        '200':
+          description: The trigger was updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMTrigger'
+        '404':
+          description: The questionnaire was not found.
+    delete:
+      description: Deletes an existing trigger from an ESM questionnaire.
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire that the trigger belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: trigger_id
+          in: path
+          description: The ID of the trigger to delete.
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: The trigger was deleted successfully.
+        '404':
+          description: The questionnaire was not found.
   /enrolment:
     post:
-        description:
-            Enrols a participant in a study through the enrolment key.
-        requestBody:
-            required: true
-            content:
-              application/json:
-                  schema:
-                    type: object
-                    required:
-                      - enrolment_key
-                    properties:
-                      enrolment_key:
-                        type: string
-                        description: The enrolment key for the study.
-        responses:
-            '201':
-              description: The enrolment was created successfully.
-              content:
-                  application/json:
-                    schema:
-                      type: object
-                      properties:
-                        participant_id:
-                          type: string
-                          description: The unique identifier for the participant.
-                        token:
-                          type: string
-                          description: The authentication token for the participant.
-            '400':
-              description: The enrolment key was invalid (typo or study does not exist).
+      description:
+        Enrols a participant in a study through the enrolment key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - enrolment_key
+              properties:
+                enrolment_key:
+                  type: string
+                  description: The enrolment key for the study.
+      responses:
+        '201':
+          description: The enrolment was created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  participant_id:
+                    type: string
+                    description: The unique identifier for the participant.
+                  token:
+                    type: string
+                    description: The authentication token for the participant.
+        '400':
+          description: The enrolment key was invalid (typo or study does not exist).
   /enrolment/{participant_id}:
     post:
       description:
@@ -104,18 +392,18 @@ paths:
           schema:
             type: string
       responses:
-          '201':
-              description: Successfully re-enrolled.
-              content:
-                application/json:
-                  schema:
-                    type: object
-                    properties:
-                      token:
-                        type: string
-                        description: The authentication token for the participant.
-          '400':
-              description: The participant ID was invalid (does not exist).
+        '201':
+          description: Successfully re-enrolled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: The authentication token for the participant.
+        '400':
+          description: The participant ID was invalid (does not exist).
   /reading:
     post:
       description:
@@ -188,7 +476,7 @@ paths:
             schema:
               $ref: '#/components/schemas/File'
       security:
-        - token: []
+        - token: [ ]
       responses:
         '201':
           description: The file was attached successfully.
@@ -280,8 +568,79 @@ components:
           type: integer
           description: The unique identifier for the study.
         name:
-            type: string
-            description: The name of the study.
+          type: string
+          description: The name of the study.
         enrolmentKey:
-            type: string
-            description: The enrolment key for the study. Needs to be unique across all studies.
+          type: string
+          description: The enrolment key for the study. Needs to be unique across all studies.
+
+    ESMQuestionnaire:
+      description: Questionnaire that can be presented to the participant
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the questionnaire.
+        studyId:
+          type: integer
+          description: The database ID for the study.
+        name:
+          type: string
+          description: The name of the questionnaire.
+        enabled:
+          type: boolean
+          description: Whether the questionnaire is enabled.
+        version:
+          type: number
+          description: The version of the questionnaire.
+
+    ESMElement:
+      description: A visual or user entry element in a questionnaire
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the element.
+        questionnaireId:
+          type: integer
+          description: The database ID for the questionnaire.
+        type:
+          type: string
+          description: The type of element (e.g., text, radio, checkbox).
+        step:
+          type: number
+          description: The step in the questionnaire.
+        position:
+          type: number
+          description: The position of the element in the step.
+        configuration:
+          type: object
+          description: The type-dependent configuration for the element.
+
+    ESMTrigger:
+      description: Conditional trigger for presenting an ESM questionnaire.
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the trigger.
+        questionnaireId:
+          type: integer
+          description: The database ID for the questionnaire.
+        type:
+          type: string
+          description: The type of trigger (e.g., time, after an event).
+        configuration:
+          type: object
+          description: The type-dependent configuration for the trigger.
+
+    ESMFullQuestionnaire:
+      description: A full questionnaire with elements and triggers
+      properties:
+        questionnaire:
+          $ref: '#/components/schemas/ESMQuestionnaire'
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/ESMElement'
+        triggers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ESMTrigger'

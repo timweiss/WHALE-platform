@@ -125,6 +125,8 @@ export interface IRepository {
     >,
   ): Promise<ExperienceSamplingTrigger>;
 
+  deleteESMQuestionnaireTrigger(id: number): Promise<void>;
+
   getESMElementsByQuestionnaireId(
     questionnaireId: number,
   ): Promise<ExperienceSamplingElement[]>;
@@ -139,6 +141,8 @@ export interface IRepository {
   updateESMElement(
     element: ExperienceSamplingElement,
   ): Promise<ExperienceSamplingElement>;
+
+  deleteESMElement(id: number): Promise<void>;
 }
 
 export class Repository implements IRepository {
@@ -484,6 +488,14 @@ export class Repository implements IRepository {
     }
   }
 
+  async deleteESMQuestionnaireTrigger(id: number): Promise<void> {
+    try {
+      await this.pool.query('DELETE FROM esm_triggers WHERE id = $1', [id]);
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
   async getESMElementsByQuestionnaireId(
     questionnaireId: number,
   ): Promise<ExperienceSamplingElement[]> {
@@ -560,6 +572,14 @@ export class Repository implements IRepository {
         position: updated.rows[0].position,
         configuration: updated.rows[0].configuration,
       };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async deleteESMElement(id: number): Promise<void> {
+    try {
+      await this.pool.query('DELETE FROM esm_elements WHERE id = $1', [id]);
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }
