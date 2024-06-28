@@ -416,12 +416,15 @@ paths:
               schema:
                 type: object
                 properties:
-                  participant_id:
+                  participantId:
                     type: string
                     description: The unique identifier for the participant.
                   token:
                     type: string
                     description: The authentication token for the participant.
+                  studyId:
+                    type: number
+                    description: The database ID for the study.
         '400':
           description: The enrolment key was invalid (typo or study does not exist).
   /enrolment/{participant_id}:
@@ -445,9 +448,15 @@ paths:
               schema:
                 type: object
                 properties:
+                  participantId:
+                    type: string
+                    description: The unique identifier for the participant.
                   token:
                     type: string
                     description: The authentication token for the participant.
+                  studyId:
+                    type: number
+                    description: The database ID for the study.
         '400':
           description: The participant ID was invalid (does not exist).
   /reading:

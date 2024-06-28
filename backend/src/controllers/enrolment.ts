@@ -34,7 +34,7 @@ export function createEnrolmentController(
 
     const token = generateTokenForEnrolment(enrolment.id);
 
-    res.json({ participantId, token });
+    res.json({ participantId, studyId: enrolment.studyId, token });
   });
 
   app.post('/v1/enrolment/:participantId', async (req, res) => {
@@ -47,7 +47,11 @@ export function createEnrolmentController(
 
     const token = generateTokenForEnrolment(enrolment.id);
 
-    res.json({ participantId: enrolment.participantId, token });
+    res.json({
+      participantId: enrolment.participantId,
+      studyId: enrolment.studyId,
+      token,
+    });
   });
 
   console.log('loaded enrolment controller');
