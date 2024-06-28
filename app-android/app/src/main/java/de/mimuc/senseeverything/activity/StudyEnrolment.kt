@@ -5,14 +5,11 @@ package de.mimuc.senseeverything.activity
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,24 +34,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.volley.Response
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
@@ -105,6 +93,9 @@ class EnrolmentViewModel @Inject constructor(
     private val _participantId = MutableStateFlow("")
     val participantId: StateFlow<String> get() = _participantId
 
+    private val _study = MutableStateFlow(Study("", -1, ""))
+    val study: StateFlow<Study> get() = _study
+
     init {
         viewModelScope.launch {
             combine(
@@ -145,12 +136,13 @@ class EnrolmentViewModel @Inject constructor(
             } else {
                 val token = response.getString("token")
                 val participantId = response.getString("participantId")
+                val studyId = response.getInt("studyId")
 
                 _isLoading.value = false
                 _isEnrolled.value = true
                 _participantId.value = participantId
 
-                dataStoreManager.saveTokenAndParticipantId(token, participantId)
+                dataStoreManager.saveEnrolment(token, participantId, studyId)
             }
         }
     }
@@ -159,6 +151,7 @@ class EnrolmentViewModel @Inject constructor(
         viewModelScope.launch {
             dataStoreManager.saveToken("")
             dataStoreManager.saveParticipantId("")
+            dataStoreManager.saveStudyId(-1)
             _isEnrolled.value = false
         }
     }

@@ -24,6 +24,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     companion object {
         val TOKEN = stringPreferencesKey("token")
         val PARTICIPANT_ID = stringPreferencesKey("participantId")
+        val STUDY_ID = stringPreferencesKey("studyId")
     }
 
     private val dataStore = context.dataStore
@@ -67,10 +68,34 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         }
     }
 
-    suspend fun saveTokenAndParticipantId(token: String, participantId: String) {
+    suspend fun saveStudyId(studyId: Int) {
+        dataStore.edit { preferences ->
+            preferences[STUDY_ID] = studyId.toString()
+        }
+    }
+
+    val studyIdFlow = dataStore.data.map { preferences ->
+        if(preferences[STUDY_ID] != null) {
+            preferences[STUDY_ID]?.toInt() ?: -1
+        } else {
+            -1
+        }
+    }
+
+    fun getStudyIdSync(callback: (Int) -> Unit) {
+        runBlocking {
+            studyIdFlow.first { studyId ->
+                callback(studyId)
+                true
+            }
+        }
+    }
+
+    suspend fun saveEnrolment(token: String, participantId: String, studyId: Int) {
         dataStore.edit { preferences ->
             preferences[TOKEN] = token
             preferences[PARTICIPANT_ID] = participantId
+            preferences[STUDY_ID] = studyId.toString()
         }
     }
 }
