@@ -6,7 +6,7 @@ import { Express, Request, Response } from 'express';
 import { authenticate } from '../middleware/authenticate';
 
 export function createESMController(repository: IRepository, app: Express) {
-  app.get('v1/study/:studyId/questionnaire', async (req, res) => {
+  app.get('/v1/study/:studyId/questionnaire', async (req, res) => {
     const studyId = parseInt(req.params.studyId);
     const questionnaires =
       await repository.getESMQuestionnairesByStudyId(studyId);
@@ -18,7 +18,7 @@ export function createESMController(repository: IRepository, app: Express) {
   });
 
   app.post(
-    'v1/study/:studyId/questionnaire',
+    '/v1/study/:studyId/questionnaire',
     authenticate,
     async (req, res) => {
       const studyId = parseInt(req.params.studyId);
@@ -37,7 +37,7 @@ export function createESMController(repository: IRepository, app: Express) {
   );
 
   app.get(
-    'v1/study/:studyId/questionnaire/:questionnaireId',
+    '/v1/study/:studyId/questionnaire/:questionnaireId',
     async (req, res) => {
       const studyId = parseInt(req.params.studyId);
       const questionnaireId = parseInt(req.params.questionnaireId);
@@ -78,7 +78,7 @@ export function createESMController(repository: IRepository, app: Express) {
   }
 
   app.put(
-    'v1/study/:studyId/questionnaire/:questionnaireId',
+    '/v1/study/:studyId/questionnaire/:questionnaireId',
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
@@ -92,7 +92,7 @@ export function createESMController(repository: IRepository, app: Express) {
   );
 
   app.post(
-    'v1/study/:studyId/questionnaire/:questionnaireId/element',
+    '/v1/study/:studyId/questionnaire/:questionnaireId/element',
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
@@ -108,7 +108,7 @@ export function createESMController(repository: IRepository, app: Express) {
   );
 
   app.put(
-    'v1/study/:studyId/questionnaire/:questionnaireId/element/:elementId',
+    '/v1/study/:studyId/questionnaire/:questionnaireId/element/:elementId',
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
@@ -124,7 +124,7 @@ export function createESMController(repository: IRepository, app: Express) {
   );
 
   app.delete(
-    'v1/study/:studyId/questionnaire/:questionnaireId/element/:elementId',
+    '/v1/study/:studyId/questionnaire/:questionnaireId/element/:elementId',
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
@@ -137,7 +137,7 @@ export function createESMController(repository: IRepository, app: Express) {
   );
 
   app.post(
-    'v1/study/:studyId/questionnaire/:questionnaireId/trigger',
+    '/v1/study/:studyId/questionnaire/:questionnaireId/trigger',
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
@@ -153,7 +153,7 @@ export function createESMController(repository: IRepository, app: Express) {
   );
 
   app.put(
-    'v1/study/:studyId/questionnaire/:questionnaireId/trigger/:triggerId',
+    '/v1/study/:studyId/questionnaire/:questionnaireId/trigger/:triggerId',
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
@@ -169,7 +169,7 @@ export function createESMController(repository: IRepository, app: Express) {
   );
 
   app.delete(
-    'v1/study/:studyId/questionnaire/:questionnaireId/trigger/:triggerId',
+    '/v1/study/:studyId/questionnaire/:questionnaireId/trigger/:triggerId',
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
@@ -182,4 +182,6 @@ export function createESMController(repository: IRepository, app: Express) {
       res.status(204).send();
     },
   );
+
+  console.log('loaded esm controller');
 }
