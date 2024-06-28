@@ -6,6 +6,7 @@ import { IRepository, Repository } from './data/repository';
 import { createEnrolmentController } from './controllers/enrolment';
 import { createReadingController } from './controllers/reading';
 import { Pool } from 'pg';
+import { createESMController } from './controllers/esm';
 
 export function makeExpressApp(pool: Pool, repository: IRepository) {
   const app = express();
@@ -18,6 +19,7 @@ export function makeExpressApp(pool: Pool, repository: IRepository) {
   createStudyController(repository, app);
   createEnrolmentController(repository, app);
   createReadingController(repository, app);
+  createESMController(repository, app);
 
   return app;
 }

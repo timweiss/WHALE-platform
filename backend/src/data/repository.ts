@@ -125,6 +125,10 @@ export interface IRepository {
     >,
   ): Promise<ExperienceSamplingTrigger>;
 
+  updateESMQuestionnaireTrigger(
+    trigger: ExperienceSamplingTrigger,
+  ): Promise<ExperienceSamplingTrigger>;
+
   deleteESMQuestionnaireTrigger(id: number): Promise<void>;
 
   getESMElementsByQuestionnaireId(
@@ -482,6 +486,27 @@ export class Repository implements IRepository {
         type: res.rows[0].type,
         configuration: res.rows[0].configuration,
         enabled: res.rows[0].enabled,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async updateESMQuestionnaireTrigger(
+    trigger: ExperienceSamplingTrigger,
+  ): Promise<ExperienceSamplingTrigger> {
+    try {
+      const updated = await this.pool.query(
+        'UPDATE esm_triggers SET type = $1, configuration = $2, enabled = $3 WHERE id = $4 RETURNING *',
+        [trigger.type, trigger.configuration, trigger.enabled, trigger.id],
+      );
+
+      return {
+        id: updated.rows[0].id,
+        questionnaireId: updated.rows[0].questionnaire_id,
+        type: updated.rows[0].type,
+        configuration: updated.rows[0].configuration,
+        enabled: updated.rows[0].enabled,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
