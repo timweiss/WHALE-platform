@@ -2,11 +2,14 @@
 Social Sensing environment.
 
 ## Tasks
+- [ ] Add interaction tracking bubble
+- [ ] Import Experience Sampling elements from Excel tables
+- [ ] Allow to sample on lock/unlock and continuously in a set interval (maybe we can define some sensors to run in a periodic interval and others to sample on interaction)
 - [ ] Use WorkManager to schedule backend pushes
 - [ ] Implement API in app (pushing data, showing study name)
-- [ ] Add radio frequency (maybe Bluetooth and WiFi?) sensor
 - [ ] Add notification sensor
-- [ ] Allow to sample on lock/unlock and continuously in a set interval (maybe we can define some sensors to run in a periodic interval and others to sample on interaction)
+- [ ] Add onboarding interface (permissions, enrolment) and basic main activity for the app
+- [x] Add radio frequency (Bluetooth and WiFi) sensor
 - [x] Detect if a conversation happens (see openSMILE)
 - [x] Revamp AppSensor so it actually retrieves the currently open app (probably with AccessibilityService)
 - [x] Sample whenever the device gets unlocked
