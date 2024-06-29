@@ -100,10 +100,12 @@ class EnrolmentViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                     dataStoreManager.tokenFlow,
-                    dataStoreManager.participantIdFlow
-            ) { token, participantId ->
+                    dataStoreManager.participantIdFlow,
+                    dataStoreManager.studyIdFlow
+            ) { token, participantId, studyId ->
                 if (token.isNotEmpty()) {
                     _isEnrolled.value = true
+                    loadStudy(getApplication(), studyId)
                 }
 
                 if (participantId.isNotEmpty()) {
@@ -143,6 +145,36 @@ class EnrolmentViewModel @Inject constructor(
                 _participantId.value = participantId
 
                 dataStoreManager.saveEnrolment(token, participantId, studyId)
+                loadStudy(context, studyId)
+            }
+        }
+    }
+
+    private fun loadStudy(context: Context, studyId: Int) {
+        if (studyId <= 0) {
+            return
+        }
+
+        viewModelScope.launch {
+            val client = ApiClient.getInstance(context)
+            val response = suspendCoroutine { continuation ->
+                client.getJson("https://siapi.timweiss.dev/v1/study/$studyId",
+                    { response ->
+                        continuation.resume(response)
+                    },
+                    { error ->
+                        continuation.resume(null)
+                    })
+            }
+
+            if (response != null) {
+                val study = Study(
+                    response.getString("name"),
+                    response.getInt("id"),
+                    response.getString("enrolmentKey")
+                )
+
+                _study.value = study
             }
         }
     }
@@ -164,6 +196,7 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
     val isEnrolled = viewModel.isEnrolled.collectAsState()
     val participantId = viewModel.participantId.collectAsState()
     val context = LocalContext.current
+    val study = viewModel.study.collectAsState()
 
     Column(
         modifier = Modifier.padding(innerPadding).padding(16.dp)
@@ -193,6 +226,11 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
         } else {
             Icon(Icons.Rounded.Check, contentDescription = "success!", modifier = Modifier.size(32.dp))
             Text("Enrolment Successful!")
+            if (study.value.id != -1) {
+                Text("Current Study: ${study.value.name}")
+            } else {
+                Text("Fetching study information...")
+            }
             Text("Participant ID: ${participantId.value}")
             Spacer(modifier = Modifier.height(16.dp))
             Button(
