@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-<!--    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />-->
+    <!-- <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" /> -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -31,6 +30,11 @@
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
+        <activity
+            android:name=".activity.esm.QuestionnaireActivity"
+            android:exported="false"
+            android:label="@string/title_activity_questionnaire"
+            android:theme="@style/Theme.MyApplication" />
         <activity
             android:name=".activity.StudyEnrolment"
             android:exported="false"
@@ -70,10 +74,9 @@
         </service>
         <service
             android:name=".service.LogService"
-            android:process=":remote"
-            android:stopWithTask="false"
             android:foregroundServiceType="microphone"
-            >
+            android:process=":remote"
+            android:stopWithTask="false">
             <intent-filter>
                 <action android:name="android.intent.action.CONFIGURATION_CHANGED" />
             </intent-filter>

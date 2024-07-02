@@ -244,11 +244,3 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AppandroidTheme {
-        EnrolmentScreen(innerPadding = PaddingValues(16.dp))
-    }
-}

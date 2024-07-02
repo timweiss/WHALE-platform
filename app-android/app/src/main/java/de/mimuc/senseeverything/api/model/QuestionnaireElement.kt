@@ -94,7 +94,7 @@ class TextViewElement(
     step: Int,
     position: Int,
     configuration: Any,
-    val textContet: String
+    val textContent: String
 ) : QuestionnaireElement(id, questionnaireId, "text_view", step, position, configuration)
 
 class RadioGroupElement(

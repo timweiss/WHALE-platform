@@ -43,4 +43,6 @@
     <string name="manageEnrolmentHint">Study Enrolment ID</string>
     <string name="manageEnrolmentEnrol">Enrol</string>
     <string name="title_activity_study_enrolment">StudyEnrolment</string>
+    <string name="title_activity_questionnaire">QuestionnaireActivity</string>
+    <string name="questionnaire_button">Open Questionnaire</string>
 </resources>
