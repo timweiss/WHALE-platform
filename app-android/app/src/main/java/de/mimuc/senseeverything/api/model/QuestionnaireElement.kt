@@ -109,7 +109,7 @@ class TextViewElement(
 ) : QuestionnaireElement(id, questionnaireId, "text_view", step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
-        json.getJSONObject("configuration").put("content", textContent)
+        json.getJSONObject("configuration").put("text", textContent)
         return json
     }
 }

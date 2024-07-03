@@ -28,6 +28,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,11 +56,12 @@ import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.TextViewElement
 import de.mimuc.senseeverything.api.model.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.emptyValueForElement
-import de.mimuc.senseeverything.api.model.fakeQuestionnaire
+import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -96,15 +98,15 @@ class QuestionnaireViewModel  @Inject constructor(
 
     init {
         _isLoading.value = true
-        loadQuestionnaire()
     }
 
-    private fun loadQuestionnaire() {
-        viewModelScope.launch {
-            val loaded = suspendCoroutine { continuation ->
-                // todo: load from actual questionnaire
-                continuation.resume(fakeQuestionnaire())
-            }
+    fun loadQuestionnaire(context: Context) {
+        val activity = (context as? Activity)
+        val intent = activity?.intent
+        val json = intent?.getStringExtra("questionnaire")
+        if (json != null) {
+            val loaded = makeFullQuestionnaireFromJson(JSONObject(json))
+            _elementValues.value = mutableMapOf()
 
             _questionnaire.value = loaded
             _isLoading.value = false
@@ -142,11 +144,12 @@ class QuestionnaireViewModel  @Inject constructor(
 fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), modifier: Modifier = Modifier) {
     val isLoading = viewModel.isLoading.collectAsState()
     val questionnaire = viewModel.questionnaire.collectAsState()
-    val maxStep = questionnaire.value.elements.maxOf { it.step }
-    val currentStep by viewModel.activeStep.collectAsState()
-    val currentElements = remember(currentStep) { questionnaire.value.elements.filter { it.step == currentStep } }
-    val answerValues = viewModel.elementValues.collectAsState()
+
     val context = LocalContext.current
+
+    LaunchedEffect(key1 = true) {
+        viewModel.loadQuestionnaire(context)
+    }
 
     Scaffold(
         topBar = {
@@ -167,6 +170,11 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
             if (isLoading.value) {
                 Text("Loading...")
             } else {
+                val maxStep = questionnaire.value.elements.maxOf { it.step }
+                val currentStep by viewModel.activeStep.collectAsState()
+                val currentElements = remember(currentStep) { questionnaire.value.elements.filter { it.step == currentStep } }
+                val answerValues = viewModel.elementValues.collectAsState()
+
                 LazyColumn {
                     items(items = currentElements, key = { item -> item.id }) { element ->
                         val elementValue = answerValues.value[element.id]

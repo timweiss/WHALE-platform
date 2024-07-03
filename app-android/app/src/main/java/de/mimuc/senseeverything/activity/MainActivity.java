@@ -55,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
 	private Button m_ButtonStop;
 	private Button m_ButtonSync;
 	private Button m_ButtonEnrolment;
-	private Button m_ButtonQuestionnaire;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +71,6 @@ public class MainActivity extends AppCompatActivity {
 		m_ButtonAccessibility = findViewById(R.id.accessibility_button);
 		m_ButtonSync = findViewById(R.id.sync_button);
 		m_ButtonEnrolment = findViewById(R.id.enrolment_button);
-		m_ButtonQuestionnaire = findViewById(R.id.questionnaire_button);
 		setAccessibilityButtonState ();
 		
 		SensorDatabaseHelper db = new SensorDatabaseHelper(this);
@@ -88,7 +86,6 @@ public class MainActivity extends AppCompatActivity {
 		m_ButtonAccessibility.setOnClickListener(onAccessibilityButtonClick);
 		m_ButtonSync.setOnClickListener(onSyncButtonClick);
 		m_ButtonEnrolment.setOnClickListener(onEnrolmentButtonClick);
-		m_ButtonQuestionnaire.setOnClickListener(onQuestionnaireButtonClick);
 
 		isPermissionGranted(Manifest.permission.WAKE_LOCK);
 		isPermissionGranted(Manifest.permission.RECORD_AUDIO);
@@ -255,12 +252,6 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MainActivity.this, StudyEnrolment.class);
         startActivity(intent);
     };
-
-	private final OnClickListener onQuestionnaireButtonClick = view -> {
-		Log.i(TAG,"questionnaireButton onClick");
-		Intent intent = new Intent(MainActivity.this, QuestionnaireActivity.class);
-		startActivity(intent);
-	};
 	
 	private void setAccessibilityButtonState ()
 	{

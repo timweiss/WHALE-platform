@@ -4,6 +4,7 @@ package de.mimuc.senseeverything.activity
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -43,6 +44,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
@@ -278,6 +280,13 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
                 Column {
                     for (questionnaire in questionnaires) {
                         Text(questionnaire.questionnaire.name)
+                        Button(onClick = {
+                            val activity = Intent(context, QuestionnaireActivity::class.java)
+                            activity.putExtra("questionnaire", questionnaire.toJson().toString())
+                            context.startActivity(activity)
+                        }) {
+                            Text("Start")
+                        }
                     }
                 }
             }
