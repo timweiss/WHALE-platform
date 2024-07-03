@@ -9,7 +9,18 @@ open class QuestionnaireElement(
     val step: Int,
     val position: Int,
     private val configuration: Any
-)
+) {
+    open fun toJson(): JSONObject {
+        val json = JSONObject()
+        json.put("id", id)
+        json.put("questionnaireId", questionnaireId)
+        json.put("type", type)
+        json.put("step", step)
+        json.put("position", position)
+        json.put("configuration", JSONObject())
+        return json
+    }
+}
 
 fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
     val config = json.getJSONObject("configuration")
@@ -22,7 +33,7 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
 
     when (type) {
         "text_view" -> {
-            TextViewElement(
+            return TextViewElement(
                 id,
                 questionnaireId,
                 step,
@@ -37,7 +48,7 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
             for (i in 0 until optionsJson.length()) {
                 options.add(optionsJson.getString(i))
             }
-            RadioGroupElement(
+            return RadioGroupElement(
                 id,
                 questionnaireId,
                 step,
@@ -52,7 +63,7 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
             for (i in 0 until optionsJson.length()) {
                 options.add(optionsJson.getString(i))
             }
-            CheckboxGroupElement(
+            return CheckboxGroupElement(
                 id,
                 questionnaireId,
                 step,
@@ -62,7 +73,7 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
             )
         }
         "slider" -> {
-            SliderElement(
+            return SliderElement(
                 id,
                 questionnaireId,
                 step,
@@ -74,7 +85,7 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
             )
         }
         "text_entry" -> {
-            TextEntryElement(
+            return TextEntryElement(
                 id,
                 questionnaireId,
                 step,
@@ -95,7 +106,13 @@ class TextViewElement(
     position: Int,
     configuration: Any,
     val textContent: String
-) : QuestionnaireElement(id, questionnaireId, "text_view", step, position, configuration)
+) : QuestionnaireElement(id, questionnaireId, "text_view", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("content", textContent)
+        return json
+    }
+}
 
 class RadioGroupElement(
     id: Int,
@@ -104,7 +121,13 @@ class RadioGroupElement(
     position: Int,
     configuration: Any,
     val options: List<String>
-) : QuestionnaireElement(id, questionnaireId, "radio_group", step, position, configuration)
+) : QuestionnaireElement(id, questionnaireId, "radio_group", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("options", options)
+        return json
+    }
+}
 
 class CheckboxGroupElement(
     id: Int,
@@ -113,7 +136,13 @@ class CheckboxGroupElement(
     position: Int,
     configuration: Any,
     val options: List<String>
-) : QuestionnaireElement(id, questionnaireId, "checkbox_group", step, position, configuration)
+) : QuestionnaireElement(id, questionnaireId, "checkbox_group", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("options", options)
+        return json
+    }
+}
 
 class SliderElement(
     id: Int,
@@ -124,7 +153,15 @@ class SliderElement(
     val min: Int,
     val max: Int,
     val stepSize: Double
-) : QuestionnaireElement(id, questionnaireId, "slider", step, position, configuration)
+) : QuestionnaireElement(id, questionnaireId, "slider", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("min", min)
+        json.getJSONObject("configuration").put("max", max)
+        json.getJSONObject("configuration").put("stepSize", stepSize)
+        return json
+    }
+}
 
 class TextEntryElement(
     id: Int,
@@ -133,4 +170,10 @@ class TextEntryElement(
     position: Int,
     configuration: Any,
     val hint: String
-) : QuestionnaireElement(id, questionnaireId, "text_entry", step, position, configuration)
+) : QuestionnaireElement(id, questionnaireId, "text_entry", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("hint", hint)
+        return json
+    }
+}

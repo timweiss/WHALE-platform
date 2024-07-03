@@ -49,6 +49,11 @@ public class ApiClient {
         addToRequestQueue(jsonObjectRequest);
     }
 
+    public void getJsonArray(String url, Response.Listener<JSONArray> listener, Response.ErrorListener errorListener) {
+        MyJsonArrayRequest request = new MyJsonArrayRequest(Request.Method.GET, url, null, listener, errorListener);
+        addToRequestQueue(request);
+    }
+
     // POST request
     public void post(String url, JSONObject jsonRequest, Map<String, String> headers, Response.Listener<JSONObject> listener, Response.ErrorListener errorListener) {
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, jsonRequest, listener, errorListener);

@@ -5,6 +5,7 @@ package de.mimuc.senseeverything.activity
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -28,8 +29,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,12 +45,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
+import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
@@ -95,6 +102,9 @@ class EnrolmentViewModel @Inject constructor(
 
     private val _study = MutableStateFlow(Study("", -1, ""))
     val study: StateFlow<Study> get() = _study
+
+    private val _questionnaires = MutableStateFlow(mutableStateListOf<FullQuestionnaire>())
+    val questionnaires: StateFlow<List<FullQuestionnaire>> get() = _questionnaires
 
     init {
         viewModelScope.launch {
@@ -146,6 +156,7 @@ class EnrolmentViewModel @Inject constructor(
 
                 dataStoreManager.saveEnrolment(token, participantId, studyId)
                 loadStudy(context, studyId)
+                fetchQuestionnaires()
             }
         }
     }
@@ -179,6 +190,19 @@ class EnrolmentViewModel @Inject constructor(
         }
     }
 
+    fun fetchQuestionnaires() {
+        viewModelScope.launch {
+            Log.d("Enrolment", "loading questionnaires")
+            val studyId = dataStoreManager.studyIdFlow.first()
+            val client = ApiClient.getInstance(getApplication())
+            val questionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, client)
+
+            Log.d("Enrolment", questionnaires.toString())
+
+            _questionnaires.value = questionnaires.toMutableStateList()
+        }
+    }
+
     fun removeEnrolment() {
         viewModelScope.launch {
             dataStoreManager.saveToken("")
@@ -197,9 +221,13 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
     val participantId = viewModel.participantId.collectAsState()
     val context = LocalContext.current
     val study = viewModel.study.collectAsState()
+    val questionnaires by viewModel.questionnaires.collectAsState()
+    val noQuestionnaires = questionnaires.isEmpty()
 
     Column(
-        modifier = Modifier.padding(innerPadding).padding(16.dp)
+        modifier = Modifier
+            .padding(innerPadding)
+            .padding(16.dp)
     ) {
         if (!isEnrolled.value) {
             TextField(
@@ -233,6 +261,28 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
             }
             Text("Participant ID: ${participantId.value}")
             Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                    onClick = {
+                        viewModel.fetchQuestionnaires()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Fetch Questionnaires")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (noQuestionnaires) {
+                Text("No questionnaires available")
+            } else {
+                Column {
+                    for (questionnaire in questionnaires) {
+                        Text(questionnaire.questionnaire.name)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(36.dp))
             Button(
                     onClick = {
                         viewModel.removeEnrolment()
