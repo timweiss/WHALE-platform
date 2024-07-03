@@ -39,6 +39,8 @@ fun fakeQuestionnaire(): FullQuestionnaire {
             RadioGroupElement(2, 1, 1, 2, JSONObject(), listOf("Option 1", "Option 2")),
             CheckboxGroupElement(3, 1, 1, 3, JSONObject(), listOf("Option 1", "Option 2")),
             TextViewElement(4, 1, 2, 1, JSONObject(), "Goodbye World"),
+            SliderElement(5, 1, 2, 2, JSONObject(), 0, 10, 5.0),
+            TextEntryElement(6, 1, 2, 3, JSONObject(), "Enter your name")
         ),
         listOf(
             QuestionnaireTrigger(1, 1, "time", JSONObject()),
