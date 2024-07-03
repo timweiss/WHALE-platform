@@ -16,30 +16,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.toMutableStateList
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
@@ -60,11 +52,8 @@ import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @AndroidEntryPoint
 class QuestionnaireActivity : ComponentActivity() {
@@ -172,7 +161,7 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
             } else {
                 val maxStep = questionnaire.value.elements.maxOf { it.step }
                 val currentStep by viewModel.activeStep.collectAsState()
-                val currentElements = remember(currentStep) { questionnaire.value.elements.filter { it.step == currentStep } }
+                val currentElements = remember(currentStep) { questionnaire.value.elements.filter { it.step == currentStep }.sortedBy { it.position } }
                 val answerValues = viewModel.elementValues.collectAsState()
 
                 LazyColumn {

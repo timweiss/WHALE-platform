@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.api.model
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 open class QuestionnaireElement(
@@ -124,7 +125,7 @@ class RadioGroupElement(
 ) : QuestionnaireElement(id, questionnaireId, "radio_group", step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
-        json.getJSONObject("configuration").put("options", options)
+        json.getJSONObject("configuration").put("options", JSONArray(options))
         return json
     }
 }
@@ -139,7 +140,7 @@ class CheckboxGroupElement(
 ) : QuestionnaireElement(id, questionnaireId, "checkbox_group", step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
-        json.getJSONObject("configuration").put("options", options)
+        json.getJSONObject("configuration").put("options", JSONArray(options))
         return json
     }
 }
