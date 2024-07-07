@@ -104,4 +104,6 @@ dependencies {
     // implementation(name: 'opensmile-debug', ext: 'aar')
 
     implementation 'com.github.gkonovalov.android-vad:webrtc:2.0.6'
+
+    implementation "androidx.cardview:cardview:1.0.0"
 }

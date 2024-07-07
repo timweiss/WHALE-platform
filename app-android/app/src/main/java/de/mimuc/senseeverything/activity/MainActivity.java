@@ -96,12 +96,15 @@ public class MainActivity extends AppCompatActivity {
 		isPermissionGranted(Manifest.permission.FOREGROUND_SERVICE);
 		isPermissionGranted(Manifest.permission.ACCESS_FINE_LOCATION);
 
+		if (!isPermissionGranted(Manifest.permission.SYSTEM_ALERT_WINDOW)) {
+			requestFloatingWindowPermissions();
+		}
+
 		// fixme: this will open the settings page, we'll need to embed this into the onboarding process
 		isPermissionGranted(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
 
 		if (SDK_INT >= Build.VERSION_CODES.S) {
 			isPermissionGranted(Manifest.permission.BLUETOOTH_SCAN);
-//			isPermissionGranted(Manifest.permission.BLUETOOTH_CONNECT);
 		}
 
 		if (checkPermission()) {
@@ -172,6 +175,16 @@ public class MainActivity extends AppCompatActivity {
 		MenuInflater inflater = getMenuInflater();
 		inflater.inflate(R.menu.menu_main, menu);
 		return true;
+	}
+
+	private void requestFloatingWindowPermissions() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			if (!Settings.canDrawOverlays(this)) {
+				Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+						Uri.parse("package:" + getPackageName()));
+				startActivityForResult(intent, 1001);
+			}
+		}
 	}
 
 	@Override

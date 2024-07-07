@@ -102,10 +102,12 @@ public class LogService extends AbstractService {
 				if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
 					Log.d(TAG, "device locked, stopping sampling");
 					stopSensors();
+					hideInteractionWidget();
 				} else {
 					Log.d(TAG, "device unlocked, starting sampling");
 					// fixme: handle condition where logging might still be running?
 					startSensors();
+					showInteractionWidget();
 				}
 			}
 		};
@@ -118,6 +120,16 @@ public class LogService extends AbstractService {
 	public IBinder onBind(Intent intent) {
 		mMessenger = new Messenger(new IncomingHandler(this, this));
 		return mMessenger.getBinder();
+	}
+
+	private void showInteractionWidget() {
+		Intent intent = new Intent(this, InteractionFloatingWidgetService.class);
+		startService(intent);
+	}
+
+	private void hideInteractionWidget() {
+		Intent intent = new Intent(this, InteractionFloatingWidgetService.class);
+		stopService(intent);
 	}
 
 	public void startSensors() {

@@ -45,4 +45,7 @@
     <string name="title_activity_study_enrolment">StudyEnrolment</string>
     <string name="title_activity_questionnaire">QuestionnaireActivity</string>
     <string name="questionnaire_button">Open Questionnaire</string>
+    <string name="are_you_interacting">Are you in an interaction?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
 </resources>
