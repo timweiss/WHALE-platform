@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -57,6 +58,10 @@ public class InteractionFloatingWidgetService extends Service {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT
         );
+
+        // put it in the top right corner, a bit lower than the status bar
+        params.gravity = android.view.Gravity.TOP | Gravity.END;
+        params.verticalMargin = 0.075f;
 
         // Add the view to the window
         windowManager.addView(floatingWidget, params);
