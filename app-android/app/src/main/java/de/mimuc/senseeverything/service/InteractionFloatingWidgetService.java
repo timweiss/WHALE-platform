@@ -13,11 +13,20 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
-import de.mimuc.senseeverything.R;
+import javax.inject.Inject;
 
+import dagger.hilt.android.AndroidEntryPoint;
+import de.mimuc.senseeverything.R;
+import de.mimuc.senseeverything.data.DataStoreManager;
+import kotlin.Unit;
+
+@AndroidEntryPoint
 public class InteractionFloatingWidgetService extends Service {
     private WindowManager windowManager;
     private View floatingWidget;
+
+    @Inject
+    DataStoreManager dataStore;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -35,6 +44,16 @@ public class InteractionFloatingWidgetService extends Service {
         Button yesButton = floatingWidget.findViewById(R.id.yes_button);
         Button noButton = floatingWidget.findViewById(R.id.no_button);
         TextView questionText = floatingWidget.findViewById(R.id.interaction_question);
+
+        // Set the question text
+        dataStore.getInInteractionSync((inInteraction) -> {
+            if (inInteraction) {
+                questionText.setText(R.string.still_interacting);
+            } else {
+                questionText.setText(R.string.are_you_interacting);
+            }
+            return Unit.INSTANCE;
+        });
 
         yesButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -106,11 +125,21 @@ public class InteractionFloatingWidgetService extends Service {
     private void answerYes() {
         Log.d("FloatingWidget", "Yes button clicked");
         floatingWidget.setVisibility(View.GONE);
+        dataStore.setInInteractionSync(true);
+        // todo: log to sensor
     }
 
     private void answerNo() {
         Log.d("FloatingWidget", "No button clicked");
         floatingWidget.setVisibility(View.GONE);
+        dataStore.getInInteractionSync((inInteraction) -> {
+            if (inInteraction) {
+                // todo: log to sensor
+                // todo: open activity with questionnaire
+            }
+            return Unit.INSTANCE;
+        });
+        dataStore.setInInteractionSync(false);
     }
 
     @Override

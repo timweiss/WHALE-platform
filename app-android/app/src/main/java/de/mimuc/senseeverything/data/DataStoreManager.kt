@@ -2,10 +2,10 @@ package de.mimuc.senseeverything.data
 
 import android.content.Context
 import android.util.Log
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.gson.JsonArray
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
@@ -30,6 +30,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         val PARTICIPANT_ID = stringPreferencesKey("participantId")
         val STUDY_ID = stringPreferencesKey("studyId")
         val QUESTIONNAIRES = stringPreferencesKey("questionnaires")
+        val IN_INTERACTION = booleanPreferencesKey("inInteraction")
     }
 
     private val dataStore = context.dataStore
@@ -123,5 +124,30 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
             fullQuestionnaires.add(fullQuestionnaire)
         }
         fullQuestionnaires.toList()
+    }
+
+    suspend fun setInInteraction(inInteraction: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[IN_INTERACTION] = inInteraction
+        }
+    }
+
+    val inInteractionFlow = dataStore.data.map { preferences ->
+        preferences[IN_INTERACTION] ?: false
+    }
+
+    fun getInInteractionSync(callback: (Boolean) -> Unit) {
+        runBlocking {
+            inInteractionFlow.first { inInteraction ->
+                callback(inInteraction)
+                true
+            }
+        }
+    }
+
+    fun setInInteractionSync(inInteraction: Boolean) {
+        runBlocking {
+            setInInteraction(inInteraction)
+        }
     }
 }

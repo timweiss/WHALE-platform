@@ -48,4 +48,5 @@
     <string name="are_you_interacting">Are you in an interaction?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="still_interacting">Are you still interacting?</string>
 </resources>
