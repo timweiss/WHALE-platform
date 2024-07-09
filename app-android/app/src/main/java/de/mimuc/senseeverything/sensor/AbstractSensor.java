@@ -74,9 +74,8 @@ public abstract class AbstractSensor implements Serializable  {
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){
-		// dataSource.write(timestamp, data);
+		Log.d(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
 
-		// new: database
 		AsyncTask.execute(() -> {
 			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));
 		});

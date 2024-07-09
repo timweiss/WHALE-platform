@@ -18,12 +18,25 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.data.DataStoreManager;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
+import de.mimuc.senseeverything.sensor.SingletonSensorList;
+import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import kotlin.Unit;
 
 @AndroidEntryPoint
 public class InteractionFloatingWidgetService extends Service {
+    enum InteractionLogType {
+        Asked,
+        Start,
+        End,
+        Confirm,
+        NoInteraction
+    }
+
     private WindowManager windowManager;
     private View floatingWidget;
+
+    private String TAG = "InteractionFloatingWidgetService";
 
     @Inject
     DataStoreManager dataStore;
@@ -86,6 +99,8 @@ public class InteractionFloatingWidgetService extends Service {
         windowManager.addView(floatingWidget, params);
         Log.d("FloatingWidget", "Floating widget added to screen");
 
+        logInteraction(InteractionLogType.Asked);
+
         // Handle the widget's movement and interactions
         floatingWidget.setOnTouchListener(new View.OnTouchListener() {
             private int lastAction;
@@ -125,8 +140,17 @@ public class InteractionFloatingWidgetService extends Service {
     private void answerYes() {
         Log.d("FloatingWidget", "Yes button clicked");
         floatingWidget.setVisibility(View.GONE);
-        dataStore.setInInteractionSync(true);
-        // todo: log to sensor
+
+        dataStore.getInInteractionSync((inInteraction) -> {
+            if (inInteraction) {
+                logInteraction(InteractionLogType.Confirm);
+            } else {
+                logInteraction(InteractionLogType.Start);
+            }
+
+            dataStore.setInInteractionSync(true);
+            return Unit.INSTANCE;
+        });
     }
 
     private void answerNo() {
@@ -134,17 +158,48 @@ public class InteractionFloatingWidgetService extends Service {
         floatingWidget.setVisibility(View.GONE);
         dataStore.getInInteractionSync((inInteraction) -> {
             if (inInteraction) {
-                // todo: log to sensor
+                logInteraction(InteractionLogType.End);
                 // todo: open activity with questionnaire
+            } else {
+                logInteraction(InteractionLogType.NoInteraction);
             }
+
+            dataStore.setInInteractionSync(false);
             return Unit.INSTANCE;
         });
-        dataStore.setInInteractionSync(false);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         if (floatingWidget != null) windowManager.removeView(floatingWidget);
+    }
+
+    private void logInteraction(InteractionLogType type) {
+        AbstractSensor sensor = SingletonSensorList.getInstance().getSensorOfType(InteractionLogSensor.class);
+
+        if (sensor != null) {
+            InteractionLogSensor interactionSensor = (InteractionLogSensor) sensor;
+
+            switch (type) {
+                case Asked:
+                    interactionSensor.logInteractionAsked();
+                    break;
+                case Start:
+                    interactionSensor.logInteractionStart();
+                    break;
+                case End:
+                    interactionSensor.logInteractionEnd();
+                    break;
+                case Confirm:
+                    interactionSensor.logContinued();
+                    break;
+                case NoInteraction:
+                    interactionSensor.logNoInteraction();
+                    break;
+            }
+        } else {
+            Log.e(TAG, "Could not get InteractionLogSensor instance.");
+        }
     }
 }

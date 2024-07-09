@@ -35,9 +35,7 @@ public class LogService extends AbstractService {
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		int ret = super.onStartCommand(intent, flags, startId);
-
-		startSensors();
-		
+		// starting sensors should only be done, once communicated by the SamplingManager
 		return ret;
 	}
 

@@ -10,6 +10,7 @@ import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
 import de.mimuc.senseeverything.sensor.implementation.AudioSampleSensor;
 import de.mimuc.senseeverything.sensor.implementation.BluetoothSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor;
+import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyAccelerometerSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyGyroscopeSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyLightSensor;
@@ -25,7 +26,7 @@ public class SingletonSensorList {
 	private SingletonSensorList() {
 	}
 
-	public static SingletonSensorList getInstance() {
+	public static synchronized SingletonSensorList getInstance() {
 		if (instance == null) {
 			instance = new SingletonSensorList();
 		}
@@ -48,6 +49,7 @@ public class SingletonSensorList {
 		this.list.add(new AccessibilitySensor(aContext));
 		this.list.add(new MyLightSensor(aContext));
 		this.list.add(new BluetoothSensor(aContext));
+		this.list.add(new InteractionLogSensor(aContext));
 
 		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
 
@@ -70,5 +72,14 @@ public class SingletonSensorList {
 
 	public static List<AbstractSensor> getList(Context pContext) {
 		return getInstance().getOrInitializeList(pContext);
+	}
+
+	public AbstractSensor getSensorOfType(Class<?> sensorType) {
+		for (AbstractSensor sensor : list) {
+			if (sensor.getClass().equals(sensorType)) {
+				return sensor;
+			}
+		}
+		return null;
 	}
 }
