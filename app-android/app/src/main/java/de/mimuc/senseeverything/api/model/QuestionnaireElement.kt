@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.api.model
 
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -23,6 +24,17 @@ open class QuestionnaireElement(
         json.put("configuration", JSONObject())
         return json
     }
+}
+
+fun getAlignmentValue(alignmentString: String): GroupAlignment {
+    var alignmentEnum: GroupAlignment = GroupAlignment.Vertical
+    when (alignmentString) {
+        "horizontal" -> alignmentEnum = GroupAlignment.Horizontal
+        "vertical" -> alignmentEnum = GroupAlignment.Vertical
+        else -> Log.e("QuestionnaireElement", "Unknown alignment: $alignmentString")
+    }
+
+    return alignmentEnum
 }
 
 fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
@@ -50,6 +62,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
         "radio_group" -> {
             val options = mutableListOf<String>()
             val optionsJson = config.getJSONArray("options")
+            val alignment = getAlignmentValue(config.getString("alignment"))
+
             for (i in 0 until optionsJson.length()) {
                 options.add(optionsJson.getString(i))
             }
@@ -60,12 +74,15 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 step,
                 position,
                 configuration,
-                options
+                options,
+                alignment = alignment
             )
         }
         "checkbox_group" -> {
             val options = mutableListOf<String>()
             val optionsJson = config.getJSONArray("options")
+            val alignment = getAlignmentValue(config.getString("alignment"))
+
             for (i in 0 until optionsJson.length()) {
                 options.add(optionsJson.getString(i))
             }
@@ -76,7 +93,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 step,
                 position,
                 configuration,
-                options
+                options,
+                alignment = alignment
             )
         }
         "slider" -> {
@@ -124,6 +142,11 @@ class TextViewElement(
     }
 }
 
+enum class GroupAlignment {
+    Horizontal,
+    Vertical
+}
+
 class RadioGroupElement(
     id: Int,
     questionnaireId: Int,
@@ -131,11 +154,13 @@ class RadioGroupElement(
     step: Int,
     position: Int,
     configuration: Any,
-    val options: List<String>
+    val options: List<String>,
+    val alignment: GroupAlignment = GroupAlignment.Vertical
 ) : QuestionnaireElement(id, questionnaireId, name, "radio_group", step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("options", JSONArray(options))
+        json.getJSONObject("configuration").put("alignment", alignment.toString().lowercase())
         return json
     }
 }
@@ -147,11 +172,13 @@ class CheckboxGroupElement(
     step: Int,
     position: Int,
     configuration: Any,
-    val options: List<String>
+    val options: List<String>,
+    val alignment: GroupAlignment = GroupAlignment.Vertical
 ) : QuestionnaireElement(id, questionnaireId, name, "checkbox_group", step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("options", JSONArray(options))
+        json.getJSONObject("configuration").put("alignment", alignment.toString().lowercase())
         return json
     }
 }

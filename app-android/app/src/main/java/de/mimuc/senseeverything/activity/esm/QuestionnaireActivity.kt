@@ -122,7 +122,7 @@ class QuestionnaireViewModel  @Inject constructor(
 
     fun saveQuestionnaire(context: Context) {
         // todo: actually save the questionnaire
-        Log.d("Questionnaire", "Answers: " + _elementValues.value.values.fold("") { acc, elementValue -> acc + elementValue.getSerializedValue() })
+        Log.d("Questionnaire", "Answers: " + _elementValues.value.values.fold("") { acc, elementValue -> acc + elementValue.elementName + ": " + elementValue.getSerializedValue() })
         // pop activity
         val activity = (context as? Activity)
         activity?.finish()
@@ -175,26 +175,26 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
                             "radio_group" -> {
                                 RadioGroupElementComponent(element = element as RadioGroupElement, value = (elementValue as RadioGroupValue).value,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, RadioGroupValue(element.id, newValue))
+                                        viewModel.setElementValue(element.id, RadioGroupValue(element.id, element.name, newValue))
                                     }
                                 )
                             }
                             "checkbox_group" -> {
                                 CheckboxGroupElementComponent(element = element as CheckboxGroupElement, value = (elementValue as CheckboxGroupValue).values,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, CheckboxGroupValue(element.id, newValue))
+                                        viewModel.setElementValue(element.id, CheckboxGroupValue(element.id, element.name, newValue))
                                     })
                             }
                             "slider" -> {
                                 SliderElementComponent(element = element as SliderElement, value = (elementValue as SliderValue).value,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, SliderValue(element.id, newValue))
+                                        viewModel.setElementValue(element.id, SliderValue(element.id, element.name, newValue))
                                     })
                             }
                             "text_entry" -> {
                                 TextEntryElementComponent(element = element as TextEntryElement, value = (elementValue as TextEntryValue).value,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, TextEntryValue(element.id, newValue))
+                                        viewModel.setElementValue(element.id, TextEntryValue(element.id, element.name, newValue))
                                     })
                             }
                         }

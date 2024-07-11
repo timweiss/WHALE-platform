@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.activity.esm
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
+import de.mimuc.senseeverything.api.model.GroupAlignment
 import de.mimuc.senseeverything.api.model.RadioGroupElement
 import de.mimuc.senseeverything.api.model.SliderElement
 import de.mimuc.senseeverything.api.model.TextEntryElement
@@ -36,11 +39,22 @@ fun RadioGroupElementComponent(element: RadioGroupElement, value: String, onValu
         onValueChange(option)
     }
 
-    Row {
-        element.options.forEach { option ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                RadioButton(selected = value.compareTo(option) == 0, onClick = { selectElement(option) })
-                Text(option)
+    if (element.alignment == GroupAlignment.Horizontal) {
+        Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+            element.options.forEach { option ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    RadioButton(selected = value.compareTo(option) == 0, onClick = { selectElement(option) })
+                    Text(option, textAlign = TextAlign.Center)
+                }
+            }
+        }
+    } else {
+        Column {
+            element.options.forEach { option ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = value.compareTo(option) == 0, onClick = { selectElement(option) })
+                    Text(option)
+                }
             }
         }
     }
@@ -58,13 +72,26 @@ fun CheckboxGroupElementComponent(element: CheckboxGroupElement, value: List<Str
         }
     }
 
-    Row {
-        element.options.forEach { option ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Checkbox(checked = value.contains(option), onCheckedChange = {
-                    selectElement(option)
-                })
-                Text(option)
+    if (element.alignment == GroupAlignment.Horizontal) {
+        Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+            element.options.forEach { option ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Checkbox(checked = value.contains(option), onCheckedChange = {
+                        selectElement(option)
+                    })
+                    Text(option)
+                }
+            }
+        }
+    } else {
+        Column {
+            element.options.forEach { option ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = value.contains(option), onCheckedChange = {
+                        selectElement(option)
+                    })
+                    Text(option)
+                }
             }
         }
     }
