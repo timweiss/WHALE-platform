@@ -64,6 +64,13 @@ export interface ExperienceSamplingTrigger {
   enabled: boolean;
 }
 
+export interface ExperienceSamplingAnswer {
+  id: number;
+  enrolmentId: string;
+  questionnaireId: number;
+  answers: string;
+}
+
 export interface IRepository {
   getStudies(): Promise<Study[]>;
 
@@ -147,6 +154,13 @@ export interface IRepository {
   ): Promise<ExperienceSamplingElement>;
 
   deleteESMElement(id: number): Promise<void>;
+
+  createESMAnswer(
+    answer: Pick<
+      ExperienceSamplingAnswer,
+      'enrolmentId' | 'questionnaireId' | 'answers'
+    >,
+  ): Promise<ExperienceSamplingAnswer>;
 }
 
 export class Repository implements IRepository {
@@ -605,6 +619,29 @@ export class Repository implements IRepository {
   async deleteESMElement(id: number): Promise<void> {
     try {
       await this.pool.query('DELETE FROM esm_elements WHERE id = $1', [id]);
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async createESMAnswer(
+    answer: Pick<
+      ExperienceSamplingAnswer,
+      'enrolmentId' | 'questionnaireId' | 'answers'
+    >,
+  ): Promise<ExperienceSamplingAnswer> {
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO esm_answers (enrolment_id, questionnaire_id, answers) VALUES ($2, $3, $4) RETURNING *',
+        [answer.enrolmentId, answer.questionnaireId, answer.answers],
+      );
+
+      return {
+        id: res.rows[0].id,
+        enrolmentId: res.rows[0].enrolment_id,
+        questionnaireId: res.rows[0].questionnaire_id,
+        answers: res.rows[0].answers,
+      };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }

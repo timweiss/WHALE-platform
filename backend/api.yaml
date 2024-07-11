@@ -390,6 +390,41 @@ paths:
           description: The trigger was deleted successfully.
         '404':
           description: The questionnaire was not found.
+  /study/{study_id}/questionnaire/{questionnaire_id}/answer:
+    post:
+      description: Adds a new answer to an existing ESM questionnaire.
+      tags:
+        - esm
+      security:
+        - token: [ ]
+      parameters:
+        - name: study_id
+          in: path
+          description: The ID of the study that the questionnaire belongs to.
+          required: true
+          schema:
+            type: integer
+        - name: questionnaire_id
+          in: path
+          description: The ID of the questionnaire to add the answer to.
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ESMAnswer'
+      responses:
+        '201':
+          description: The answer was added successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESMAnswer'
+        '404':
+          description: The questionnaire was not found.
   /enrolment:
     post:
       description:
@@ -705,3 +740,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ESMTrigger'
+    ESMAnswer:
+      description: Instance of answered questionnaire
+      properties:
+        questionnaireId:
+          type: integer
+          description: The database ID for the questionnaire.
+        enrolmentId:
+          type: integer
+          description: The unique identifier for the enrolment.
+        answers:
+          type: array
+          description: The answers to the questionnaire.
