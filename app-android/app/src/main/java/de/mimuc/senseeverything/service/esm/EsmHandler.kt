@@ -34,7 +34,8 @@ class EsmHandler {
                         // open questionnaire
                         val intent = Intent(context, QuestionnaireActivity::class.java)
                         intent.putExtra("questionnaire", matchingQuestionnaire.toJson().toString())
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
                         context.startActivity(intent)
                     }
                 }
