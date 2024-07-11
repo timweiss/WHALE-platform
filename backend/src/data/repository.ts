@@ -46,6 +46,7 @@ export interface ElementConfiguration {}
 export interface ExperienceSamplingElement {
   id: number;
   questionnaireId: number;
+  name: string;
   type: ElementType;
   step: number;
   position: number;
@@ -547,6 +548,7 @@ export class Repository implements IRepository {
       return elements.rows.map((row) => ({
         id: row.id,
         questionnaireId: row.questionnaire_id,
+        name: row.name,
         type: row.type,
         step: row.step,
         position: row.position,
@@ -560,14 +562,20 @@ export class Repository implements IRepository {
   async createESMElement(
     element: Pick<
       ExperienceSamplingElement,
-      'questionnaireId' | 'type' | 'configuration' | 'step' | 'position'
+      | 'questionnaireId'
+      | 'name'
+      | 'type'
+      | 'configuration'
+      | 'step'
+      | 'position'
     >,
   ): Promise<ExperienceSamplingElement> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO esm_elements (questionnaire_id, type, step, position, configuration) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        'INSERT INTO esm_elements (questionnaire_id, name, type, step, position, configuration) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [
           element.questionnaireId,
+          element.name,
           element.type,
           element.step,
           element.position,
@@ -578,6 +586,7 @@ export class Repository implements IRepository {
       return {
         id: res.rows[0].id,
         questionnaireId: res.rows[0].questionnaire_id,
+        name: res.rows[0].name,
         type: res.rows[0].type,
         step: res.rows[0].step,
         position: res.rows[0].position,
@@ -593,12 +602,13 @@ export class Repository implements IRepository {
   ): Promise<ExperienceSamplingElement> {
     try {
       const updated = await this.pool.query(
-        'UPDATE esm_elements SET type = $1, step = $2, position = $3, configuration = $4 WHERE id = $5 RETURNING *',
+        'UPDATE esm_elements SET type = $1, step = $2, position = $3, configuration = $4, name = $5 WHERE id = $6 RETURNING *',
         [
           element.type,
           element.step,
           element.position,
           element.configuration,
+          element.name,
           element.id,
         ],
       );
@@ -606,6 +616,7 @@ export class Repository implements IRepository {
       return {
         id: updated.rows[0].id,
         questionnaireId: updated.rows[0].questionnaire_id,
+        name: updated.rows[0].name,
         type: updated.rows[0].type,
         step: updated.rows[0].step,
         position: updated.rows[0].position,

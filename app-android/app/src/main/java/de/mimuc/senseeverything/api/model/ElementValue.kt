@@ -1,31 +1,31 @@
 package de.mimuc.senseeverything.api.model
 
 
-open class ElementValue(val elementId: Int) {
+open class ElementValue(val elementId: Int, val elementName: String) {
     open fun getSerializedValue(): String {
         return ""
     }
 }
 
-class RadioGroupValue(elementId: Int, var value: String) : ElementValue(elementId) {
+class RadioGroupValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return value
     }
 }
 
-class CheckboxGroupValue(elementId: Int, var values: List<String>) : ElementValue(elementId) {
+class CheckboxGroupValue(elementId: Int, elementName: String, var values: List<String>) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return values.joinToString(",")
     }
 }
 
-class SliderValue(elementId: Int, var value: Double) : ElementValue(elementId) {
+class SliderValue(elementId: Int, elementName: String, var value: Double) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return value.toString()
     }
 }
 
-class TextEntryValue(elementId: Int, var value: String) : ElementValue(elementId) {
+class TextEntryValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return value
     }
@@ -33,10 +33,10 @@ class TextEntryValue(elementId: Int, var value: String) : ElementValue(elementId
 
 fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
     return when (element.type) {
-        "radio_group" -> RadioGroupValue(element.id, "")
-        "checkbox_group" -> CheckboxGroupValue(element.id, emptyList())
-        "slider" -> SliderValue(element.id, 0.0)
-        "text_entry" -> TextEntryValue(element.id, "")
-        else -> ElementValue(element.id)
+        "radio_group" -> RadioGroupValue(element.id, element.name, "")
+        "checkbox_group" -> CheckboxGroupValue(element.id, element.name, emptyList())
+        "slider" -> SliderValue(element.id,element.name, 0.0)
+        "text_entry" -> TextEntryValue(element.id, element.name, "")
+        else -> ElementValue(element.id, element.name)
     }
 }
