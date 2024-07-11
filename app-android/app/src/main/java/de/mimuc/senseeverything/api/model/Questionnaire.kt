@@ -21,7 +21,7 @@ data class Questionnaire(
     }
 }
 
-data class QuestionnaireTrigger(
+open class QuestionnaireTrigger(
     val id: Int,
     val questionnaireId: Int,
     val type: String,
@@ -36,6 +36,13 @@ data class QuestionnaireTrigger(
         return json
     }
 }
+
+class EventQuestionnaireTrigger(
+    id: Int,
+    questionnaireId: Int,
+    configuration: Any,
+    val eventName: String
+) : QuestionnaireTrigger(id, questionnaireId, "event", configuration)
 
 data class FullQuestionnaire(
     val questionnaire: Questionnaire,
@@ -77,7 +84,20 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
     val type = json.getString("type")
     val configuration = json.getJSONObject("configuration")
 
-    return QuestionnaireTrigger(id, questionnaireId, type, configuration)
+    when (type) {
+        "event" -> {
+            return EventQuestionnaireTrigger(
+                id,
+                questionnaireId,
+                configuration,
+                configuration.getString("eventName")
+            )
+        }
+
+        else -> {
+            return QuestionnaireTrigger(id, questionnaireId, type, configuration)
+        }
+    }
 }
 
 fun makeFullQuestionnaireFromJson(json: JSONObject): FullQuestionnaire {

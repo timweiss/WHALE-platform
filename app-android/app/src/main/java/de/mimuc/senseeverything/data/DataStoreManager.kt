@@ -126,6 +126,15 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         fullQuestionnaires.toList()
     }
 
+    fun getQuestionnairesSync(callback: (List<FullQuestionnaire>) -> Unit) {
+        runBlocking {
+            questionnairesFlow.first { fullQuestionnaires ->
+                callback(fullQuestionnaires)
+                true
+            }
+        }
+    }
+
     suspend fun setInInteraction(inInteraction: Boolean) {
         dataStore.edit { preferences ->
             preferences[IN_INTERACTION] = inInteraction

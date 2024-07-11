@@ -7,6 +7,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 
 import dagger.hilt.android.HiltAndroidApp;
+import de.mimuc.senseeverything.service.esm.EsmHandler;
 import de.mimuc.senseeverything.service.sampling.OnUnlockSamplingStrategy;
 import de.mimuc.senseeverything.service.sampling.PeriodicSamplingStrategy;
 import de.mimuc.senseeverything.service.sampling.SamplingManager;
@@ -27,6 +28,8 @@ public class SEApplicationController extends Application {
     private RequestQueue mRequestQueue;
 
     private SamplingManager mSamplingManager;
+
+    private EsmHandler mEsmHandler;
 
     /**
      * Method to access the ApplicationController singleton instance
@@ -70,5 +73,12 @@ public class SEApplicationController extends Application {
             mSamplingManager = new SamplingManager(new OnUnlockSamplingStrategy());
         }
         return mSamplingManager;
+    }
+
+    public EsmHandler getEsmHandler() {
+        if (mEsmHandler == null) {
+            mEsmHandler = new EsmHandler();
+        }
+        return mEsmHandler;
     }
 }

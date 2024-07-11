@@ -159,7 +159,8 @@ public class InteractionFloatingWidgetService extends Service {
         dataStore.getInInteractionSync((inInteraction) -> {
             if (inInteraction) {
                 logInteraction(InteractionLogType.End);
-                // todo: open activity with questionnaire
+                SEApplicationController.getInstance().getEsmHandler().initializeTriggers(dataStore);
+                SEApplicationController.getInstance().getEsmHandler().handleEvent("interactionEnd", this, dataStore);
             } else {
                 logInteraction(InteractionLogType.NoInteraction);
             }

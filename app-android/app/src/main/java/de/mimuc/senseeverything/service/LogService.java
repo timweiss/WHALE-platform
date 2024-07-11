@@ -109,6 +109,7 @@ public class LogService extends AbstractService {
 				}
 			}
 		};
+		initializeSensors();
 		registerReceiver(broadcastReceiver, filter);
 		Log.d(TAG, "registered broadcast receiver");
 	}
@@ -130,7 +131,11 @@ public class LogService extends AbstractService {
 		stopService(intent);
 	}
 
-	public void startSensors() {
+	private void initializeSensors() {
+		sensorList = SingletonSensorList.getList(this);
+	}
+
+	private void startSensors() {
 		// use the singleton list because we want to keep our sensor's state inbetween activations
 		sensorList = SingletonSensorList.getList(this);
 
@@ -149,7 +154,7 @@ public class LogService extends AbstractService {
 		}
 	}
 
-	public void stopSensors() {
+	private void stopSensors() {
 		for(AbstractSensor sensor : sensorList) {
 			if (sensor.isRunning())
 			{
