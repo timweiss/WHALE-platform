@@ -201,8 +201,6 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return res.status(404).send();
 
-      console.log('answers', req.body.answers);
-
       const answer = await repository.createESMAnswer({
         questionnaireId: questionnaire.id,
         enrolmentId: (req.user! as RequestUser).enrolmentId,
