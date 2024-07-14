@@ -203,8 +203,8 @@ export function createESMController(repository: IRepository, app: Express) {
 
       const answer = await repository.createESMAnswer({
         questionnaireId: questionnaire.id,
-        participantId: (req.user! as RequestUser).enrolmentId,
-        ...req.body,
+        enrolmentId: (req.user! as RequestUser).enrolmentId,
+        answers: req.body.answers,
       });
 
       res.json(answer);

@@ -643,7 +643,7 @@ export class Repository implements IRepository {
   ): Promise<ExperienceSamplingAnswer> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO esm_answers (enrolment_id, questionnaire_id, answers) VALUES ($2, $3, $4) RETURNING *',
+        'INSERT INTO esm_answers (enrolment_id, questionnaire_id, answers) VALUES ($1, $2, $3) RETURNING *',
         [answer.enrolmentId, answer.questionnaireId, answer.answers],
       );
 
