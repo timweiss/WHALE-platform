@@ -368,20 +368,6 @@ public class ConversationSensor extends AbstractSensor {
 				throwable = (Throwable) results[0];
 				Log.e(RecordWaveTask.class.getSimpleName(), throwable.getMessage(), throwable);
 			}
-
-			// If we're attached to an activity
-			if (ctx != null) {
-				if (throwable == null) {
-					// Display final recording stats
-					double size = (long) results[0] / 1000000.00;
-					long time = (long) results[1] / 1000;
-					Toast.makeText(ctx, String.format(Locale.getDefault(), "%.2f MB / %d seconds",
-							size, time), Toast.LENGTH_LONG).show();
-				} else {
-					// Error
-					Toast.makeText(ctx, throwable.getLocalizedMessage(), Toast.LENGTH_LONG).show();
-				}
-			}
 		}
 	}
 }

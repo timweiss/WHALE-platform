@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
@@ -50,8 +51,11 @@ import de.mimuc.senseeverything.api.model.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.emptyValueForElement
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.network.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -121,11 +125,27 @@ class QuestionnaireViewModel  @Inject constructor(
     }
 
     fun saveQuestionnaire(context: Context) {
-        // todo: actually save the questionnaire
-        Log.d("Questionnaire", "Answers: " + _elementValues.value.values.fold("") { acc, elementValue -> acc + elementValue.elementName + ": " + elementValue.getSerializedValue() })
-        // pop activity
-        val activity = (context as? Activity)
-        activity?.finish()
+        Log.d("Questionnaire", "Save questionnaire")
+
+        viewModelScope.launch {
+            combine(
+                dataStoreManager.studyIdFlow,
+                dataStoreManager.tokenFlow
+            ) { studyId, token ->
+                // schedule to upload answers
+                Log.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
+                enqueueQuestionnaireUploadWorker(context, makeAnswerJsonArray(), questionnaire.value.questionnaire.id, studyId, token)
+
+                // pop activity
+                val activity = (context as? Activity)
+                activity?.finish()
+            }.collect {}
+        }
+    }
+
+    private fun makeAnswerJsonArray(): String {
+        val jsonArray = _elementValues.value.values.map { it.toJson() }
+        return jsonArray.toString()
     }
 }
 

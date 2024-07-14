@@ -1,9 +1,19 @@
 package de.mimuc.senseeverything.api.model
 
+import org.json.JSONObject
+
 
 open class ElementValue(val elementId: Int, val elementName: String) {
     open fun getSerializedValue(): String {
         return ""
+    }
+
+    open fun toJson(): JSONObject {
+        val json = JSONObject()
+        json.put("elementId", elementId)
+        json.put("elementName", elementName)
+        json.put("value", getSerializedValue())
+        return json
     }
 }
 

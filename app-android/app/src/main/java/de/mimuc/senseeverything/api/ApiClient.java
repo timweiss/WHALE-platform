@@ -56,15 +56,9 @@ public class ApiClient {
 
     // POST request
     public void post(String url, JSONObject jsonRequest, Map<String, String> headers, Response.Listener<JSONObject> listener, Response.ErrorListener errorListener) {
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, jsonRequest, listener, errorListener);
+        MyJsonObjectRequest jsonObjectRequest = new MyJsonObjectRequest(Request.Method.POST, url, jsonRequest, listener, errorListener);
         if (!headers.isEmpty()) {
-            for (Map.Entry<String, String> entry : headers.entrySet()) {
-                try {
-                    jsonObjectRequest.getHeaders().put(entry.getKey(), entry.getValue());
-                } catch (AuthFailureError e) {
-                    throw new RuntimeException(e);
-                }
-            }
+           jsonObjectRequest.setHeaders(headers);
         }
         addToRequestQueue(jsonObjectRequest);
     }
