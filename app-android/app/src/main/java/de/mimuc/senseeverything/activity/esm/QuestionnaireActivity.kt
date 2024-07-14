@@ -143,8 +143,18 @@ class QuestionnaireViewModel  @Inject constructor(
         }
     }
 
+    private fun canHaveAnswer(elementId: Int): Boolean {
+        val element = questionnaire.value.elements.find { it.id == elementId }
+        if (element != null) {
+            return element.type != "text_view"
+        }
+        return false
+    }
+
     private fun makeAnswerJsonArray(): String {
-        val jsonArray = _elementValues.value.values.map { it.toJson() }
+        val jsonArray = _elementValues.value.values
+            .filter { canHaveAnswer(it.elementId) }
+            .map { it.toJson() }
         return jsonArray.toString()
     }
 }
