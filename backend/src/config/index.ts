@@ -13,6 +13,7 @@ export const Config = {
   },
   database: {
     connectionString: process.env.DB_CONNECTION || 'localhost:5432',
+    useEnv: process.env.DB_USE_ENV === 'true',
   },
   auth: {
     jwtSecret:
