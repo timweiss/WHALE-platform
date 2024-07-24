@@ -135,7 +135,7 @@ class EnrolmentViewModel @Inject constructor(
             body.put("enrolmentKey", text)
 
             val response = suspendCoroutine { continuation ->
-                client.post("https://siapi.timweiss.dev/v1/enrolment", body, emptyMap(),
+                client.post("https://sisensing.medien.ifi.lmu.de/v1/enrolment", body, emptyMap(),
                     { response ->
                         continuation.resume(response)
                     },
@@ -171,7 +171,7 @@ class EnrolmentViewModel @Inject constructor(
         viewModelScope.launch {
             val client = ApiClient.getInstance(context)
             val response = suspendCoroutine { continuation ->
-                client.getJson("https://siapi.timweiss.dev/v1/study/$studyId",
+                client.getJson("https://sisensing.medien.ifi.lmu.de/v1/study/$studyId",
                     { response ->
                         continuation.resume(response)
                     },

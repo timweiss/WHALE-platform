@@ -70,7 +70,7 @@ class SensorReadingsUploadWorker(
         try {
             val response = suspendCoroutine { continuation ->
                 client.postArray(
-                    "https://siapi.timweiss.dev/v1/reading/batch",
+                    "https://sisensing.medien.ifi.lmu.de/v1/reading/batch",
                     jsonReadings,
                     headers,
                     { response ->

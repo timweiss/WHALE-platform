@@ -51,11 +51,7 @@ public class ScreenOrientationSensor extends AbstractSensor {
 			}
 			else if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
 				onLogDataItem(t, "PORTRAIT");
-			}
-			else if(m_context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_SQUARE){
-				onLogDataItem(t, "SQUARE");
-			}
-			else {
+			} else {
 				onLogDataItem(t, "UNDEFINED");
 			}
 		} catch (Exception e) {
@@ -96,11 +92,7 @@ public class ScreenOrientationSensor extends AbstractSensor {
 		                }
 		                else if(context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT){
 							onLogDataItem(t, "PORTRAIT");
-		                }
-						else if(context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_SQUARE){
-							onLogDataItem(t, "SQUARE");
-						}
-		                else {
+		                } else {
 							onLogDataItem(t, "UNDEFINED");
 		                }
 	                } catch (Exception e) {

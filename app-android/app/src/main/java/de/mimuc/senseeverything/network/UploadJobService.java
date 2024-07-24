@@ -103,7 +103,7 @@ public class UploadJobService extends JobService {
             Map<String, String> headers = new HashMap<>();
             headers.put("Authorization", "Bearer " + token);
 
-            client.postArray("https://siapi.timweiss.dev/v1/reading/batch", jsonReadings, headers
+            client.postArray("https://sisensing.medien.ifi.lmu.de/v1/reading/batch", jsonReadings, headers
                     , response -> {
                         Log.d(TAG, response.toString());
                         for (LogData logData : data) {
@@ -190,7 +190,7 @@ public class UploadJobService extends JobService {
                 headers.put("Authorization", "Bearer " + token);
 
                 client.postFile(
-                        "https://siapi.timweiss.dev/v1/reading/" + readingId + "/file",
+                        "https://sisensing.medien.ifi.lmu.de/v1/reading/" + readingId + "/file",
                         file.getName(),
                         "audio/aac",
                         bytes,

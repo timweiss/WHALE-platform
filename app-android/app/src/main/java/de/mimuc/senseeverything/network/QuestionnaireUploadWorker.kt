@@ -56,7 +56,7 @@ class QuestionnaireUploadWorker(appContext: Context, workerParams: WorkerParamet
         val headers = mapOf("Authorization" to "Bearer $userToken")
         val response = suspendCoroutine { continuation ->
             client.post(
-                "https://siapi.timweiss.dev/v1/study/$studyId/questionnaire/$questionnaireId/answer",
+                "https://sisensing.medien.ifi.lmu.de/v1/study/$studyId/questionnaire/$questionnaireId/answer",
                 json,
                 headers,
                 { response ->
