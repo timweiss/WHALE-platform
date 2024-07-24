@@ -35,6 +35,13 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
 
         try {
             context.unbindService(serviceConnection);
+        } catch (Exception e) {
+            Log.e(TAG, "could not unbind context from connection, could be because it's a new activity", e);
+        }
+
+        // we should continue trying to stop the service even if unbinding fails (as it could be a new activity)
+
+        try {
             Intent intent = new Intent(context, LogService.class);
             context.stopService(intent);
 
@@ -51,8 +58,8 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
 
     @Override
     public boolean isRunning(Context context) {
-        SharedPreferences sp = context.getSharedPreferences(CONST.SP_LOG_EVERYTHING, Activity.MODE_PRIVATE);
-        return sp.getBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, false);
+        // fixme: even if a messenger exists, the service could still be dead
+        return logServiceMessenger != null;
     }
 
     private void startLogService(Context context) {
