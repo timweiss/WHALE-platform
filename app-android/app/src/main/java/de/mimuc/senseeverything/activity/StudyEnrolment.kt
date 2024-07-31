@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -42,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.volley.VolleyError
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
@@ -88,6 +91,25 @@ class StudyEnrolment : ComponentActivity() {
     }
 }
 
+data class ApiError(val httpCode: Int, val appCode: String, val message: String)
+
+fun decodeError(error: VolleyError): ApiError {
+    val response = error.networkResponse
+    val message = error.message ?: "Unknown error"
+    return if (response != null) {
+        try {
+            val data = String(response.data)
+            val json = JSONObject(data)
+            ApiError(response.statusCode, json.getString("code"), json.getString("error"))
+        } catch (e: Exception) {
+            Log.e("Enrolment", "Error decoding error response: $e")
+            ApiError(response.statusCode, "unknown", message)
+        }
+    } else {
+        ApiError(-1, "unknown", message)
+    }
+}
+
 @HiltViewModel
 class EnrolmentViewModel @Inject constructor(
         application: Application,
@@ -107,6 +129,12 @@ class EnrolmentViewModel @Inject constructor(
 
     private val _questionnaires = MutableStateFlow(mutableStateListOf<FullQuestionnaire>())
     val questionnaires: StateFlow<List<FullQuestionnaire>> get() = _questionnaires
+
+    private val _errorCode = MutableStateFlow("")
+    val errorCode: StateFlow<String> get() = _errorCode
+
+    private val _showErrorDialog = MutableStateFlow(false)
+    val showErrorDialog: StateFlow<Boolean> get() = _showErrorDialog
 
     init {
         viewModelScope.launch {
@@ -140,14 +168,19 @@ class EnrolmentViewModel @Inject constructor(
                         continuation.resume(response)
                     },
                     { error ->
-                        continuation.resume(null)
+                        continuation.resume(error)
                     })
             }
 
-            if (response == null) {
+            if (response is VolleyError) {
                 _isEnrolled.value = false
                 _isLoading.value = false
-            } else {
+
+                val error = decodeError(response)
+                Log.e("Enrolment", "Error: ${error.httpCode} ${error.appCode} ${error.message}")
+                _errorCode.value = error.appCode
+                _showErrorDialog.value = true
+            } else if (response is JSONObject) {
                 val token = response.getString("token")
                 val participantId = response.getString("participantId")
                 val studyId = response.getInt("studyId")
@@ -213,6 +246,11 @@ class EnrolmentViewModel @Inject constructor(
             _isEnrolled.value = false
         }
     }
+
+    fun closeError() {
+        _showErrorDialog.value = false
+        _errorCode.value = ""
+    }
 }
 
 @Composable
@@ -225,6 +263,8 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
     val study = viewModel.study.collectAsState()
     val questionnaires by viewModel.questionnaires.collectAsState()
     val noQuestionnaires = questionnaires.isEmpty()
+    val errorCode = viewModel.errorCode.collectAsState()
+    val showErrorDialog = viewModel.showErrorDialog.collectAsState()
 
     Column(
         modifier = Modifier
@@ -252,6 +292,37 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
                 ) {
                     Text("Enrol in Study")
                 }
+            }
+
+            if (showErrorDialog.value && errorCode.value.isNotEmpty()) {
+                AlertDialog(
+                    title = {
+                        if (errorCode.value == "full" || errorCode.value == "closed") {
+                            Text ("Study closed")
+                        } else {
+                            Text("Incorrect enrolment key")
+                        }
+                    },
+                    text = {
+                        if (errorCode.value == "full" || errorCode.value == "closed") {
+                            Text("The study no longer accepts new participants.")
+                        } else {
+                            Text("The study could not be joined. Please check if the enrolment key is correct.")
+                        }
+                    },
+                    onDismissRequest = {
+                        viewModel.closeError()
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.closeError()
+                            }
+                        ) {
+                            Text("Confirm")
+                        }
+                    }
+                )
             }
         } else {
             Icon(Icons.Rounded.Check, contentDescription = "success!", modifier = Modifier.size(32.dp))
