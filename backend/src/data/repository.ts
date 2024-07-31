@@ -5,6 +5,7 @@ export interface Study {
   id: number;
   name: string;
   enrolmentKey: string;
+  maxEnrolments: number;
 }
 
 export interface Enrolment {
@@ -80,6 +81,10 @@ export interface IRepository {
   getStudyById(id: number): Promise<Study | null>;
 
   getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study | null>;
+
+  getEnrolmentCountByStudyId(studyId: number): Promise<number>;
+
+  updateStudy(study: Study): Promise<Study>;
 
   createEnrolment(
     enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
@@ -203,6 +208,36 @@ export class Repository implements IRepository {
         id: res.rows[0].id,
         name: res.rows[0].name,
         enrolmentKey: res.rows[0].enrolment_key,
+        maxEnrolments: res.rows[0].max_enrolments,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async getEnrolmentCountByStudyId(studyId: number): Promise<number> {
+    try {
+      const res = await this.pool.query(
+        'SELECT COUNT(*) FROM enrolments WHERE study_id = $1',
+        [studyId],
+      );
+      return parseInt(res.rows[0].count);
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async updateStudy(study: Study): Promise<Study> {
+    try {
+      const res = await this.pool.query(
+        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3 WHERE id = $4 RETURNING *',
+        [study.name, study.enrolmentKey, study.maxEnrolments, study.id],
+      );
+      return {
+        id: res.rows[0].id,
+        name: res.rows[0].name,
+        enrolmentKey: res.rows[0].enrolment_key,
+        maxEnrolments: res.rows[0].max_enrolments,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -277,17 +312,18 @@ export class Repository implements IRepository {
   }
 
   async createStudy(
-    study: Pick<Study, 'name' | 'enrolmentKey'>,
+    study: Pick<Study, 'name' | 'enrolmentKey' | 'maxEnrolments'>,
   ): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO studies (name, enrolment_key) VALUES ($1, $2) RETURNING *',
-        [study.name, study.enrolmentKey],
+        'INSERT INTO studies (name, enrolment_key, max_enrolments) VALUES ($1, $2, $3) RETURNING *',
+        [study.name, study.enrolmentKey, study.maxEnrolments],
       );
       return {
         id: res.rows[0].id,
         name: res.rows[0].name,
         enrolmentKey: res.rows[0].enrolment_key,
+        maxEnrolments: res.rows[0].max_enrolments,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -340,6 +376,7 @@ export class Repository implements IRepository {
         id: row.id,
         name: row.name,
         enrolmentKey: row.enrolment_key,
+        maxEnrolments: row.max_enrolments,
       }));
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -355,6 +392,7 @@ export class Repository implements IRepository {
         id: res.rows[0].id,
         name: res.rows[0].name,
         enrolmentKey: res.rows[0].enrolment_key,
+        maxEnrolments: res.rows[0].max_enrolments,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());

@@ -11,4 +11,27 @@ npm i
 ```
 
 ## Deployment
-tbd
+
+For PM2-deployments, we can utilize peer-authentication to connect to the database. An example PM2 environment is
+provided:
+
+```js
+module.exports = {
+  apps: [{
+    name: "sisensing-backend",
+    cwd: "./nodejs",
+    script: "./index.js",
+    autorestart: true,
+    env: {
+      "NODE_ENV": "production",
+      "APP_PORT": "50000",
+      "AUTH_JWT_SECRET": "your secret here please change it or else you'll suffer the consequences again",
+      "PGHOST": "/var/run/postgresql",
+      "DB_USE_ENV": "true"
+    }
+  }]
+}
+```
+
+`DB_USE_ENV=true` will tell `pg` to use the default connection, and `PGHOST=/var/run/postgresql` allows us to utilize
+the socket connection.

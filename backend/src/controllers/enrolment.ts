@@ -21,7 +21,21 @@ export function createEnrolmentController(
       req.body.enrolmentKey,
     );
     if (!study) {
-      return res.status(404).send({ error: 'Study not found' });
+      return res
+        .status(404)
+        .send({ error: 'Study not found', code: 'not_found' });
+    }
+
+    const enrolmentCount = await repository.getEnrolmentCountByStudyId(
+      study.id,
+    );
+
+    if (study.maxEnrolments == -1) {
+      // unlimited enrolments
+    } else if (study.maxEnrolments == 0) {
+      return res.status(400).send({ error: 'Study is closed', code: 'closed' });
+    } else if (enrolmentCount >= study.maxEnrolments) {
+      return res.status(400).send({ error: 'Study is full', code: 'full' });
     }
 
     const participantId = (await ksuid.random()).string;
