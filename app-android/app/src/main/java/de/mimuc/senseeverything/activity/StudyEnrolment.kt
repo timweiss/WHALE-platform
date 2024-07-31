@@ -50,6 +50,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.decodeError
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
@@ -88,25 +89,6 @@ class StudyEnrolment : ComponentActivity() {
                 }
             }
         }
-    }
-}
-
-data class ApiError(val httpCode: Int, val appCode: String, val message: String)
-
-fun decodeError(error: VolleyError): ApiError {
-    val response = error.networkResponse
-    val message = error.message ?: "Unknown error"
-    return if (response != null) {
-        try {
-            val data = String(response.data)
-            val json = JSONObject(data)
-            ApiError(response.statusCode, json.getString("code"), json.getString("error"))
-        } catch (e: Exception) {
-            Log.e("Enrolment", "Error decoding error response: $e")
-            ApiError(response.statusCode, "unknown", message)
-        }
-    } else {
-        ApiError(-1, "unknown", message)
     }
 }
 
