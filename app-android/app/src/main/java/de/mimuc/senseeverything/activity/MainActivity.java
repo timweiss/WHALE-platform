@@ -262,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
 
 	private final OnClickListener onEnrolmentButtonClick = view -> {
         Log.i(TAG,"enrolmentButton onClick");
-        Intent intent = new Intent(MainActivity.this, StudyEnrolment.class);
+        Intent intent = new Intent(MainActivity.this, Onboarding.class);
         startActivity(intent);
     };
 	

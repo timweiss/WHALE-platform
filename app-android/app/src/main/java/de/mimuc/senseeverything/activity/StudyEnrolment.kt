@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -85,7 +86,9 @@ class StudyEnrolment : ComponentActivity() {
                             )
                         }
                 ) { innerPadding ->
-                    EnrolmentScreen(innerPadding = innerPadding)
+                    EnrolmentScreen(innerPadding = innerPadding, finishedEnrolment = {
+                        // whatever
+                    })
                 }
             }
         }
@@ -137,7 +140,7 @@ class EnrolmentViewModel @Inject constructor(
         }
     }
 
-    fun performAction(context: Context, text: String) {
+    fun performAction(context: Context, text: String, finishedEnrolment: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
             val client = ApiClient.getInstance(context)
@@ -174,6 +177,7 @@ class EnrolmentViewModel @Inject constructor(
                 dataStoreManager.saveEnrolment(token, participantId, studyId)
                 loadStudy(context, studyId)
                 fetchQuestionnaires()
+                finishedEnrolment()
             }
         }
     }
@@ -236,7 +240,7 @@ class EnrolmentViewModel @Inject constructor(
 }
 
 @Composable
-fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : PaddingValues) {
+fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : PaddingValues, finishedEnrolment: () -> Unit) {
     val textState = remember { mutableStateOf("") }
     val isLoading = viewModel.isLoading.collectAsState()
     val isEnrolled = viewModel.isEnrolled.collectAsState()
@@ -268,7 +272,7 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
             } else {
                 Button(
                         onClick = {
-                            viewModel.performAction(context, textState.value)
+                            viewModel.performAction(context, textState.value, finishedEnrolment)
                         },
                         modifier = Modifier.fillMaxWidth()
                 ) {
@@ -349,9 +353,17 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
                     onClick = {
                         viewModel.removeEnrolment()
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error)
             ) {
                 Text("Remove Enrolment")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = {
+                finishedEnrolment()
+            }) {
+                Text("Continue")
             }
         }
     }

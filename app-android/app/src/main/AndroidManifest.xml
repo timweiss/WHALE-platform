@@ -21,7 +21,7 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:name=".service.SEApplicationController"
@@ -32,6 +32,11 @@
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
+        <activity
+            android:name=".activity.Onboarding"
+            android:exported="false"
+            android:label="@string/title_activity_onboarding"
+            android:theme="@style/Theme.MyApplication" />
         <activity
             android:name=".activity.esm.QuestionnaireActivity"
             android:exported="false"
@@ -103,7 +108,7 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config_deepactivity" />
         </service>
-
-        <service android:name=".service.InteractionFloatingWidgetService"/>
+        <service android:name=".service.InteractionFloatingWidgetService" />
     </application>
+
 </manifest>
