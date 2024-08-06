@@ -1,7 +1,9 @@
 package de.mimuc.senseeverything.api.model
 
+import androidx.compose.ui.text.toUpperCase
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 
 data class Questionnaire(
     val name: String,
@@ -60,6 +62,19 @@ data class FullQuestionnaire(
     }
 }
 
+enum class PeriodicQuestionnaireTriggerInterval {
+    DAILY,
+    WEEKLY,
+    MONTHLY
+}
+
+class PeriodicQuestionnaireTrigger(
+    id: Int,
+    questionnaireId: Int,
+    configuration: Any,
+    val interval: PeriodicQuestionnaireTriggerInterval,
+    val time: String): QuestionnaireTrigger(id, questionnaireId, "periodic", configuration)
+
 fun emptyQuestionnaire(): FullQuestionnaire {
     return FullQuestionnaire(
         Questionnaire("", 0, 0, 0, false),
@@ -91,6 +106,16 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
                 questionnaireId,
                 configuration,
                 configuration.getString("eventName")
+            )
+        }
+
+        "periodic" -> {
+            return PeriodicQuestionnaireTrigger(
+                id,
+                questionnaireId,
+                configuration,
+                PeriodicQuestionnaireTriggerInterval.valueOf(configuration.getString("interval").uppercase()),
+                configuration.getString("time")
             )
         }
 

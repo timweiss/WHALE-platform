@@ -51,6 +51,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.service.SEApplicationController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -92,9 +93,15 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    fun finishOnboarding() {
+    fun finishOnboarding(context: Context) {
         // save that we've finished onboarding
         // pop and open the mainactivity again
+        val activity = context.getActivity()
+        if (activity != null) {
+            activity.finish()
+        } else {
+            Log.e("OnboardingViewModel", "Could not get activity")
+        }
     }
 }
 
@@ -102,6 +109,7 @@ class OnboardingViewModel @Inject constructor(
 @Composable
 fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
     val step = viewModel.step.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -125,7 +133,7 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
             OnboardingViewModel.Step.WELCOME -> WelcomeScreen(viewModel::nextStep, innerPadding)
             OnboardingViewModel.Step.ENTER_STUDY_ID -> EnterStudyIdScreen(viewModel::nextStep, innerPadding)
             OnboardingViewModel.Step.ACCEPT_PERMISSIONS -> AcceptPermissionsScreen(viewModel::nextStep, innerPadding)
-            OnboardingViewModel.Step.START_STUDY -> StartStudyScreen(viewModel::finishOnboarding, innerPadding)
+            OnboardingViewModel.Step.START_STUDY -> StartStudyScreen({ viewModel.finishOnboarding(context) }, innerPadding)
         }
     }
 }
@@ -191,6 +199,8 @@ class AcceptPermissionsViewModel @Inject constructor(
         checkAndSetPermission(Manifest.permission.SYSTEM_ALERT_WINDOW)
         checkAndSetPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         checkAndSetPermission(Manifest.permission.BLUETOOTH_SCAN)
+        checkAndSetPermission(Manifest.permission.POST_NOTIFICATIONS)
+        checkAndSetPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
 
         if (Settings.canDrawOverlays(getApplication())) {
             setPermission(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
@@ -240,17 +250,6 @@ class AcceptPermissionsViewModel @Inject constructor(
         } else {
             Log.e("AcceptPermissionsViewModel", "Could not get activity")
         }
-    }
-
-    fun Context.getActivity(): Activity? {
-        var currentContext = this
-        while (currentContext is ContextWrapper) {
-            if (currentContext is Activity) {
-                return currentContext
-            }
-            currentContext = currentContext.baseContext
-        }
-        return null
     }
 }
 
@@ -327,6 +326,20 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
                 Text("Request Permission")
             }
         }
+        // Post Notifications
+        Text("Notifications: ${permissions.value[Manifest.permission.POST_NOTIFICATIONS] ?: false}")
+        if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
+            Button(onClick = { viewModel.requestPermission(Manifest.permission.POST_NOTIFICATIONS, context) }) {
+                Text("Request Permission")
+            }
+        }
+        // Schedule Exact Alarm
+        Text("Schedule Exact Alarm: ${permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] ?: false}")
+        if (permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] == false) {
+            Button(onClick = { viewModel.requestPermission(Manifest.permission.SCHEDULE_EXACT_ALARM, context) }) {
+                Text("Request Permission")
+            }
+        }
         // Access Fine Location
         Text("Access Fine Location: ${permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] ?: false}")
         if (permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
@@ -359,8 +372,21 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
     }
 }
 
+@HiltViewModel
+class StartStudyViewModel @Inject constructor(
+    application: Application,
+    private val dataStoreManager: DataStoreManager
+) : AndroidViewModel(application) {
+    fun scheduleTasks(context: Context, finish: () -> Unit) {
+        getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager)
+        finish()
+    }
+}
+
 @Composable
-fun StartStudyScreen(finish: () -> Unit, innerPadding: PaddingValues) {
+fun StartStudyScreen(finish: () -> Unit, innerPadding: PaddingValues, viewModel: StartStudyViewModel = viewModel()) {
+    val context = LocalContext.current
+
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
@@ -370,7 +396,9 @@ fun StartStudyScreen(finish: () -> Unit, innerPadding: PaddingValues) {
         Text("Everything has been set up, you can now proceed and start your participation in the study.")
 
         Spacer(modifier = Modifier.padding(16.dp))
-        Button(onClick = finish, modifier = Modifier.fillMaxWidth()) {
+        Button(onClick = {
+            viewModel.scheduleTasks(context, finish)
+        }, modifier = Modifier.fillMaxWidth()) {
             Text("Start Study")
         }
     }

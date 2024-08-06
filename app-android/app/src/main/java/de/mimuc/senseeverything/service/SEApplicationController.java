@@ -1,6 +1,8 @@
 package de.mimuc.senseeverything.service;
 
 import android.app.Application;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -43,6 +45,14 @@ public class SEApplicationController extends Application {
     public void onCreate() {
         sInstance = this;
         super.onCreate();
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("SEChannel", "SenseEverything", NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("SenseEverything Notifications");
+
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
     /**

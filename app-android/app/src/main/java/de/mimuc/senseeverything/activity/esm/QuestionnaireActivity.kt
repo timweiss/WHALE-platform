@@ -188,6 +188,8 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
             .padding(16.dp)) {
             if (isLoading.value) {
                 Text("Loading...")
+            } else if (questionnaire.value.elements.isEmpty()) {
+                Text("No questions have been provided. This is likely a mistake of the study creator.")
             } else {
                 val maxStep = questionnaire.value.elements.maxOf { it.step }
                 val currentStep by viewModel.activeStep.collectAsState()
