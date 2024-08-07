@@ -5,6 +5,7 @@ package de.mimuc.senseeverything.activity.esm
 import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -55,6 +56,9 @@ import de.mimuc.senseeverything.network.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flatMapConcat
+import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
@@ -96,7 +100,13 @@ class QuestionnaireViewModel  @Inject constructor(
     fun loadQuestionnaire(context: Context) {
         val activity = (context as? Activity)
         val intent = activity?.intent
-        val json = intent?.getStringExtra("questionnaire")
+        if (intent != null) {
+            loadFromIntent(intent)
+        }
+    }
+
+    private fun loadFromIntent(intent: Intent) {
+        val json = intent.getStringExtra("questionnaire")
         if (json != null) {
             val loaded = makeFullQuestionnaireFromJson(JSONObject(json))
             _elementValues.value = mutableMapOf()
@@ -106,6 +116,27 @@ class QuestionnaireViewModel  @Inject constructor(
 
             for (element in loaded.elements) {
                 setElementValue(element.id, emptyValueForElement(element))
+            }
+        } else {
+            val triggerId = intent.getIntExtra("triggerId", -1)
+            if (triggerId != -1) {
+                viewModelScope.launch {
+                    dataStoreManager.questionnairesFlow.collect { questionnaires ->
+                        val questionnaire = questionnaires.find { it.triggers.any { it.id == triggerId } }
+                        if (questionnaire == null) {
+                            _isLoading.value = false
+                        } else {
+                            _elementValues.value = mutableMapOf()
+
+                            _questionnaire.value = questionnaire
+                            _isLoading.value = false
+
+                            for (element in questionnaire.elements) {
+                                setElementValue(element.id, emptyValueForElement(element))
+                            }
+                        }
+                    }
+                }
             }
         }
     }

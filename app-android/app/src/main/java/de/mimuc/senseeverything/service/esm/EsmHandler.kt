@@ -99,6 +99,11 @@ class ReminderNotification(private val context: Context) {
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
     fun sendReminderNotification(triggerId: Int, title: String?) {
+        val intent = Intent(context, QuestionnaireActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("triggerId", triggerId)
+        }
+
         val notification = NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
             .setContentTitle(title)
@@ -117,7 +122,7 @@ class ReminderNotification(private val context: Context) {
                 PendingIntent.getActivity(
                     context,
                     0,
-                    Intent(context, QuestionnaireActivity::class.java),
+                    intent,
                     PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
