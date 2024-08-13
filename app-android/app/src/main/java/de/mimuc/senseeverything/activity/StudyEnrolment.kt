@@ -109,7 +109,7 @@ class EnrolmentViewModel @Inject constructor(
     private val _participantId = MutableStateFlow("")
     val participantId: StateFlow<String> get() = _participantId
 
-    private val _study = MutableStateFlow(Study("", -1, ""))
+    private val _study = MutableStateFlow(Study("", -1, "", 0))
     val study: StateFlow<Study> get() = _study
 
     private val _questionnaires = MutableStateFlow(mutableStateListOf<FullQuestionnaire>())
@@ -203,10 +203,14 @@ class EnrolmentViewModel @Inject constructor(
                 val study = Study(
                     response.getString("name"),
                     response.getInt("id"),
-                    response.getString("enrolmentKey")
+                    response.getString("enrolmentKey"),
+                    response.getInt("durationDays")
                 )
 
                 _study.value = study
+
+                dataStoreManager.saveStudyDays(study.durationDays)
+                dataStoreManager.saveRemainingStudyDays(study.durationDays)
             }
         }
     }

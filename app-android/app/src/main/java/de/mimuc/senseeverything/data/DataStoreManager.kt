@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -31,6 +32,8 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         val STUDY_ID = stringPreferencesKey("studyId")
         val QUESTIONNAIRES = stringPreferencesKey("questionnaires")
         val IN_INTERACTION = booleanPreferencesKey("inInteraction")
+        val STUDY_DAYS = intPreferencesKey("studyDays")
+        val REMAINING_STUDY_DAYS = intPreferencesKey("remainingStudyDays")
     }
 
     private val dataStore = context.dataStore
@@ -157,6 +160,44 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     fun setInInteractionSync(inInteraction: Boolean) {
         runBlocking {
             setInInteraction(inInteraction)
+        }
+    }
+
+    suspend fun saveStudyDays(studyDays: Int) {
+        dataStore.edit { preferences ->
+            preferences[STUDY_DAYS] = studyDays
+        }
+    }
+
+    val studyDaysFlow = dataStore.data.map { preferences ->
+        preferences[STUDY_DAYS] ?: -1
+    }
+
+    fun getStudyDaysSync(callback: (Int) -> Unit) {
+        runBlocking {
+            studyDaysFlow.first { studyDays ->
+                callback(studyDays)
+                true
+            }
+        }
+    }
+
+    suspend fun saveRemainingStudyDays(remainingStudyDays: Int) {
+        dataStore.edit { preferences ->
+            preferences[REMAINING_STUDY_DAYS] = remainingStudyDays
+        }
+    }
+
+    val remainingStudyDaysFlow = dataStore.data.map { preferences ->
+        preferences[REMAINING_STUDY_DAYS] ?: -1
+    }
+
+    fun getRemainingStudyDaysSync(callback: (Int) -> Unit) {
+        runBlocking {
+            remainingStudyDaysFlow.first { remainingStudyDays ->
+                callback(remainingStudyDays)
+                true
+            }
         }
     }
 }

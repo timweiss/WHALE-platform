@@ -6,13 +6,22 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.EventQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.invoke
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 
 class EsmHandler {
@@ -52,45 +61,82 @@ class EsmHandler {
         }
     }
 
-    fun schedulePeriodicQuestionnaires(context: Context, dataStoreManager: DataStoreManager) {
-        dataStoreManager.getQuestionnairesSync { questionnaires ->
+    suspend fun schedulePeriodicQuestionnaires(context: Context, dataStoreManager: DataStoreManager) {
+        coroutineScope {
+            val questionnaires = (Dispatchers.IO) {
+                dataStoreManager.questionnairesFlow.first()
+            }
+            val remainingStudyDays = (Dispatchers.IO) {
+                dataStoreManager.remainingStudyDaysFlow.first()
+            }
             val periodicTriggers =
                 questionnaires.flatMap { it.triggers }.filter { it.type == "periodic" }
             for (trigger in periodicTriggers) {
                 // schedule periodic questionnaire
+                val periodicTrigger = trigger as PeriodicQuestionnaireTrigger
 
-                val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
-                intent.putExtra("title", "Es ist Zeit für ${questionnaires.find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire?.name}")
-                intent.putExtra("id", trigger.id)
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context.applicationContext,
-                    trigger.id,
-                    intent,
-                    PendingIntent.FLAG_MUTABLE
-                )
-
-                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                val selectedDate = Calendar.getInstance().apply {
-                    timeInMillis = System.currentTimeMillis()
-                    add(Calendar.MINUTE, 1)
+                val nextRemainingDays = remainingStudyDays - 1
+                withContext(Dispatchers.IO) {
+                    dataStoreManager.saveRemainingStudyDays(nextRemainingDays)
                 }
 
-                val year = selectedDate.get(Calendar.YEAR)
-                val month = selectedDate.get(Calendar.MONTH)
-                val day = selectedDate.get(Calendar.DAY_OF_MONTH)
-                val hour = selectedDate.get(Calendar.HOUR_OF_DAY)
-                val minute = selectedDate.get(Calendar.MINUTE)
-
-                val calendar = Calendar.getInstance()
-                calendar.set(year, month, day, hour, minute)
-
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.timeInMillis,
-                    pendingIntent
-                )
+                scheduleNextPeriodicNotification(context, periodicTrigger, remainingStudyDays, questionnaires.find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire?.name ?: "Unknown")
             }
         }
+    }
+
+    fun scheduleNextPeriodicNotification(context: Context, trigger: PeriodicQuestionnaireTrigger, remainingDays: Int, title: String) {
+        val sendNextNotification = remainingDays > 0
+        val nextRemainingDays = remainingDays - 1
+
+        if (!sendNextNotification) {
+            return
+        }
+
+        val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
+        intent.apply {
+            putExtra("title", "Es ist Zeit für ${title}")
+            putExtra("id", trigger.id)
+            putExtra("triggerJson", trigger.toJson().toString())
+            putExtra("questionnaireId", trigger.questionnaireId)
+            putExtra("questionnaireName", title)
+            putExtra("remainingDays", nextRemainingDays)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context.applicationContext,
+            trigger.id,
+            intent,
+            PendingIntent.FLAG_MUTABLE
+        )
+
+        val scheduleHour = trigger.time.split(":")[0].toInt()
+        val scheduleMinute = trigger.time.split(":")[1].toInt()
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val selectedDate = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            add(Calendar.MINUTE, 1)
+            // set(Calendar.HOUR_OF_DAY, scheduleHour)
+            // set(Calendar.MINUTE, scheduleMinute)
+        }
+
+        val year = selectedDate.get(Calendar.YEAR)
+        val month = selectedDate.get(Calendar.MONTH)
+        val day = selectedDate.get(Calendar.DAY_OF_MONTH)
+        val hour = selectedDate.get(Calendar.HOUR_OF_DAY)
+        val minute = selectedDate.get(Calendar.MINUTE)
+
+        val calendar = Calendar.getInstance()
+        calendar.set(year, month, day, hour, minute)
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            pendingIntent
+        )
+
+        Log.d("EsmHandler", "Scheduled periodic questionnaire for ${title}, remaining days: ${nextRemainingDays}")
     }
 }
 

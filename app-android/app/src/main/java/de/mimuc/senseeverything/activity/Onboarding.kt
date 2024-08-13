@@ -45,6 +45,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,6 +55,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.service.SEApplicationController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -378,8 +380,10 @@ class StartStudyViewModel @Inject constructor(
     private val dataStoreManager: DataStoreManager
 ) : AndroidViewModel(application) {
     fun scheduleTasks(context: Context, finish: () -> Unit) {
-        getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager)
-        finish()
+        viewModelScope.launch {
+            getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager)
+            finish()
+        }
     }
 }
 
