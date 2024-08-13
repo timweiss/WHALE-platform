@@ -116,9 +116,8 @@ class EsmHandler {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val selectedDate = Calendar.getInstance().apply {
             timeInMillis = System.currentTimeMillis()
-            add(Calendar.MINUTE, 1)
-            // set(Calendar.HOUR_OF_DAY, scheduleHour)
-            // set(Calendar.MINUTE, scheduleMinute)
+            set(Calendar.HOUR_OF_DAY, scheduleHour)
+            set(Calendar.MINUTE, scheduleMinute)
         }
 
         val year = selectedDate.get(Calendar.YEAR)
