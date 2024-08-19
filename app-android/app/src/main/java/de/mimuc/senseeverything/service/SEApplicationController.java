@@ -3,10 +3,18 @@ package de.mimuc.senseeverything.service;
 import android.app.Application;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.hilt.work.HiltWorkerFactory;
+import androidx.work.Configuration;
+import androidx.work.WorkerFactory;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
+
+import javax.inject.Inject;
 
 import dagger.hilt.android.HiltAndroidApp;
 import de.mimuc.senseeverything.service.esm.EsmHandler;
@@ -15,7 +23,7 @@ import de.mimuc.senseeverything.service.sampling.PeriodicSamplingStrategy;
 import de.mimuc.senseeverything.service.sampling.SamplingManager;
 
 @HiltAndroidApp
-public class SEApplicationController extends Application {
+public class SEApplicationController extends Application implements Configuration.Provider {
 
     private static final String TAG = "SEApplicationController";
 
@@ -40,6 +48,9 @@ public class SEApplicationController extends Application {
     public static synchronized SEApplicationController getInstance() {
         return sInstance;
     }
+
+    @Inject
+    HiltWorkerFactory workerFactory;
 
     @Override
     public void onCreate() {
@@ -90,5 +101,14 @@ public class SEApplicationController extends Application {
             mEsmHandler = new EsmHandler();
         }
         return mEsmHandler;
+    }
+
+    @NonNull
+    @Override
+    public Configuration getWorkManagerConfiguration() {
+        return new Configuration.Builder()
+                .setMinimumLoggingLevel(Log.INFO)
+                .setWorkerFactory(workerFactory)
+                .build();
     }
 }

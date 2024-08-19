@@ -98,6 +98,9 @@ dependencies {
 
     implementation "com.google.dagger:hilt-android:2.44"
     kapt "com.google.dagger:hilt-compiler:2.44"
+    implementation "androidx.hilt:hilt-work:1.2.0"
+    annotationProcessor "androidx.hilt:hilt-compiler:1.2.0"
+    kapt "androidx.hilt:hilt-compiler:1.2.0"
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"

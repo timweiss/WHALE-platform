@@ -110,5 +110,8 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
         .setConstraints(constraints)
         .build()
 
+    // reset
+    WorkManager.getInstance(context).cancelAllWorkByTag("readingsUpload")
+
     WorkManager.getInstance(context).enqueue(uploadWorkRequest)
 }

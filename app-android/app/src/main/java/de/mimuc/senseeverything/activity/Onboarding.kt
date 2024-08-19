@@ -52,9 +52,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.network.enqueueSensorReadingsUploadWorker
+import de.mimuc.senseeverything.network.enqueueUpdateQuestionnaireWorker
 import de.mimuc.senseeverything.service.SEApplicationController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -382,6 +385,9 @@ class StartStudyViewModel @Inject constructor(
     fun scheduleTasks(context: Context, finish: () -> Unit) {
         viewModelScope.launch {
             getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager)
+            val token = dataStoreManager.tokenFlow.first()
+            enqueueSensorReadingsUploadWorker(context, token)
+            enqueueUpdateQuestionnaireWorker(context)
             finish()
         }
     }
