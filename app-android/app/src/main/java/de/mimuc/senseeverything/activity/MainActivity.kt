@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,10 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -97,6 +102,20 @@ class StudyHomeViewModel @Inject constructor(
         }
     }
 
+    fun pauseStudy(context: Context) {
+        SEApplicationController.getInstance().samplingManager.stopSampling(context)
+        viewModelScope.launch {
+            delay(1000)
+            checkIfStudyIsRunning()
+        }
+    }
+
+    fun openSettings(context: Context) {
+        val intent = Intent(getApplication(), StudyEnrolment::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
+    }
+
     private fun checkEnrolment() {
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
@@ -141,12 +160,16 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
         Column(modifier = Modifier
             .padding(innerPadding)
             .padding(16.dp)) {
-            Text("Welcome to WHALE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Welcome to WHALE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, fontSize = 36.sp)
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isEnrolled.value) {
-                StudyActivity(isRunning = isStudyRunning.value, resumeStudy = { viewModel.resumeStudy(context) })
+                StudyActivity(isRunning = isStudyRunning.value, resumeStudy = { viewModel.resumeStudy(context) }, pauseStudy = { viewModel.pauseStudy(context) })
+                SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
+                FilledTonalButton(onClick = { viewModel.openSettings(context) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Study Settings")
+                }
             } else {
                 Button(onClick = { viewModel.startOnboarding() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Enroll in Study")
@@ -157,12 +180,18 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 }
 
 @Composable
-fun StudyActivity(isRunning: Boolean, resumeStudy: () -> Unit) {
+fun StudyActivity(isRunning: Boolean, resumeStudy: () -> Unit, pauseStudy: () -> Unit) {
     if (isRunning) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Study is running")
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Study is running")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = { pauseStudy() }) {
+                Text("Pause Study", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
         }
     } else {
         Column {
@@ -185,6 +214,16 @@ fun StatusIndicator(color: Color) {
         .size(16.dp)
         .clip(CircleShape)
         .background(color))
+}
+
+@Composable
+fun SpacerLine(paddingValues: PaddingValues, width: Dp) {
+    Column(modifier = Modifier.fillMaxWidth().padding(paddingValues), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(modifier = Modifier
+            .width(width)
+            .height(1.dp)
+            .background(Color.LightGray))
+    }
 }
 
 @Preview(showBackground = true)
