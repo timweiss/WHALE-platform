@@ -65,8 +65,8 @@ public abstract class  ForegroundService extends Service {
 		PendingIntent pendingIntent = PendingIntent.getActivity(this,
 				0, notificationIntent, 0);
 		Notification notification = new NotificationCompat.Builder(this, channelId)
-				.setContentTitle("SenseEverything")
-				.setContentText("App is running in background")
+				.setContentTitle(getString(R.string.app_name))
+				.setContentText(getString(R.string.notif_title))
 				.setSmallIcon(R.drawable.ic_launcher)
 				.setContentIntent(pendingIntent)
 				.build();

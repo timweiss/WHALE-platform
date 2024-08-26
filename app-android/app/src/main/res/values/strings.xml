@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">Log Everything</string>
+    <string name="app_name">WHALE</string>
     <string name="hello_world">Hello world!</string>
 
     <string name="action_settings">Settings</string>
@@ -15,9 +15,9 @@
     <string name="sensor_settings_cancel">Cancel</string>
     <string name="sensor_settings_none">No settings available for this sensor</string>
 
-    <string name="notif_ticker">Log Everything enabled</string>
-    <string name="notif_title">Log Everything enabled</string>
-    <string name="notif_text">Touch to disable logging</string>
+    <string name="notif_ticker">WHALE is running</string>
+    <string name="notif_title">Study is running, thank you for participating!</string>
+    <string name="notif_text">Tap to see status</string>
 
     <string name="saving_to">Saving logs to</string>
     <string name="accessibility_service_description">TEST</string>
