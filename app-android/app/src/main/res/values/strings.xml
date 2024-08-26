@@ -50,4 +50,5 @@
     <string name="no">No</string>
     <string name="still_interacting">Are you still interacting?</string>
     <string name="title_activity_onboarding">Onboarding</string>
+    <string name="title_activity_main">WHALE</string>
 </resources>
