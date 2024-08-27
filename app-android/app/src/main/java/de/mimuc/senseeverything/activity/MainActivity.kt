@@ -30,12 +30,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +52,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
+import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.loadStudy
+import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
@@ -57,6 +63,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -83,9 +91,20 @@ class StudyHomeViewModel @Inject constructor(
     private val _isStudyRunning = MutableStateFlow(false)
     val isStudyRunning: StateFlow<Boolean> get() = _isStudyRunning
 
+    private val _currentDay = MutableStateFlow(0)
+    val currentDay: StateFlow<Int> get() = _currentDay
+
+    private val _study = MutableStateFlow(Study("", -1, "", -1))
+    val study: StateFlow<Study> get() = _study
+
     init {
+        load()
+    }
+
+    fun load() {
         checkEnrolment()
         checkIfStudyIsRunning()
+        getStudyDetails()
     }
 
     fun startOnboarding() {
@@ -140,6 +159,26 @@ class StudyHomeViewModel @Inject constructor(
         }
         return false
     }
+
+    private fun getStudyDetails() {
+        viewModelScope.launch {
+            setCurrentStudyDay()
+            val studyId = dataStoreManager.studyIdFlow.first()
+            val api = ApiClient.getInstance(getApplication())
+            val study = loadStudy(api, studyId)
+            if (study != null) {
+                _study.value = study
+            }
+        }
+    }
+
+    private suspend fun setCurrentStudyDay() {
+        val unixStarted = dataStoreManager.timestampStudyStartedFlow.first()
+        val date = Instant.ofEpochMilli(unixStarted).atZone(ZoneId.systemDefault()).toLocalDate()
+        val today = Instant.now().atZone(ZoneId.systemDefault()).toLocalDate()
+        val days = today.toEpochDay() - date.toEpochDay() + 1
+        _currentDay.value = days.toInt()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,7 +186,12 @@ class StudyHomeViewModel @Inject constructor(
 fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val isEnrolled = viewModel.isEnrolled.collectAsState()
     val isStudyRunning = viewModel.isStudyRunning.collectAsState()
+    val currentDay = viewModel.currentDay.collectAsState()
+    val study = viewModel.study.collectAsState()
     val context = LocalContext.current
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
 
     Scaffold(topBar = {
         TopAppBar(
@@ -165,6 +209,8 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isEnrolled.value) {
+                Text("Day ${currentDay.value} of ${study.value.durationDays}")
+
                 StudyActivity(isRunning = isStudyRunning.value, resumeStudy = { viewModel.resumeStudy(context) }, pauseStudy = { viewModel.pauseStudy(context) })
                 SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
                 FilledTonalButton(onClick = { viewModel.openSettings(context) }, modifier = Modifier.fillMaxWidth()) {
@@ -174,6 +220,12 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                 Button(onClick = { viewModel.startOnboarding() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Enroll in Study")
                 }
+            }
+        }
+        LaunchedEffect(lifecycleState) {
+            when(lifecycleState) {
+                androidx.lifecycle.Lifecycle.State.RESUMED -> viewModel.load()
+                else -> {}
             }
         }
     }
@@ -218,7 +270,9 @@ fun StatusIndicator(color: Color) {
 
 @Composable
 fun SpacerLine(paddingValues: PaddingValues, width: Dp) {
-    Column(modifier = Modifier.fillMaxWidth().padding(paddingValues), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(paddingValues), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(modifier = Modifier
             .width(width)
             .height(1.dp)

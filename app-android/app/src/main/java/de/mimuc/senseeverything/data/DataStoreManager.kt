@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,6 +35,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         val IN_INTERACTION = booleanPreferencesKey("inInteraction")
         val STUDY_DAYS = intPreferencesKey("studyDays")
         val REMAINING_STUDY_DAYS = intPreferencesKey("remainingStudyDays")
+        val TIMESTAMP_STUDY_STARTED = longPreferencesKey("timestampStudyStarted")
     }
 
     private val dataStore = context.dataStore
@@ -199,5 +201,15 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
                 true
             }
         }
+    }
+
+    suspend fun saveTimestampStudyStarted(timestamp: Long) {
+        dataStore.edit { preferences ->
+            preferences[TIMESTAMP_STUDY_STARTED] = timestamp
+        }
+    }
+
+    val timestampStudyStartedFlow = dataStore.data.map { preferences ->
+        preferences[TIMESTAMP_STUDY_STARTED] ?: -1
     }
 }

@@ -87,6 +87,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1'
     // Optional - Integration with LiveData
     implementation 'androidx.compose.runtime:runtime-livedata'
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
 
     implementation "androidx.room:room-runtime:2.5.0"

@@ -388,6 +388,7 @@ class StartStudyViewModel @Inject constructor(
             val token = dataStoreManager.tokenFlow.first()
             enqueueSensorReadingsUploadWorker(context, token)
             enqueueUpdateQuestionnaireWorker(context)
+            dataStoreManager.saveTimestampStudyStarted(System.currentTimeMillis())
             finish()
         }
     }
