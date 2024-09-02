@@ -18,6 +18,7 @@ import javax.inject.Inject;
 
 import dagger.hilt.android.HiltAndroidApp;
 import de.mimuc.senseeverything.service.esm.EsmHandler;
+import de.mimuc.senseeverything.service.sampling.OnUnlockAndPeriodicSamplingStrategy;
 import de.mimuc.senseeverything.service.sampling.OnUnlockSamplingStrategy;
 import de.mimuc.senseeverything.service.sampling.PeriodicSamplingStrategy;
 import de.mimuc.senseeverything.service.sampling.SamplingManager;
@@ -91,7 +92,7 @@ public class SEApplicationController extends Application implements Configuratio
 
     public SamplingManager getSamplingManager() {
         if (mSamplingManager == null) {
-            mSamplingManager = new SamplingManager(new OnUnlockSamplingStrategy());
+            mSamplingManager = new SamplingManager(new OnUnlockAndPeriodicSamplingStrategy());
         }
         return mSamplingManager;
     }

@@ -21,10 +21,12 @@ public class LogService extends AbstractService {
 	public static final int START_SENSORS = 0;
 	public static final int STOP_SENSORS = 1;
 	public static final int LISTEN_LOCK_UNLOCK = 2;
+	public static final int LISTEN_LOCK_UNLOCK_AND_PERIODIC = 3;
 
 	private List<AbstractSensor> sensorList = null;
 	private Messenger mMessenger;
 	private BroadcastReceiver broadcastReceiver;
+	private boolean isSampling = false;
 
 	@Override
 	public void onCreate() {
@@ -69,10 +71,16 @@ public class LogService extends AbstractService {
 					}
 					case STOP_SENSORS: {
 						service.stopSensors();
+						service.stopPeriodicSampling();
 						break;
 					}
 					case LISTEN_LOCK_UNLOCK: {
 						service.listenForLockUnlock();
+						break;
+					}
+					case LISTEN_LOCK_UNLOCK_AND_PERIODIC: {
+						service.listenForLockUnlock();
+						service.setupPeriodicSampling();
 						break;
 					}
 					default:
@@ -114,6 +122,29 @@ public class LogService extends AbstractService {
 		Log.d(TAG, "registered broadcast receiver");
 	}
 
+	Handler periodicHandler = new Handler();
+	Runnable periodicRunnable = new Runnable() {
+		@Override
+		public void run() {
+			if (!isSampling) {
+				Log.d(TAG, "periodic sampling start");
+				startSensors();
+				periodicHandler.postDelayed(this, 1000 * 60); // 1 minute
+			} else {
+				Log.d(TAG, "periodic sampling stop");
+				stopSensors();
+				periodicHandler.postDelayed(this, 1000 * 60 * 5); // 5 minutes
+			}
+		}
+	};
+
+	private void setupPeriodicSampling() {
+		periodicRunnable.run();
+	}
+
+	private void stopPeriodicSampling() {
+		periodicHandler.removeCallbacks(periodicRunnable);
+	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
@@ -152,6 +183,8 @@ public class LogService extends AbstractService {
 				Log.w(TAG, sensor.getSensorName() + " turned off");
 			}
 		}
+
+		isSampling = true;
 	}
 
 	private void stopSensors() {
@@ -161,6 +194,8 @@ public class LogService extends AbstractService {
 				sensor.stop();
 			}
 		}
+
+		isSampling = false;
 	}
 
 	public class LogBinder extends Binder {
