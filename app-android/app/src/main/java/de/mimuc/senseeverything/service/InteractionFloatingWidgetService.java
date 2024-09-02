@@ -1,9 +1,16 @@
 package de.mimuc.senseeverything.service;
 
 import android.app.Service;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.PixelFormat;
+import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -38,6 +45,8 @@ public class InteractionFloatingWidgetService extends Service {
 
     private String TAG = "InteractionFloatingWidgetService";
 
+    private Messenger logServiceMessenger;
+
     @Inject
     DataStoreManager dataStore;
 
@@ -52,6 +61,11 @@ public class InteractionFloatingWidgetService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        // bind to LogService
+        Intent intent = new Intent(this, LogService.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
         // Inflate the floating widget layout
@@ -102,8 +116,6 @@ public class InteractionFloatingWidgetService extends Service {
         windowManager.addView(floatingWidget, params);
         Log.d("FloatingWidget", "Floating widget added to screen");
 
-        logInteraction(InteractionLogType.Asked);
-
         // Handle the widget's movement and interactions
         floatingWidget.setOnTouchListener(new View.OnTouchListener() {
             private int lastAction;
@@ -146,9 +158,9 @@ public class InteractionFloatingWidgetService extends Service {
 
         dataStore.getInInteractionSync((inInteraction) -> {
             if (inInteraction) {
-                logInteraction(InteractionLogType.Confirm);
+                logInteractionMessage(InteractionLogType.Confirm);
             } else {
-                logInteraction(InteractionLogType.Start);
+                logInteractionMessage(InteractionLogType.Start);
             }
 
             dataStore.setInInteractionSync(true);
@@ -161,11 +173,11 @@ public class InteractionFloatingWidgetService extends Service {
         floatingWidget.setVisibility(View.GONE);
         dataStore.getInInteractionSync((inInteraction) -> {
             if (inInteraction) {
-                logInteraction(InteractionLogType.End);
+                logInteractionMessage(InteractionLogType.End);
                 SEApplicationController.getInstance().getEsmHandler().initializeTriggers(dataStore);
                 SEApplicationController.getInstance().getEsmHandler().handleEvent("interactionEnd", this, dataStore);
             } else {
-                logInteraction(InteractionLogType.NoInteraction);
+                logInteractionMessage(InteractionLogType.NoInteraction);
             }
 
             dataStore.setInInteractionSync(false);
@@ -177,6 +189,7 @@ public class InteractionFloatingWidgetService extends Service {
     public void onDestroy() {
         super.onDestroy();
         if (floatingWidget != null) windowManager.removeView(floatingWidget);
+        unbindService(connection);
     }
 
     private void logInteraction(InteractionLogType type) {
@@ -204,6 +217,55 @@ public class InteractionFloatingWidgetService extends Service {
             }
         } else {
             Log.e(TAG, "Could not get InteractionLogSensor instance.");
+        }
+    }
+
+    private void logInteractionMessage(InteractionLogType type) {
+        switch (type) {
+            case Asked:
+                sendDataToLogService("asked");
+                break;
+            case Start:
+                sendDataToLogService("start");
+                break;
+            case End:
+                sendDataToLogService("end");
+                break;
+            case Confirm:
+                sendDataToLogService("confirm");
+                break;
+            case NoInteraction:
+                sendDataToLogService("noInteraction");
+                break;
+        }
+    }
+
+    private ServiceConnection connection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            logServiceMessenger = new Messenger(service);
+            logInteractionMessage(InteractionLogType.Asked); // needs to be logged here because otherwise we have a race condition
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            logServiceMessenger = null;
+        }
+    };
+
+    private void sendDataToLogService(String message) {
+        if (logServiceMessenger != null) {
+            Message msg = Message.obtain(null, LogService.SEND_SENSOR_LOG_DATA);
+            Bundle bundle = new Bundle();
+            bundle.putString("sensorData", message);
+            bundle.putString("sensorName", InteractionLogSensor.class.getName());
+            msg.setData(bundle);
+
+            try {
+                logServiceMessenger.send(msg);
+            } catch (RemoteException e) {
+                Log.e(TAG, "Failed to send message to LogService", e);
+            }
         }
     }
 }

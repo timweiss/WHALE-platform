@@ -5,6 +5,7 @@ import java.util.List;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
+import de.mimuc.senseeverything.sensor.SensorNotRunningException;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 
 import android.content.BroadcastReceiver;
@@ -26,6 +27,7 @@ public class LogService extends AbstractService {
 	public static final int STOP_SENSORS = 1;
 	public static final int LISTEN_LOCK_UNLOCK = 2;
 	public static final int LISTEN_LOCK_UNLOCK_AND_PERIODIC = 3;
+	public static final int SEND_SENSOR_LOG_DATA = 4;
 
 	private List<AbstractSensor> sensorList = null;
 	private Messenger mMessenger;
@@ -90,6 +92,13 @@ public class LogService extends AbstractService {
 						service.setupPeriodicSampling();
 						break;
 					}
+					case SEND_SENSOR_LOG_DATA: {
+						String sensorName = msg.getData().getString("sensorName");
+						String sensorData = msg.getData().getString("sensorData");
+
+						service.receiveSensorLogData(sensorName, sensorData);
+						break;
+					}
 					default:
 						super.handleMessage(msg);
 				}
@@ -152,6 +161,23 @@ public class LogService extends AbstractService {
 	private void stopPeriodicSampling() {
 		periodicHandler.removeCallbacks(periodicRunnable);
 	}
+
+	private void receiveSensorLogData(String sensorName, String sensorData) {
+		Log.d(TAG, "received sensor log data: " + sensorName + " " + sensorData);
+
+		try {
+			Class<?> sensorClass = Class.forName(sensorName);
+			AbstractSensor sensor = singletonSensorList.getSensorOfType(sensorClass);
+			Log.d(TAG, "sensors active: " + sensorList.stream().filter(s -> s.isRunning()).count());
+			if (sensor != null) {
+				sensor.tryLogStringData(sensorData);
+			}
+		} catch (ClassNotFoundException e) {
+            Log.e(TAG, "Could not find sensor class: " + sensorName, e);
+        } catch (SensorNotRunningException e) {
+            Log.e(TAG, "Sensor not running: " + sensorName, e);
+        }
+    }
 
 	@Override
 	public IBinder onBind(Intent intent) {

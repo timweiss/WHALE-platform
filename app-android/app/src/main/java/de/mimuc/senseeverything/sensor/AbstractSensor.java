@@ -1,9 +1,7 @@
 package de.mimuc.senseeverything.sensor;
 
-import java.io.OutputStream;
 import java.io.Serializable;
 
-import de.mimuc.senseeverything.activity.CONST;
 import de.mimuc.senseeverything.data.SensorReadingDiskDataSource;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.db.LogData;
@@ -81,6 +79,14 @@ public abstract class AbstractSensor implements Serializable  {
 		AsyncTask.execute(() -> {
 			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));
 		});
+	}
+
+	public void tryLogStringData(String data) throws SensorNotRunningException {
+		if (m_IsRunning) {
+			onLogDataItem(System.currentTimeMillis(), data);
+		} else {
+			throw new SensorNotRunningException();
+		}
 	}
 
 	protected void onLogDataItemWithFile(Long timestamp, String data, String fileName) {

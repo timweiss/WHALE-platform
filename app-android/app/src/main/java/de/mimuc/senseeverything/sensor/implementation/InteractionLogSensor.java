@@ -29,7 +29,14 @@ public class InteractionLogSensor extends AbstractSensor {
 
     @Override
     public void stop() {
+        m_IsRunning = false;
         closeDataSource();
+    }
+
+    @Override
+    public void start(Context context) {
+        super.start(context);
+        m_IsRunning = true;
     }
 
     public void logInteractionStart() {
