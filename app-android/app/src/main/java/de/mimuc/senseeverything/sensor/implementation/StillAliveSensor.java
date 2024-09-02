@@ -56,6 +56,11 @@ public class StillAliveSensor extends AbstractSensor {
 	}
 
 	@Override
+	public boolean availableForPeriodicSampling() {
+		return false;
+	}
+
+	@Override
 	public void start(Context context) {
 		super.start(context);
         Long t = System.currentTimeMillis();

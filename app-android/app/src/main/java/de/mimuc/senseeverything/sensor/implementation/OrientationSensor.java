@@ -62,6 +62,12 @@ public class OrientationSensor extends AbstractSensor implements SensorEventList
 		SensorManager sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
 		return !(sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR) == null);
 	}
+
+	@Override
+	public boolean availableForPeriodicSampling() {
+		return false;
+	}
+
 	@Override
 	public void start(Context context) {
 		super.start(context);

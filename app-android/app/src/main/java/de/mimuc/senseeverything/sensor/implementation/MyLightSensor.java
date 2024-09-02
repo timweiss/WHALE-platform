@@ -62,7 +62,12 @@ public class MyLightSensor extends AbstractSensor implements SensorEventListener
 		SensorManager sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
 		return !(sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) == null);
 	}
-	
+
+	@Override
+	public boolean availableForPeriodicSampling() {
+		return true;
+	}
+
 	@Override
 	public void start(Context context){
 		super.start(context);

@@ -30,7 +30,12 @@ public class AirplaneModeSensor extends AbstractSensor {
 	public boolean isAvailable(Context context) {
 		return true;
 	}
-	
+
+	@Override
+	public boolean availableForPeriodicSampling() {
+		return true;
+	}
+
 	private static boolean isAirplaneModeOn(Context context) {
 		return Settings.System.getInt(context.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
 	}

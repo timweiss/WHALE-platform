@@ -51,7 +51,12 @@ public class ConversationSensor extends AbstractSensor {
 	public boolean isAvailable(Context context) {
 		return true;
 	}
-	
+
+	@Override
+	public boolean availableForPeriodicSampling() {
+		return false;
+	}
+
 	@Override
 	public void start(Context context) {
 		super.start(context);

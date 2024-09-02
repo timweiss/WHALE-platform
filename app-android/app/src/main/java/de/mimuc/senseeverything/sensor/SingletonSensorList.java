@@ -3,7 +3,11 @@ package de.mimuc.senseeverything.sensor;
 import android.content.Context;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
@@ -19,18 +23,12 @@ import de.mimuc.senseeverything.sensor.implementation.ScreenOnOffSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOrientationSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConnectedWifiSensor;
 
+@Singleton
 public class SingletonSensorList {
-	private static SingletonSensorList instance;
 	private final List<AbstractSensor> list = new ArrayList<>();
 
-	private SingletonSensorList() {
-	}
-
-	public static synchronized SingletonSensorList getInstance() {
-		if (instance == null) {
-			instance = new SingletonSensorList();
-		}
-		return instance;
+	@Inject
+	SingletonSensorList() {
 	}
 
 	private void initializeList(Context pContext) {
@@ -70,8 +68,8 @@ public class SingletonSensorList {
 		return this.list;
 	}
 
-	public static List<AbstractSensor> getList(Context pContext) {
-		return getInstance().getOrInitializeList(pContext);
+	public List<AbstractSensor> getList(Context pContext) {
+		return getOrInitializeList(pContext);
 	}
 
 	public AbstractSensor getSensorOfType(Class<?> sensorType) {

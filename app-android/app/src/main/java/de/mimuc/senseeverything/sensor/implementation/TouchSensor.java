@@ -40,6 +40,11 @@ public class TouchSensor extends AbstractSensor implements HandlerListener {
 	}
 
 	@Override
+	public boolean availableForPeriodicSampling() {
+		return false;
+	}
+
+	@Override
 	public void start(Context context) {
 		super.start(context);
 		if (!m_isSensorAvailable)

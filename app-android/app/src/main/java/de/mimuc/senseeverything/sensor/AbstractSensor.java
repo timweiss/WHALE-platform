@@ -64,6 +64,8 @@ public abstract class AbstractSensor implements Serializable  {
 	abstract public View getSettingsView(Context context);
 	
 	abstract public boolean isAvailable(Context context);
+
+	abstract public boolean availableForPeriodicSampling();
 	
 	public void start(Context context){
 		m_isSensorAvailable = isAvailable(context);

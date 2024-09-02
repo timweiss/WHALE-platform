@@ -31,7 +31,12 @@ public class ChargingSensor extends AbstractSensor {
 	public boolean isAvailable(Context context) {
 		return true;
 	}
-	
+
+	@Override
+	public boolean availableForPeriodicSampling() {
+		return true;
+	}
+
 	private static boolean isConnected(Context context) {
 		IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 		filter.addAction(Intent.ACTION_BATTERY_CHANGED);

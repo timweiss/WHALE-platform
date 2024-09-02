@@ -3,6 +3,7 @@ package de.mimuc.senseeverything.service;
 import java.lang.ref.WeakReference;
 import java.util.List;
 
+import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 
@@ -17,6 +18,9 @@ import android.os.Message;
 import android.os.Messenger;
 import android.util.Log;
 
+import javax.inject.Inject;
+
+@AndroidEntryPoint
 public class LogService extends AbstractService {
 	public static final int START_SENSORS = 0;
 	public static final int STOP_SENSORS = 1;
@@ -27,6 +31,9 @@ public class LogService extends AbstractService {
 	private Messenger mMessenger;
 	private BroadcastReceiver broadcastReceiver;
 	private boolean isSampling = false;
+
+	@Inject
+	public SingletonSensorList singletonSensorList;
 
 	@Override
 	public void onCreate() {
@@ -66,7 +73,7 @@ public class LogService extends AbstractService {
 				Log.d(TAG, "message: " + msg.what);
 				switch (msg.what) {
 					case START_SENSORS: {
-						service.startSensors();
+						service.startSensors(false);
 						break;
 					}
 					case STOP_SENSORS: {
@@ -110,9 +117,9 @@ public class LogService extends AbstractService {
 					stopSensors();
 					hideInteractionWidget();
 				} else {
-					Log.d(TAG, "device unlocked, starting sampling");
+					Log.d(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
 					// fixme: handle condition where logging might still be running?
-					startSensors();
+					startSensors(false);
 					showInteractionWidget();
 				}
 			}
@@ -128,7 +135,7 @@ public class LogService extends AbstractService {
 		public void run() {
 			if (!isSampling) {
 				Log.d(TAG, "periodic sampling start");
-				startSensors();
+				startSensors(true);
 				periodicHandler.postDelayed(this, 1000 * 60); // 1 minute
 			} else {
 				Log.d(TAG, "periodic sampling stop");
@@ -163,16 +170,16 @@ public class LogService extends AbstractService {
 	}
 
 	private void initializeSensors() {
-		sensorList = SingletonSensorList.getList(this);
+		sensorList = singletonSensorList.getList(this);
 	}
 
-	private void startSensors() {
+	private void startSensors(boolean onlyPeriodic) {
 		// use the singleton list because we want to keep our sensor's state inbetween activations
-		sensorList = SingletonSensorList.getList(this);
+		sensorList = singletonSensorList.getList(this);
 
 		Log.d(TAG, "size: "+sensorList.size());
 		for(AbstractSensor sensor : sensorList) {
-			if (sensor.isEnabled() && sensor.isAvailable(this))
+			if (sensor.isEnabled() && sensor.isAvailable(this) && (sensor.availableForPeriodicSampling() || !onlyPeriodic))
 			{
 				sensor.start(this);
 

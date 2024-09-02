@@ -23,6 +23,11 @@ public class InteractionLogSensor extends AbstractSensor {
     }
 
     @Override
+    public boolean availableForPeriodicSampling() {
+        return false;
+    }
+
+    @Override
     public void stop() {
         closeDataSource();
     }

@@ -54,6 +54,11 @@ public class BluetoothSensor extends AbstractSensor {
 	}
 
 	@Override
+	public boolean availableForPeriodicSampling() {
+		return true;
+	}
+
+	@Override
 	public void start(Context context) {
 		super.start(context);
 		if (!m_isSensorAvailable)

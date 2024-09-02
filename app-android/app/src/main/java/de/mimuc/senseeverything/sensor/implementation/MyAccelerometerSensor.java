@@ -61,6 +61,11 @@ public class MyAccelerometerSensor extends AbstractSensor implements SensorEvent
 	}
 
 	@Override
+	public boolean availableForPeriodicSampling() {
+		return true;
+	}
+
+	@Override
 	public void start(Context context) {
 		super.start(context);
 		if (!m_isSensorAvailable)

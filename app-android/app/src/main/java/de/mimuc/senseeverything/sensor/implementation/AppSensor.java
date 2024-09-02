@@ -35,6 +35,11 @@ public class AppSensor extends AbstractSensor {
 		return true;
 	}
 
+	@Override
+	public boolean availableForPeriodicSampling() {
+		return false;
+	}
+
 	private String getForegroundApp(Context context) {
 		try {
 			// fixme: this has been deprecated and always just yields de.mimuc.senseeverything

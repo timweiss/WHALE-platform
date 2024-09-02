@@ -41,6 +41,9 @@ public class InteractionFloatingWidgetService extends Service {
     @Inject
     DataStoreManager dataStore;
 
+    @Inject
+    SingletonSensorList singletonSensorList;
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -177,7 +180,7 @@ public class InteractionFloatingWidgetService extends Service {
     }
 
     private void logInteraction(InteractionLogType type) {
-        AbstractSensor sensor = SingletonSensorList.getInstance().getSensorOfType(InteractionLogSensor.class);
+        AbstractSensor sensor = singletonSensorList.getSensorOfType(InteractionLogSensor.class);
 
         if (sensor != null) {
             InteractionLogSensor interactionSensor = (InteractionLogSensor) sensor;

@@ -60,7 +60,12 @@ public class MyGyroscopeSensor extends AbstractSensor implements SensorEventList
 		SensorManager sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
 		return !(sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) == null);
 	}
-	
+
+	@Override
+	public boolean availableForPeriodicSampling() {
+		return true;
+	}
+
 	@Override
 	public void start(Context context) {
 		super.start(context);
