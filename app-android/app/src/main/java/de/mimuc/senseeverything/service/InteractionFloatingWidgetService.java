@@ -192,34 +192,6 @@ public class InteractionFloatingWidgetService extends Service {
         unbindService(connection);
     }
 
-    private void logInteraction(InteractionLogType type) {
-        AbstractSensor sensor = singletonSensorList.getSensorOfType(InteractionLogSensor.class);
-
-        if (sensor != null) {
-            InteractionLogSensor interactionSensor = (InteractionLogSensor) sensor;
-
-            switch (type) {
-                case Asked:
-                    interactionSensor.logInteractionAsked();
-                    break;
-                case Start:
-                    interactionSensor.logInteractionStart();
-                    break;
-                case End:
-                    interactionSensor.logInteractionEnd();
-                    break;
-                case Confirm:
-                    interactionSensor.logContinued();
-                    break;
-                case NoInteraction:
-                    interactionSensor.logNoInteraction();
-                    break;
-            }
-        } else {
-            Log.e(TAG, "Could not get InteractionLogSensor instance.");
-        }
-    }
-
     private void logInteractionMessage(InteractionLogType type) {
         switch (type) {
             case Asked:

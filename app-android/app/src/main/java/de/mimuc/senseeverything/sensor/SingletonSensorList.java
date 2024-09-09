@@ -3,7 +3,6 @@ package de.mimuc.senseeverything.sensor;
 import android.content.Context;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -36,7 +35,6 @@ public class SingletonSensorList {
 
 		Context aContext = pContext.getApplicationContext();
 
-		// this.list.add(new AudioSampleSensor(aContext));
 		this.list.add(new ConversationSensor(aContext));
 		this.list.add(new ScreenOrientationSensor(aContext));
 		this.list.add(new MyProximitySensor(aContext));

@@ -206,6 +206,7 @@ class AcceptPermissionsViewModel @Inject constructor(
         checkAndSetPermission(Manifest.permission.BLUETOOTH_SCAN)
         checkAndSetPermission(Manifest.permission.POST_NOTIFICATIONS)
         checkAndSetPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
+        checkAndSetPermission(Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE)
 
         if (Settings.canDrawOverlays(getApplication())) {
             setPermission(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
@@ -255,6 +256,13 @@ class AcceptPermissionsViewModel @Inject constructor(
         } else {
             Log.e("AcceptPermissionsViewModel", "Could not get activity")
         }
+    }
+
+    fun requestNotificationListenerPermission(context: Context) {
+        context.startActivity(
+            Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 }
 
@@ -363,6 +371,13 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
         Text("System Alert Window: ${permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] ?: false}")
         if (permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] == false) {
             Button(onClick = { viewModel.requestSystemWindowPermission(context) }) {
+                Text("Request Permission")
+            }
+        }
+        // Notification Listener Service
+        Text("System Alert Window: ${permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] ?: false}")
+        if (permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] == false) {
+            Button(onClick = { viewModel.requestNotificationListenerPermission(context) }) {
                 Text("Request Permission")
             }
         }
