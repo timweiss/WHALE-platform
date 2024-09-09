@@ -3,9 +3,9 @@ Social Sensing environment with Experience Sampling capabilities.
 
 ## Tasks
 - [ ] Import Experience Sampling elements from Excel tables
-- [ ] Allow to sample on lock/unlock and continuously in a set interval (maybe we can define some sensors to run in a periodic interval and others to sample on interaction)
-- [ ] Implement API in app (pushing data, showing study name)
-- [ ] Add notification sensor
+- [x] Allow to sample on lock/unlock and continuously in a set interval (maybe we can define some sensors to run in a periodic interval and others to sample on interaction)
+- [x] Implement API in app (pushing data, showing study name)
+- [x] Add notification sensor
 - [x] Add interaction tracking bubble
 - [x] Add onboarding interface (permissions, enrolment) and basic main activity for the app
 - [x] Use WorkManager to schedule backend pushes

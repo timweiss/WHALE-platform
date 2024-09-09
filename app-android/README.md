@@ -1,7 +1,7 @@
 # Android App
 
 ## Lifecycle
-[LogService](app-android/app/src/main/java/de/mimuc/senseeverything/service/LogService.java) is responsible for starting the [Sensors](app-android/app/src/main/java/de/mimuc/senseeverything/sensor).
+[LogService](/app/src/main/java/de/mimuc/senseeverything/service/LogService.java) is responsible for starting the [Sensors](app/src/main/java/de/mimuc/senseeverything/sensor).
 
 ### Sampling methodology
 Currently, sampling is manually started. It is managed by [SamplingManager](app/src/main/java/de/mimuc/senseeverything/service/SamplingManager.java). We have different modes of sampling, depending on what a study wants to investigate:
