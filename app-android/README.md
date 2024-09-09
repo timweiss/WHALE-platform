@@ -6,17 +6,13 @@
 ### Sampling methodology
 Currently, sampling is manually started. It is managed by [SamplingManager](app/src/main/java/de/mimuc/senseeverything/service/SamplingManager.java). We have different modes of sampling, depending on what a study wants to investigate:
 * Continuous sampling, repeatedly for a specific duration
-  * The LogService is activated every **60 seconds** through an AlarmService in `startLogService` (MainActivity)
+  * The LogService is started once and is always active as a foreground service. The SamplingManager can initialize LogService for different sampling 'strategies'.
+    * The default strategy is [OnUnlockAndPeriodicSamplingStrategy](app/src/main/java/de/mimuc/senseeverything/service/sampling/OnUnlockAndPeriodicSamplingStrategy.java), which covers the following
+      * Sampling on unlock
+      * Periodic sampling (every **5 minutes** for **1 minute**)
+      * Event-based (*continuous*) sampling, e.g. for notifications
     * This "wakes up" each enabled sensor through their `start` method
     * Sensors are only stopped through `stop` when the entire sampling process is stopped (through the UI)
-* Sampling on/after events (for now: Screen Unlock/Lock)
-  * LogService is listening to Screen Unlock/Lock events and starts sampling based on that
-    * for a specific duration after the event
-    * until another events stops it
-
-In the future, **both** strategies should be applied:
-* we should be able to define some sensors for each strategy
-* a scheduling service will set up the listeners as well as running the continuous sampling
 
 #### Components
 * [AudioSampleService](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AudioSampleSensor.java): Will record audio until it is stopped again
