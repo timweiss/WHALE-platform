@@ -10,7 +10,6 @@ import javax.inject.Singleton;
 
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
-import de.mimuc.senseeverything.sensor.implementation.AudioSampleSensor;
 import de.mimuc.senseeverything.sensor.implementation.BluetoothSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
@@ -18,6 +17,7 @@ import de.mimuc.senseeverything.sensor.implementation.MyAccelerometerSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyGyroscopeSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyLightSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyProximitySensor;
+import de.mimuc.senseeverything.sensor.implementation.NotificationSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOnOffSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOrientationSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConnectedWifiSensor;
@@ -46,6 +46,7 @@ public class SingletonSensorList {
 		this.list.add(new MyLightSensor(aContext));
 		this.list.add(new BluetoothSensor(aContext));
 		this.list.add(new InteractionLogSensor(aContext));
+		this.list.add(new NotificationSensor(aContext));
 
 		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
 

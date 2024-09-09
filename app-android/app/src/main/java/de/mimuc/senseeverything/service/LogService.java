@@ -52,7 +52,7 @@ public class LogService extends AbstractService {
 
 	@Override
 	public void onDestroy() {
-		stopSensors();
+		stopSensors(true);
 		unregisterReceiver(broadcastReceiver);
 		super.onDestroy();
 	}
@@ -75,11 +75,11 @@ public class LogService extends AbstractService {
 				Log.d(TAG, "message: " + msg.what);
 				switch (msg.what) {
 					case START_SENSORS: {
-						service.startSensors(false);
+						service.startSensors(false, true);
 						break;
 					}
 					case STOP_SENSORS: {
-						service.stopSensors();
+						service.stopSensors(true);
 						service.stopPeriodicSampling();
 						break;
 					}
@@ -90,6 +90,7 @@ public class LogService extends AbstractService {
 					case LISTEN_LOCK_UNLOCK_AND_PERIODIC: {
 						service.listenForLockUnlock();
 						service.setupPeriodicSampling();
+						service.setupContiunousSampling();
 						break;
 					}
 					case SEND_SENSOR_LOG_DATA: {
@@ -123,12 +124,12 @@ public class LogService extends AbstractService {
 			public void onReceive(Context context, Intent intent) {
 				if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
 					Log.d(TAG, "device locked, stopping sampling");
-					stopSensors();
+					stopSensors(false);
 					hideInteractionWidget();
 				} else {
 					Log.d(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
 					// fixme: handle condition where logging might still be running?
-					startSensors(false);
+					startSensors(false, false);
 					showInteractionWidget();
 				}
 			}
@@ -144,11 +145,11 @@ public class LogService extends AbstractService {
 		public void run() {
 			if (!isSampling) {
 				Log.d(TAG, "periodic sampling start");
-				startSensors(true);
+				startSensors(true, false);
 				periodicHandler.postDelayed(this, 1000 * 60); // 1 minute
 			} else {
 				Log.d(TAG, "periodic sampling stop");
-				stopSensors();
+				stopSensors(false);
 				periodicHandler.postDelayed(this, 1000 * 60 * 5); // 5 minutes
 			}
 		}
@@ -160,6 +161,10 @@ public class LogService extends AbstractService {
 
 	private void stopPeriodicSampling() {
 		periodicHandler.removeCallbacks(periodicRunnable);
+	}
+
+	private void setupContiunousSampling() {
+		startSensors(false, true);
 	}
 
 	private void receiveSensorLogData(String sensorName, String sensorData) {
@@ -199,13 +204,13 @@ public class LogService extends AbstractService {
 		sensorList = singletonSensorList.getList(this);
 	}
 
-	private void startSensors(boolean onlyPeriodic) {
+	private void startSensors(boolean onlyPeriodic, boolean includeContinous) {
 		// use the singleton list because we want to keep our sensor's state inbetween activations
 		sensorList = singletonSensorList.getList(this);
 
 		Log.d(TAG, "size: "+sensorList.size());
 		for(AbstractSensor sensor : sensorList) {
-			if (sensor.isEnabled() && sensor.isAvailable(this) && (sensor.availableForPeriodicSampling() || !onlyPeriodic))
+			if (sensor.isEnabled() && sensor.isAvailable(this) && (sensor.availableForPeriodicSampling() || !onlyPeriodic || (sensor.availableForContinuousSampling() && includeContinous)))
 			{
 				sensor.start(this);
 
@@ -220,9 +225,9 @@ public class LogService extends AbstractService {
 		isSampling = true;
 	}
 
-	private void stopSensors() {
+	private void stopSensors(boolean includeContinuous) {
 		for(AbstractSensor sensor : sensorList) {
-			if (sensor.isRunning())
+			if (sensor.isRunning() && ((sensor.availableForContinuousSampling() && includeContinuous) || !sensor.availableForContinuousSampling()))
 			{
 				sensor.stop();
 			}
