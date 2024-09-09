@@ -173,7 +173,7 @@ public class LogService extends AbstractService {
 		try {
 			Class<?> sensorClass = Class.forName(sensorName);
 			AbstractSensor sensor = singletonSensorList.getSensorOfType(sensorClass);
-			Log.d(TAG, "sensors active: " + sensorList.stream().filter(s -> s.isRunning()).count());
+			Log.d(TAG, "sensors active: " + singletonSensorList.getList(this).stream().filter(s -> s.isRunning()).count());
 			if (sensor != null) {
 				sensor.tryLogStringData(sensorData);
 			}

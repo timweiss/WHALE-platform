@@ -1,5 +1,7 @@
 package de.mimuc.senseeverything.service
 
+import android.app.ActivityManager
+import android.app.Application
 import android.app.Notification
 import android.app.NotificationChannel
 import android.content.ComponentName
@@ -20,6 +22,9 @@ class MyNotificationListenerService : NotificationListenerService() {
 
     private var logServiceMessenger: Messenger? = null
     private var boundToLogService: Boolean = false
+    private var bindingToLogService: Boolean = false
+
+    private val notificationQueue = mutableListOf<String>()
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
@@ -80,7 +85,8 @@ class MyNotificationListenerService : NotificationListenerService() {
 
     private fun sendToSensor(data: String) {
         if (!boundToLogService) {
-            Log.d(TAG, "sendToSensor: not bound")
+            Log.d(TAG, "sendToSensor: not bound, queueing and binding now")
+            queueAndBind(data)
             return
         }
 
@@ -102,6 +108,7 @@ class MyNotificationListenerService : NotificationListenerService() {
             logServiceMessenger = Messenger(service)
             boundToLogService = true
             Log.d(TAG, "connected to logservice")
+            consumeQueue()
         }
 
         override fun onServiceDisconnected(className: ComponentName) {
@@ -110,9 +117,35 @@ class MyNotificationListenerService : NotificationListenerService() {
         }
     }
 
+    private fun queueAndBind(item: String) {
+        notificationQueue.add(item)
+
+        if (!boundToLogService && !bindingToLogService) {
+            if (!isServiceRunning(LogService::class.java)) {
+                Log.d(TAG, "LogService is not running, keeping in queue")
+                return
+            }
+
+            bindingToLogService = true
+
+            Intent(this, LogService::class.java).also { intent ->
+                bindingToLogService = bindService(intent, mConnection, Context.BIND_AUTO_CREATE)
+            }
+        }
+    }
+
+    private fun consumeQueue() {
+        notificationQueue.forEach { sendToSensor(it) }
+        notificationQueue.clear()
+    }
+
     override fun onCreate() {
-        Intent(this, LogService::class.java).also { intent ->
-            bindService(intent, mConnection, Context.BIND_AUTO_CREATE)
+        if (isServiceRunning(LogService::class.java)) {
+            Intent(this, LogService::class.java).also { intent ->
+                bindService(intent, mConnection, Context.BIND_AUTO_CREATE)
+            }
+        } else {
+            Log.d(TAG, "LogService is not running, not connecting to it")
         }
     }
 
@@ -121,6 +154,17 @@ class MyNotificationListenerService : NotificationListenerService() {
             unbindService(mConnection)
             boundToLogService = false
         }
+    }
+
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = application.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        @Suppress("DEPRECATION")
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
     }
 
     companion object {
