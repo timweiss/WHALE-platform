@@ -35,6 +35,11 @@ public class PeriodicSamplingStrategy implements SamplingStrategy {
     }
 
     @Override
+    public void pause(Context context) {
+        // unsupported
+    }
+
+    @Override
     public boolean isRunning(Context context) {
         SharedPreferences sp = context.getSharedPreferences(CONST.SP_LOG_EVERYTHING, Activity.MODE_PRIVATE);
         return sp.getBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, false);

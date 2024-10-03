@@ -13,7 +13,7 @@ public class BootUpReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction().equals("android.intent.action.BOOT_COMPLETED")) {
             SamplingManager samplingManager = SEApplicationController.getInstance().getSamplingManager();
-            if (samplingManager.isRunning(context)) {
+            if (!samplingManager.isRunning(context)) {
                 samplingManager.startSampling(context);
             }
         }

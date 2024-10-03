@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.data
 
 import android.content.Context
 import android.util.Log
+import androidx.datastore.core.MultiProcessDataStoreFactory
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -24,6 +25,15 @@ private val Context.dataStore by preferencesDataStore(
         name = USER_PREFERENCES_NAME
 )
 
+// todo: need to use MultiProcessDataStoreFactory to share data between processes
+// https://developer.android.com/topic/libraries/architecture/datastore
+
+/*
+private val Context.dataStore by MultiProcessDataStoreFactory.create(
+    serializer = (),
+)
+*/
+
 @Singleton
 class DataStoreManager @Inject constructor(@ApplicationContext context: Context) {
 
@@ -36,6 +46,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         val STUDY_DAYS = intPreferencesKey("studyDays")
         val REMAINING_STUDY_DAYS = intPreferencesKey("remainingStudyDays")
         val TIMESTAMP_STUDY_STARTED = longPreferencesKey("timestampStudyStarted")
+        val STUDY_PAUSED = booleanPreferencesKey("studyPaused")
     }
 
     private val dataStore = context.dataStore
@@ -211,5 +222,24 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
 
     val timestampStudyStartedFlow = dataStore.data.map { preferences ->
         preferences[TIMESTAMP_STUDY_STARTED] ?: -1
+    }
+
+    suspend fun saveStudyPaused(studyPaused: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[STUDY_PAUSED] = studyPaused
+        }
+    }
+
+    val studyPausedFlow = dataStore.data.map { preferences ->
+        preferences[STUDY_PAUSED] ?: false
+    }
+
+    fun getStudyPausedSync(callback: (Boolean) -> Unit) {
+        runBlocking {
+            studyPausedFlow.first { studyPaused ->
+                callback(studyPaused)
+                true
+            }
+        }
     }
 }

@@ -33,26 +33,38 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
         if (!isRunning(context))
             return;
 
+        if (logServiceMessenger != null) {
+            try {
+                logServiceMessenger.send(Message.obtain(null, LogService.STOP_SENSORS, 0, 0));
+            } catch (RemoteException e) {
+                Log.e(TAG, "failed to send message", e);
+            }
+        } else {
+            Log.e(TAG, "logServiceMessenger is null");
+        }
+
         try {
             context.unbindService(serviceConnection);
         } catch (Exception e) {
-            Log.e(TAG, "could not unbind context from connection, could be because it's a new activity", e);
+            Log.e(TAG, "failed to unbind service", e);
         }
 
-        // we should continue trying to stop the service even if unbinding fails (as it could be a new activity)
-
         try {
-            Intent intent = new Intent(context, LogService.class);
-            context.stopService(intent);
-
-            SharedPreferences sp = context.getSharedPreferences(CONST.SP_LOG_EVERYTHING, Activity.MODE_PRIVATE);
-            sp.edit().putBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, false).apply();
-
-            if (stopHandler != null) {
-                stopHandler.removeCallbacksAndMessages(null);
-            }
+            context.stopService(new Intent(context, LogService.class));
         } catch (Exception e) {
             Log.e(TAG, "failed to stop service", e);
+        }
+    }
+
+    @Override
+    public void pause(Context context) {
+        if (!isRunning(context))
+            return;
+
+        try {
+            logServiceMessenger.send(Message.obtain(null, LogService.SLEEP_MODE, 0, 0));
+        } catch (Exception e) {
+            Log.e(TAG, "failed to send message", e);
         }
     }
 

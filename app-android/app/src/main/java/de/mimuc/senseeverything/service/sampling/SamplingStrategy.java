@@ -5,6 +5,7 @@ import android.content.Context;
 public interface SamplingStrategy {
     void start(Context context);
     void stop(Context context);
+    void pause(Context context);
 
     boolean isRunning(Context context);
 }

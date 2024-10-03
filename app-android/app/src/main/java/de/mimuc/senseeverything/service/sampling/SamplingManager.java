@@ -26,6 +26,10 @@ public class SamplingManager {
         samplingStrategy.stop(context);
     }
 
+    public void pauseSampling(Context context) {
+        samplingStrategy.pause(context);
+    }
+
     public boolean isRunning(Context context) {
         return samplingStrategy.isRunning(context);
     }

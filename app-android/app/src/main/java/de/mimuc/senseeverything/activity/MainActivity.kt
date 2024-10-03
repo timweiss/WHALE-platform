@@ -62,6 +62,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -90,6 +91,9 @@ class StudyHomeViewModel @Inject constructor(
 
     private val _isStudyRunning = MutableStateFlow(false)
     val isStudyRunning: StateFlow<Boolean> get() = _isStudyRunning
+
+    private val _isStudyPaused = MutableStateFlow(false)
+    val isStudyPaused: StateFlow<Boolean> get() = _isStudyPaused
 
     private val _currentDay = MutableStateFlow(0)
     val currentDay: StateFlow<Int> get() = _currentDay
@@ -122,7 +126,7 @@ class StudyHomeViewModel @Inject constructor(
     }
 
     fun pauseStudy(context: Context) {
-        SEApplicationController.getInstance().samplingManager.stopSampling(context)
+        SEApplicationController.getInstance().samplingManager.pauseSampling(context)
         viewModelScope.launch {
             delay(1000)
             checkIfStudyIsRunning()
@@ -146,6 +150,10 @@ class StudyHomeViewModel @Inject constructor(
         viewModelScope.launch {
             val isRunning = isServiceRunning(LogService::class.java)
             _isStudyRunning.value = isRunning
+
+            dataStoreManager.studyPausedFlow.collect { paused ->
+                _isStudyPaused.value = paused
+            }
         }
     }
 
@@ -186,6 +194,7 @@ class StudyHomeViewModel @Inject constructor(
 fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val isEnrolled = viewModel.isEnrolled.collectAsState()
     val isStudyRunning = viewModel.isStudyRunning.collectAsState()
+    val isStudyPaused = viewModel.isStudyPaused.collectAsState()
     val currentDay = viewModel.currentDay.collectAsState()
     val study = viewModel.study.collectAsState()
     val context = LocalContext.current
@@ -211,7 +220,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
             if (isEnrolled.value) {
                 Text("Day ${currentDay.value} of ${study.value.durationDays}")
 
-                StudyActivity(isRunning = isStudyRunning.value, resumeStudy = { viewModel.resumeStudy(context) }, pauseStudy = { viewModel.pauseStudy(context) })
+                StudyActivity(isRunning = isStudyRunning.value, isPaused = isStudyPaused.value, resumeStudy = { viewModel.resumeStudy(context) }, pauseStudy = { viewModel.pauseStudy(context) })
                 SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
                 FilledTonalButton(onClick = { viewModel.openSettings(context) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Study Settings")
@@ -232,17 +241,37 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 }
 
 @Composable
-fun StudyActivity(isRunning: Boolean, resumeStudy: () -> Unit, pauseStudy: () -> Unit) {
+fun StudyActivity(isRunning: Boolean, isPaused: Boolean, resumeStudy: () -> Unit, pauseStudy: () -> Unit) {
     if (isRunning) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Study is running")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { pauseStudy() }) {
-                Text("Pause Study", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            if (!isPaused) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Study is running")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { pauseStudy() }) {
+                    Text(
+                        "Pause Study",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Study is paused")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { resumeStudy() }) {
+                    Text(
+                        "Resume Study",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     } else {
