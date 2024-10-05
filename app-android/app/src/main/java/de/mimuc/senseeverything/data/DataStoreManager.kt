@@ -2,63 +2,101 @@ package de.mimuc.senseeverything.data
 
 import android.content.Context
 import android.util.Log
+import androidx.datastore.core.CorruptionException
+import androidx.datastore.core.DataStore
 import androidx.datastore.core.MultiProcessDataStoreFactory
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.core.Serializer
+import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.json.JSONArray
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val USER_PREFERENCES_NAME = "user_preferences"
+fun Context.appSettingsDataStoreFile(name: String): File =
+    this.dataStoreFile("$name.appsettings.json")
 
-private val Context.dataStore by preferencesDataStore(
-        name = USER_PREFERENCES_NAME
+@Serializable
+data class AppSettings(
+    val lastUpdate: Long,
+    val token: String?,
+    val participantId: String?,
+    val studyId: Int,
+    val questionnaires: String?,
+    val inInteraction: Boolean,
+    val studyDays: Int,
+    val remainingStudyDays: Int,
+    val timestampStudyStarted: Long,
+    val studyPaused: Boolean
 )
 
-// todo: need to use MultiProcessDataStoreFactory to share data between processes
-// https://developer.android.com/topic/libraries/architecture/datastore
+@Singleton
+class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
 
-/*
-private val Context.dataStore by MultiProcessDataStoreFactory.create(
-    serializer = (),
-)
-*/
+    override val defaultValue = AppSettings(
+        lastUpdate = 0,
+        token = "",
+        participantId = "",
+        studyId = -1,
+        questionnaires = "",
+        inInteraction = false,
+        studyDays = -1,
+        remainingStudyDays = -1,
+        timestampStudyStarted = -1,
+        studyPaused = false
+    )
+
+    override suspend fun readFrom(input: InputStream): AppSettings =
+        try {
+            Json.decodeFromString(input.readBytes().decodeToString())
+        } catch (serialization: SerializationException) {
+            throw CorruptionException("Unable to read Settings", serialization)
+        }
+
+    override suspend fun writeTo(t: AppSettings, output: OutputStream) {
+        withContext(Dispatchers.IO) {
+            output.write(
+                Json.encodeToString(t)
+                    .encodeToByteArray()
+            )
+        }
+    }
+}
 
 @Singleton
 class DataStoreManager @Inject constructor(@ApplicationContext context: Context) {
 
     companion object {
-        val TOKEN = stringPreferencesKey("token")
-        val PARTICIPANT_ID = stringPreferencesKey("participantId")
-        val STUDY_ID = stringPreferencesKey("studyId")
-        val QUESTIONNAIRES = stringPreferencesKey("questionnaires")
-        val IN_INTERACTION = booleanPreferencesKey("inInteraction")
-        val STUDY_DAYS = intPreferencesKey("studyDays")
-        val REMAINING_STUDY_DAYS = intPreferencesKey("remainingStudyDays")
-        val TIMESTAMP_STUDY_STARTED = longPreferencesKey("timestampStudyStarted")
-        val STUDY_PAUSED = booleanPreferencesKey("studyPaused")
+        private const val DATASTORE_NAME = "app_preferences"
     }
 
-    private val dataStore = context.dataStore
+    private val dataStore: DataStore<AppSettings> = MultiProcessDataStoreFactory.create(
+        serializer = SettingsSerializer(),
+        produceFile = { context.appSettingsDataStoreFile(DATASTORE_NAME) }
+    )
 
     suspend fun saveToken(token: String) {
-        dataStore.edit { preferences ->
-            preferences[TOKEN] = token
+        dataStore.updateData { preferences ->
+            preferences.copy(lastUpdate = System.currentTimeMillis(), token = token)
         }
     }
 
     val tokenFlow = dataStore.data.map { preferences ->
-        preferences[TOKEN] ?: ""
+        preferences.token ?: ""
     }
 
     fun getTokenSync(callback: (String) -> Unit) {
@@ -71,14 +109,14 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun saveParticipantId(participantId: String) {
-        dataStore.edit { preferences ->
+        dataStore.updateData { preferences ->
             Log.d("datastore", "saveParticipantId: $participantId")
-            preferences[PARTICIPANT_ID] = participantId
+            preferences.copy(lastUpdate = System.currentTimeMillis(), participantId = participantId)
         }
     }
 
     val participantIdFlow = dataStore.data.map { preferences ->
-        preferences[PARTICIPANT_ID] ?: ""
+        preferences.participantId ?: ""
     }
 
     fun getParticipantIdSync(callback: (String) -> Unit) {
@@ -91,17 +129,13 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun saveStudyId(studyId: Int) {
-        dataStore.edit { preferences ->
-            preferences[STUDY_ID] = studyId.toString()
+        dataStore.updateData { preferences ->
+            preferences.copy(lastUpdate = System.currentTimeMillis(), studyId = studyId)
         }
     }
 
     val studyIdFlow = dataStore.data.map { preferences ->
-        if(preferences[STUDY_ID] != null) {
-            preferences[STUDY_ID]?.toInt() ?: -1
-        } else {
-            -1
-        }
+        preferences.studyId ?: -1
     }
 
     fun getStudyIdSync(callback: (Int) -> Unit) {
@@ -114,10 +148,13 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun saveEnrolment(token: String, participantId: String, studyId: Int) {
-        dataStore.edit { preferences ->
-            preferences[TOKEN] = token
-            preferences[PARTICIPANT_ID] = participantId
-            preferences[STUDY_ID] = studyId.toString()
+        dataStore.updateData { preferences ->
+            preferences.copy(
+                lastUpdate = System.currentTimeMillis(),
+                token = token,
+                participantId = participantId,
+                studyId = studyId
+            )
         }
     }
 
@@ -126,13 +163,16 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         for (fullQuestionnaire in fullQuestionnaires) {
             json.put(fullQuestionnaire.toJson())
         }
-        dataStore.edit { preferences ->
-            preferences[QUESTIONNAIRES] = json.toString()
+        dataStore.updateData {
+            it.copy(
+                lastUpdate = System.currentTimeMillis(),
+                questionnaires = json.toString()
+            )
         }
     }
 
     val questionnairesFlow = dataStore.data.map { preferences ->
-        val json = preferences[QUESTIONNAIRES] ?: "[]"
+        val json = preferences.questionnaires ?: "[]"
         val jsonArray = JSONArray(json)
         val fullQuestionnaires = mutableListOf<FullQuestionnaire>()
         for (i in 0 until jsonArray.length()) {
@@ -152,13 +192,13 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun setInInteraction(inInteraction: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[IN_INTERACTION] = inInteraction
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), inInteraction = inInteraction)
         }
     }
 
     val inInteractionFlow = dataStore.data.map { preferences ->
-        preferences[IN_INTERACTION] ?: false
+        preferences.inInteraction
     }
 
     fun getInInteractionSync(callback: (Boolean) -> Unit) {
@@ -177,13 +217,13 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun saveStudyDays(studyDays: Int) {
-        dataStore.edit { preferences ->
-            preferences[STUDY_DAYS] = studyDays
+        dataStore.updateData { preferences ->
+            preferences.copy(lastUpdate = System.currentTimeMillis(), studyDays = studyDays)
         }
     }
 
     val studyDaysFlow = dataStore.data.map { preferences ->
-        preferences[STUDY_DAYS] ?: -1
+        preferences.studyDays
     }
 
     fun getStudyDaysSync(callback: (Int) -> Unit) {
@@ -196,13 +236,13 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun saveRemainingStudyDays(remainingStudyDays: Int) {
-        dataStore.edit { preferences ->
-            preferences[REMAINING_STUDY_DAYS] = remainingStudyDays
+        dataStore.updateData { preferences ->
+            preferences.copy(lastUpdate = System.currentTimeMillis(), remainingStudyDays = remainingStudyDays)
         }
     }
 
     val remainingStudyDaysFlow = dataStore.data.map { preferences ->
-        preferences[REMAINING_STUDY_DAYS] ?: -1
+        preferences.remainingStudyDays
     }
 
     fun getRemainingStudyDaysSync(callback: (Int) -> Unit) {
@@ -215,23 +255,23 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun saveTimestampStudyStarted(timestamp: Long) {
-        dataStore.edit { preferences ->
-            preferences[TIMESTAMP_STUDY_STARTED] = timestamp
+        dataStore.updateData { preferences ->
+            preferences.copy(lastUpdate = System.currentTimeMillis(), timestampStudyStarted = timestamp)
         }
     }
 
     val timestampStudyStartedFlow = dataStore.data.map { preferences ->
-        preferences[TIMESTAMP_STUDY_STARTED] ?: -1
+        preferences.timestampStudyStarted
     }
 
     suspend fun saveStudyPaused(studyPaused: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[STUDY_PAUSED] = studyPaused
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), studyPaused = studyPaused)
         }
     }
 
     val studyPausedFlow = dataStore.data.map { preferences ->
-        preferences[STUDY_PAUSED] ?: false
+        preferences.studyPaused
     }
 
     fun getStudyPausedSync(callback: (Boolean) -> Unit) {
