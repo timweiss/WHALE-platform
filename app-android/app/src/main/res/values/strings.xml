@@ -52,5 +52,5 @@
     <string name="title_activity_onboarding">Onboarding</string>
     <string name="title_activity_main">WHALE</string>
     <string name="notif_channel_name">WHALE Notifications</string>
-    <string name="notification_sleep_text">WHALE is not recording this day. Please keep it running for the study to continue.</string>
+    <string name="notification_sleep_text">Today, WHALE is not recording any data from you. Please keep it running for the study to continue tomorrow.</string>
 </resources>

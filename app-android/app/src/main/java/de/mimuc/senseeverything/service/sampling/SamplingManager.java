@@ -30,6 +30,10 @@ public class SamplingManager {
         samplingStrategy.pause(context);
     }
 
+    public void resumeSampling(Context context) {
+        samplingStrategy.resume(context);
+    }
+
     public boolean isRunning(Context context) {
         return samplingStrategy.isRunning(context);
     }

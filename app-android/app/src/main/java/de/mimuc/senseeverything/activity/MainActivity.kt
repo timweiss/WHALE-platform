@@ -118,7 +118,12 @@ class StudyHomeViewModel @Inject constructor(
     }
 
     fun resumeStudy(context: Context) {
-        SEApplicationController.getInstance().samplingManager.startSampling(context)
+        if (isStudyRunning.value) {
+            SEApplicationController.getInstance().samplingManager.resumeSampling(context)
+        } else {
+            SEApplicationController.getInstance().samplingManager.startSampling(context)
+        }
+
         viewModelScope.launch {
             delay(1000)
             checkIfStudyIsRunning()

@@ -69,6 +69,18 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
     }
 
     @Override
+    public void resume(Context context) {
+        if (!isRunning(context))
+            return;
+
+        try {
+            logServiceMessenger.send(Message.obtain(null, LogService.LISTEN_LOCK_UNLOCK_AND_PERIODIC, 0, 0));
+        } catch (Exception e) {
+            Log.e(TAG, "failed to send message", e);
+        }
+    }
+
+    @Override
     public boolean isRunning(Context context) {
         // fixme: even if a messenger exists, the service could still be dead
         return logServiceMessenger != null;
@@ -78,9 +90,6 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
         Intent intent = new Intent(context, LogService.class);
         context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
         context.startService(intent);
-
-        // stopHandler = new Handler();
-        // stopHandler.postDelayed(this::stopSampling, STOP_DURATION);
 
         SharedPreferences sp = context.getSharedPreferences(CONST.SP_LOG_EVERYTHING, Activity.MODE_PRIVATE);
         sp.edit().putBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, true).apply();

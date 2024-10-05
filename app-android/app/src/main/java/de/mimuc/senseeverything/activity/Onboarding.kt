@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,16 +36,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
+import androidx.core.view.ScrollingView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -190,7 +197,7 @@ class AcceptPermissionsViewModel @Inject constructor(
         checkPermissions()
     }
 
-    private fun checkPermissions() {
+    fun checkPermissions() {
         _permissions.value = mutableMapOf()
 
         checkAndSetPermission(Manifest.permission.WAKE_LOCK)
@@ -210,6 +217,10 @@ class AcceptPermissionsViewModel @Inject constructor(
 
         if (Settings.canDrawOverlays(getApplication())) {
             setPermission(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
+        }
+
+        if (NotificationManagerCompat.getEnabledListenerPackages(getApplication()).contains(getApplication<SEApplicationController>().packageName)) {
+            setPermission(Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE, true)
         }
     }
 
@@ -272,6 +283,9 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
     val context = LocalContext.current
     val allAccepted = permissions.value.values.all { it }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
+
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
@@ -282,112 +296,120 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
 
         Spacer(modifier = Modifier.padding(12.dp))
 
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            // Wake Lock
+            Text("Wake Lock: ${permissions.value[Manifest.permission.WAKE_LOCK] ?: false}")
+            if (permissions.value[Manifest.permission.WAKE_LOCK] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.WAKE_LOCK, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Record Audio
+            Text("Record Audio: ${permissions.value[Manifest.permission.RECORD_AUDIO] ?: false}")
+            if (permissions.value[Manifest.permission.RECORD_AUDIO] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.RECORD_AUDIO, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Access Wifi
+            Text("Access Wifi: ${permissions.value[Manifest.permission.ACCESS_WIFI_STATE] ?: false}")
+            if (permissions.value[Manifest.permission.ACCESS_WIFI_STATE] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_WIFI_STATE, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Bluetooth Scan
+            Text("Bluetooth Scan: ${permissions.value[Manifest.permission.BLUETOOTH_SCAN] ?: false}")
+            if (permissions.value[Manifest.permission.BLUETOOTH_SCAN] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.BLUETOOTH_SCAN, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Access Network State
+            Text("Access Network State: ${permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] ?: false}")
+            if (permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_NETWORK_STATE, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Receive Boot Completed
+            Text("Receive Boot Completed: ${permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] ?: false}")
+            if (permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.RECEIVE_BOOT_COMPLETED, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Read Phone State
+            Text("Read Phone State: ${permissions.value[Manifest.permission.READ_PHONE_STATE] ?: false}")
+            if (permissions.value[Manifest.permission.READ_PHONE_STATE] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.READ_PHONE_STATE, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Foreground Service
+            Text("Foreground Service: ${permissions.value[Manifest.permission.FOREGROUND_SERVICE] ?: false}")
+            if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.FOREGROUND_SERVICE, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Post Notifications
+            Text("Notifications: ${permissions.value[Manifest.permission.POST_NOTIFICATIONS] ?: false}")
+            if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.POST_NOTIFICATIONS, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Schedule Exact Alarm
+            Text("Schedule Exact Alarm: ${permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] ?: false}")
+            if (permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.SCHEDULE_EXACT_ALARM, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Access Fine Location
+            Text("Access Fine Location: ${permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] ?: false}")
+            if (permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_FINE_LOCATION, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Background Location
+            Text("Background Location: ${permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] ?: false}")
+            if (permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] == false) {
+                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // System Alert Window
+            Text("System Alert Window: ${permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] ?: false}")
+            if (permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] == false) {
+                Button(onClick = { viewModel.requestSystemWindowPermission(context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Notification Listener Service
+            Text("Notification Access: ${permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] ?: false}")
+            if (permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] == false) {
+                Button(onClick = { viewModel.requestNotificationListenerPermission(context) }) {
+                    Text("Request Permission")
+                }
+            }
 
-        // Wake Lock
-        Text("Wake Lock: ${permissions.value[Manifest.permission.WAKE_LOCK] ?: false}")
-        if (permissions.value[Manifest.permission.WAKE_LOCK] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.WAKE_LOCK, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Record Audio
-        Text("Record Audio: ${permissions.value[Manifest.permission.RECORD_AUDIO] ?: false}")
-        if (permissions.value[Manifest.permission.RECORD_AUDIO] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.RECORD_AUDIO, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Access Wifi
-        Text("Access Wifi: ${permissions.value[Manifest.permission.ACCESS_WIFI_STATE] ?: false}")
-        if (permissions.value[Manifest.permission.ACCESS_WIFI_STATE] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_WIFI_STATE, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Bluetooth Scan
-        Text("Bluetooth Scan: ${permissions.value[Manifest.permission.BLUETOOTH_SCAN] ?: false}")
-        if (permissions.value[Manifest.permission.BLUETOOTH_SCAN] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.BLUETOOTH_SCAN, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Access Network State
-        Text("Access Network State: ${permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] ?: false}")
-        if (permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_NETWORK_STATE, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Receive Boot Completed
-        Text("Receive Boot Completed: ${permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] ?: false}")
-        if (permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.RECEIVE_BOOT_COMPLETED, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Read Phone State
-        Text("Read Phone State: ${permissions.value[Manifest.permission.READ_PHONE_STATE] ?: false}")
-        if (permissions.value[Manifest.permission.READ_PHONE_STATE] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.READ_PHONE_STATE, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Foreground Service
-        Text("Foreground Service: ${permissions.value[Manifest.permission.FOREGROUND_SERVICE] ?: false}")
-        if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.FOREGROUND_SERVICE, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Post Notifications
-        Text("Notifications: ${permissions.value[Manifest.permission.POST_NOTIFICATIONS] ?: false}")
-        if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.POST_NOTIFICATIONS, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Schedule Exact Alarm
-        Text("Schedule Exact Alarm: ${permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] ?: false}")
-        if (permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.SCHEDULE_EXACT_ALARM, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Access Fine Location
-        Text("Access Fine Location: ${permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] ?: false}")
-        if (permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_FINE_LOCATION, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Background Location
-        Text("Background Location: ${permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] ?: false}")
-        if (permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] == false) {
-            Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, context) }) {
-                Text("Request Permission")
-            }
-        }
-        // System Alert Window
-        Text("System Alert Window: ${permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] ?: false}")
-        if (permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] == false) {
-            Button(onClick = { viewModel.requestSystemWindowPermission(context) }) {
-                Text("Request Permission")
-            }
-        }
-        // Notification Listener Service
-        Text("System Alert Window: ${permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] ?: false}")
-        if (permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] == false) {
-            Button(onClick = { viewModel.requestNotificationListenerPermission(context) }) {
-                Text("Request Permission")
+            Spacer(modifier = Modifier.padding(16.dp))
+            Text("Please accept all permissions to continue. You can pause or stop the study at any time, and have the ability to delete all data collected.")
+
+            Spacer(modifier = Modifier.padding(12.dp))
+            Button(onClick = nextStep, enabled = allAccepted) {
+                Text("Continue")
             }
         }
 
-        Spacer(modifier = Modifier.padding(16.dp))
-        Text("Please accept all permissions to continue. You can pause or stop the study at any time, and have the ability to delete all data collected.")
-
-        Spacer(modifier = Modifier.padding(12.dp))
-        Button(onClick = nextStep, enabled = allAccepted) {
-            Text("Continue")
+        LaunchedEffect(lifecycleState) {
+            when(lifecycleState) {
+                androidx.lifecycle.Lifecycle.State.RESUMED -> viewModel.checkPermissions()
+                else -> {}
+            }
         }
     }
 }

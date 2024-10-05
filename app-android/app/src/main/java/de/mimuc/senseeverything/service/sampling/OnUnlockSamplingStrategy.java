@@ -69,6 +69,18 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
     }
 
     @Override
+    public void resume(Context context) {
+        if (!isRunning(context))
+            return;
+
+        try {
+            logServiceMessenger.send(Message.obtain(null, LogService.LISTEN_LOCK_UNLOCK, 0, 0));
+        } catch (Exception e) {
+            Log.e(TAG, "failed to send message", e);
+        }
+    }
+
+    @Override
     public boolean isRunning(Context context) {
         // fixme: even if a messenger exists, the service could still be dead
         return logServiceMessenger != null;
