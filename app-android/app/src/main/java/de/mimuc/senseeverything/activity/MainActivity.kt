@@ -25,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -39,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,6 +53,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
@@ -218,21 +221,21 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
         Column(modifier = Modifier
             .padding(innerPadding)
             .padding(16.dp)) {
-            Text("Welcome to WHALE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, fontSize = 36.sp)
+            Text(stringResource(R.string.welcome_to_whale), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, fontSize = 36.sp)
 
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isEnrolled.value) {
-                Text("Day ${currentDay.value} of ${study.value.durationDays}")
+                Text(stringResource(R.string.day_of, currentDay.value, study.value.durationDays))
 
                 StudyActivity(isRunning = isStudyRunning.value, isPaused = isStudyPaused.value, resumeStudy = { viewModel.resumeStudy(context) }, pauseStudy = { viewModel.pauseStudy(context) })
                 SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
                 FilledTonalButton(onClick = { viewModel.openSettings(context) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Study Settings")
+                    Text(stringResource(R.string.study_settings))
                 }
             } else {
                 Button(onClick = { viewModel.startOnboarding() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Enroll in Study")
+                    Text(stringResource(R.string.enroll_in_study))
                 }
             }
         }
@@ -253,26 +256,26 @@ fun StudyActivity(isRunning: Boolean, isPaused: Boolean, resumeStudy: () -> Unit
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Study is running")
+                    Text(stringResource(R.string.study_is_running))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { pauseStudy() }) {
+                OutlinedButton(onClick = { pauseStudy() }) {
                     Text(
-                        "Pause Study",
+                        stringResource(R.string.pause_study_for_today),
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
                     )
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
+                    StatusIndicator(color = Color.hsl(37f, 1f, 0.50f, 1f))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Study is paused")
+                    Text(stringResource(R.string.study_is_paused), fontStyle = FontStyle.Italic)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { resumeStudy() }) {
                     Text(
-                        "Resume Study",
+                        stringResource(R.string.resume_study),
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
                     )
@@ -282,13 +285,13 @@ fun StudyActivity(isRunning: Boolean, isPaused: Boolean, resumeStudy: () -> Unit
     } else {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusIndicator(color = Color.hsl(31f, 1f, 0.5f, 1f))
+                StatusIndicator(color = Color.hsl(0f, 1f, 0.41f, 1f))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Study is not running")
+                Text(stringResource(R.string.study_not_running))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = { resumeStudy() }) {
-                Text("Resume Study", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text(stringResource(R.string.service_not_running_resume_study), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             }
         }
     }
