@@ -1,17 +1,22 @@
 package de.mimuc.senseeverything.service.sampling;
 
 import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.util.Log;
+
+import java.util.Calendar;
 
 import de.mimuc.senseeverything.activity.CONST;
 import de.mimuc.senseeverything.service.LogService;
@@ -63,6 +68,7 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
 
         try {
             logServiceMessenger.send(Message.obtain(null, LogService.SLEEP_MODE, 0, 0));
+            scheduleResumeTimer(context);
         } catch (Exception e) {
             Log.e(TAG, "failed to send message", e);
         }
@@ -84,6 +90,56 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
     public boolean isRunning(Context context) {
         // fixme: even if a messenger exists, the service could still be dead
         return logServiceMessenger != null;
+    }
+
+    private void scheduleResumeTimer(Context context) {
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+
+        Intent intent = new Intent(context, ResumeSamplingReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        long triggerAtMillis = System.currentTimeMillis() + getNextDayTime();
+
+        if (alarmManager != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            triggerAtMillis,
+                            pendingIntent
+                    );
+                } else {
+                    Log.e(TAG, "Cannot schedule exact alarms");
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                );
+            }
+            Log.i(TAG, "Scheduled resume timer at " + triggerAtMillis);
+        } else {
+            Log.e(TAG, "AlarmManager is null");
+        }
+    }
+
+    private long getNextDayTime() {
+        Calendar calendar = Calendar.getInstance();
+
+        // we'll restart the service at 6:00 the next day
+        calendar.add(Calendar.DAY_OF_YEAR, 1);
+        calendar.set(Calendar.HOUR_OF_DAY, 6);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        return calendar.getTimeInMillis();
     }
 
     private void startLogService(Context context) {

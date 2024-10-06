@@ -5,7 +5,6 @@ import java.util.List;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.R;
-import de.mimuc.senseeverything.activity.MainActivity;
 import de.mimuc.senseeverything.data.DataStoreManager;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SensorNotRunningException;
@@ -13,10 +12,6 @@ import de.mimuc.senseeverything.sensor.SingletonSensorList;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.BuildersKt;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -27,8 +22,6 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.util.Log;
-
-import androidx.core.app.NotificationCompat;
 
 import javax.inject.Inject;
 
@@ -43,7 +36,7 @@ public class LogService extends AbstractService {
 
     private List<AbstractSensor> sensorList = null;
     private Messenger mMessenger;
-    private BroadcastReceiver broadcastReceiver;
+    private BroadcastReceiver lockUnlockReceiver;
     private boolean isSampling = false;
     private boolean isInSleepMode = false;
 
@@ -69,7 +62,7 @@ public class LogService extends AbstractService {
     @Override
     public void onDestroy() {
         stopSensors(true);
-        unregisterReceiver(broadcastReceiver);
+        unregisterReceiver(lockUnlockReceiver);
         super.onDestroy();
     }
 
@@ -96,8 +89,7 @@ public class LogService extends AbstractService {
                         break;
                     }
                     case STOP_SENSORS: {
-                        service.stopSensors(true);
-                        service.stopPeriodicSampling();
+                        service.stopSampling();
                         break;
                     }
                     case LISTEN_LOCK_UNLOCK: {
@@ -120,8 +112,7 @@ public class LogService extends AbstractService {
                         break;
                     }
                     case SLEEP_MODE: {
-                        service.stopSensors(true);
-                        service.stopPeriodicSampling();
+                        service.stopSampling();
                         service.setSleepMode();
                         break;
                     }
@@ -144,7 +135,7 @@ public class LogService extends AbstractService {
         filter.addAction(Intent.ACTION_USER_PRESENT);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
 
-        broadcastReceiver = new BroadcastReceiver() {
+        lockUnlockReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
@@ -160,8 +151,13 @@ public class LogService extends AbstractService {
             }
         };
         initializeSensors();
-        registerReceiver(broadcastReceiver, filter);
-        Log.d(TAG, "registered broadcast receiver");
+        registerReceiver(lockUnlockReceiver, filter);
+        Log.i(TAG, "registered lock/unlock receiver");
+    }
+
+    private void stopListeningForLockUnlock() {
+        unregisterReceiver(lockUnlockReceiver);
+        Log.i(TAG, "unregistered lock/unlock receiver");
     }
 
     Handler periodicHandler = new Handler();
@@ -235,6 +231,12 @@ public class LogService extends AbstractService {
             isInSleepMode = false;
             replaceNotification(getString(R.string.app_name), getString(R.string.notif_title), R.drawable.ic_launcher);
         }
+    }
+
+    private void stopSampling() {
+        stopSensors(true);
+        stopPeriodicSampling();
+        stopListeningForLockUnlock();
     }
 
     @Override
