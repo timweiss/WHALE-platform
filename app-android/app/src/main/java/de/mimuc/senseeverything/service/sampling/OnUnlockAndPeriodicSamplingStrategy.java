@@ -23,9 +23,7 @@ import de.mimuc.senseeverything.service.LogService;
 
 public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
     private final String TAG = OnUnlockAndPeriodicSamplingStrategy.class.getSimpleName();
-    private final long STOP_DURATION = 1000 * 60;
 
-    private Handler stopHandler;
     private Messenger logServiceMessenger;
 
     @Override
@@ -151,7 +149,7 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
         sp.edit().putBoolean(CONST.KEY_LOG_EVERYTHING_RUNNING, true).apply();
     }
 
-    private ServiceConnection serviceConnection = new ServiceConnection() {
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceDisconnected(ComponentName name) {
             Log.d(TAG, "LogService disconnected");
