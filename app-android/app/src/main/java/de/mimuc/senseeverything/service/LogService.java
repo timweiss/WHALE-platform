@@ -34,6 +34,10 @@ public class LogService extends AbstractService {
     public static final int SEND_SENSOR_LOG_DATA = 4;
     public static final int SLEEP_MODE = 5;
 
+    private final int PERIODIC_SAMPLING_SAMPLE_DURATION = 60 * 1000; // 1 minute
+    private final int PERIODIC_SAMPLING_CYCLE_DURATION = 5 * 60 * 1000; // 5 minutes
+    private final int LOCK_UNLOCK_SAMPLE_DURATION = 60 * 1000; // 1 minute
+
     private List<AbstractSensor> sensorList = null;
     private Messenger mMessenger;
     private BroadcastReceiver lockUnlockReceiver;
@@ -125,11 +129,16 @@ public class LogService extends AbstractService {
         }
     }
 
-    /* todo: this behavior is necessary to run inside a ForegroundService
-        but I generally want to capsule the behavior to how we're sampling the sensors (so in the sampling strategy)
-        now we're calling it from the OnUnlockSamplingStrategy and would not be if we're periodically sensing, but we want to do both,
-        so instead we might want to have another ForegroundService for this?
-     */
+    /* Section: Sampling */
+
+    Handler lockUnlockStopHandler = new Handler();
+    Runnable lockUnlockStopRunnable = new Runnable() {
+        @Override
+        public void run() {
+            stopSensors(false);
+        }
+    };
+
     private void listenForLockUnlock() {
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_USER_PRESENT);
@@ -142,11 +151,13 @@ public class LogService extends AbstractService {
                     Log.d(TAG, "device locked, stopping sampling");
                     stopSensors(false);
                     hideInteractionWidget();
+                    lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
                 } else {
                     Log.d(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
-                    // fixme: handle condition where logging might still be running?
                     startSensors(false, false);
+                    lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
                     showInteractionWidget();
+                    lockUnlockStopHandler.postDelayed(lockUnlockStopRunnable, LOCK_UNLOCK_SAMPLE_DURATION);
                 }
             }
         };
@@ -167,11 +178,12 @@ public class LogService extends AbstractService {
             if (!isSampling) {
                 Log.d(TAG, "periodic sampling start");
                 startSensors(true, false);
-                periodicHandler.postDelayed(this, 1000 * 60); // 1 minute
+                lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable); // prevent lock/unlock from stopping the sensors
+                periodicHandler.postDelayed(this, PERIODIC_SAMPLING_SAMPLE_DURATION); // 1 minute
             } else {
                 Log.d(TAG, "periodic sampling stop");
                 stopSensors(false);
-                periodicHandler.postDelayed(this, 1000 * 60 * 5); // 5 minutes
+                periodicHandler.postDelayed(this, PERIODIC_SAMPLING_CYCLE_DURATION); // 5 minutes
             }
         }
     };
@@ -187,6 +199,14 @@ public class LogService extends AbstractService {
     private void setupContiunousSampling() {
         startSensors(false, true);
     }
+
+    private void stopSampling() {
+        stopSensors(true);
+        stopPeriodicSampling();
+        stopListeningForLockUnlock();
+    }
+
+    /* Section: Receiving Sensor Log Data */
 
     private void receiveSensorLogData(String sensorName, String sensorData) {
         Log.d(TAG, "received sensor log data: " + sensorName + " " + sensorData);
@@ -204,6 +224,8 @@ public class LogService extends AbstractService {
             Log.e(TAG, "Sensor not running: " + sensorName, e);
         }
     }
+
+    /* Section: Sleep Mode */
 
     private void setSleepMode() {
         isInSleepMode = true;
@@ -233,17 +255,7 @@ public class LogService extends AbstractService {
         }
     }
 
-    private void stopSampling() {
-        stopSensors(true);
-        stopPeriodicSampling();
-        stopListeningForLockUnlock();
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        mMessenger = new Messenger(new IncomingHandler(this, this));
-        return mMessenger.getBinder();
-    }
+    /* Section: Interaction Widget */
 
     private void showInteractionWidget() {
         Intent intent = new Intent(this, InteractionFloatingWidgetService.class);
@@ -254,6 +266,8 @@ public class LogService extends AbstractService {
         Intent intent = new Intent(this, InteractionFloatingWidgetService.class);
         stopService(intent);
     }
+
+    /* Section: Sensor Handling */
 
     private void initializeSensors() {
         sensorList = singletonSensorList.getList(this);
@@ -285,6 +299,12 @@ public class LogService extends AbstractService {
         }
 
         isSampling = false;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        mMessenger = new Messenger(new IncomingHandler(this, this));
+        return mMessenger.getBinder();
     }
 
     public class LogBinder extends Binder {
