@@ -62,7 +62,8 @@
             android:label="@string/title_activity_study_enrolment"
             android:theme="@style/Theme.MyApplication" />
 
-        <receiver android:name=".activity.BootUpReceiver">
+        <receiver android:name=".activity.BootUpReceiver" android:enabled="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
