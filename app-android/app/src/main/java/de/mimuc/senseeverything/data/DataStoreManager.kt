@@ -41,7 +41,8 @@ data class AppSettings(
     val studyDays: Int,
     val remainingStudyDays: Int,
     val timestampStudyStarted: Long,
-    val studyPaused: Boolean
+    val studyPaused: Boolean,
+    val studyPausedUntil: Long
 )
 
 @Singleton
@@ -57,7 +58,8 @@ class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
         studyDays = -1,
         remainingStudyDays = -1,
         timestampStudyStarted = -1,
-        studyPaused = false
+        studyPaused = false,
+        studyPausedUntil = -1
     )
 
     override suspend fun readFrom(input: InputStream): AppSettings =
@@ -274,12 +276,13 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.studyPaused
     }
 
-    fun getStudyPausedSync(callback: (Boolean) -> Unit) {
-        runBlocking {
-            studyPausedFlow.first { studyPaused ->
-                callback(studyPaused)
-                true
-            }
+    suspend fun saveStudyPausedUntil(studyPausedUntil: Long) {
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), studyPausedUntil = studyPausedUntil)
         }
+    }
+
+    val studyPausedUntilFlow = dataStore.data.map { preferences ->
+        preferences.studyPausedUntil
     }
 }

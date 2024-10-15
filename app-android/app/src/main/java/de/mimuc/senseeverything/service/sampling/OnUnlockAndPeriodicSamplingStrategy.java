@@ -1,5 +1,7 @@
 package de.mimuc.senseeverything.service.sampling;
 
+import static de.mimuc.senseeverything.helpers.ResumeSamplingKt.scheduleResumeSamplingAlarm;
+
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -9,6 +11,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -19,6 +22,7 @@ import android.util.Log;
 import java.util.Calendar;
 
 import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import de.mimuc.senseeverything.service.LogService;
 
 public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
@@ -65,8 +69,13 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
             return;
 
         try {
-            logServiceMessenger.send(Message.obtain(null, LogService.SLEEP_MODE, 0, 0));
-            scheduleResumeTimer(context);
+            long durationUntil = scheduleResumeTimer(context);
+            Message msg = Message.obtain(null, LogService.SLEEP_MODE);
+            Bundle bundle = new Bundle();
+            bundle.putString("until", durationUntil + "");
+            msg.setData(bundle);
+
+            logServiceMessenger.send(msg);
         } catch (Exception e) {
             Log.e(TAG, "failed to send message", e);
         }
@@ -90,41 +99,14 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
         return logServiceMessenger != null;
     }
 
-    private void scheduleResumeTimer(Context context) {
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-
-        Intent intent = new Intent(context, ResumeSamplingReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                context,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
+    private long scheduleResumeTimer(Context context) {
         long triggerAtMillis = System.currentTimeMillis() + getNextDayTime();
 
-        if (alarmManager != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                            AlarmManager.RTC_WAKEUP,
-                            triggerAtMillis,
-                            pendingIntent
-                    );
-                } else {
-                    Log.e(TAG, "Cannot schedule exact alarms");
-                }
-            } else {
-                alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerAtMillis,
-                        pendingIntent
-                );
-            }
-            Log.i(TAG, "Scheduled resume timer at " + triggerAtMillis);
-        } else {
-            Log.e(TAG, "AlarmManager is null");
+        if (scheduleResumeSamplingAlarm(context, triggerAtMillis)) {
+            return triggerAtMillis;
         }
+
+        return -1;
     }
 
     private long getNextDayTime() {

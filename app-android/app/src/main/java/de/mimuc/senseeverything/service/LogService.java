@@ -116,8 +116,11 @@ public class LogService extends AbstractService {
                         break;
                     }
                     case SLEEP_MODE: {
+                        String until = msg.getData().getString("until");
+                        long untilTime = Long.parseLong(until);
+
                         service.stopSampling();
-                        service.setSleepMode();
+                        service.setSleepMode(untilTime);
                         break;
                     }
                     default:
@@ -227,12 +230,15 @@ public class LogService extends AbstractService {
 
     /* Section: Sleep Mode */
 
-    private void setSleepMode() {
+    private void setSleepMode(long untilTime) {
         isInSleepMode = true;
         try {
             BuildersKt.runBlocking(
                     EmptyCoroutineContext.INSTANCE,
                     (scope, continuation) -> dataStoreManager.saveStudyPaused(true, continuation));
+            BuildersKt.runBlocking(
+                    EmptyCoroutineContext.INSTANCE,
+                    (scope, continuation) -> dataStoreManager.saveStudyPausedUntil(untilTime, continuation));
         } catch (Exception e) {
             Log.e(TAG, "Could not save study paused", e);
         }
@@ -245,6 +251,9 @@ public class LogService extends AbstractService {
             BuildersKt.runBlocking(
                     EmptyCoroutineContext.INSTANCE,
                     (scope, continuation) -> dataStoreManager.saveStudyPaused(false, continuation));
+            BuildersKt.runBlocking(
+                    EmptyCoroutineContext.INSTANCE,
+                    (scope, continuation) -> dataStoreManager.saveStudyPausedUntil(-1, continuation));
         } catch (Exception e) {
             Log.e(TAG, "Could not save study paused", e);
         }

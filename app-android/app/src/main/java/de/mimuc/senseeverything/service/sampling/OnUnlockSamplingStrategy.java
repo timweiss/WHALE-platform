@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -14,6 +15,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import de.mimuc.senseeverything.service.LogService;
 
 public class OnUnlockSamplingStrategy implements SamplingStrategy {
