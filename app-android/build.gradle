@@ -33,7 +33,7 @@ allprojects {
         android_targetSdkVersion = 30
 
         // https://mvnrepository.com/artifact/com.google.code.gson/gson
-        gson_library_version = '2.8.8'
+        gson_library_version = '2.11.0'
         // https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp
         okhttp_library_version = '3.9.0'
     }
