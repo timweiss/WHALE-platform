@@ -25,7 +25,6 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.data.DataStoreManager;
-import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import kotlin.Unit;
@@ -37,11 +36,16 @@ public class InteractionFloatingWidgetService extends Service {
         Start,
         End,
         Confirm,
+        ConfirmAnotherInteraction,
+        ConfirmSameInteraction,
         NoInteraction
     }
 
     private WindowManager windowManager;
     private View floatingWidget;
+    private TextView questionText;
+
+    private boolean askedAnotherInteraction = false;
 
     private String TAG = "InteractionFloatingWidgetService";
 
@@ -73,14 +77,14 @@ public class InteractionFloatingWidgetService extends Service {
 
         Button yesButton = floatingWidget.findViewById(R.id.yes_button);
         Button noButton = floatingWidget.findViewById(R.id.no_button);
-        TextView questionText = floatingWidget.findViewById(R.id.interaction_question);
+        this.questionText = floatingWidget.findViewById(R.id.interaction_question);
 
         // Set the question text
         dataStore.getInInteractionSync((inInteraction) -> {
             if (inInteraction) {
-                questionText.setText(R.string.still_interacting);
+                this.questionText.setText(R.string.still_interacting);
             } else {
-                questionText.setText(R.string.are_you_interacting);
+                this.questionText.setText(R.string.are_you_interacting);
             }
             return Unit.INSTANCE;
         });
@@ -154,12 +158,19 @@ public class InteractionFloatingWidgetService extends Service {
 
     private void answerYes() {
         Log.d("FloatingWidget", "Yes button clicked");
-        floatingWidget.setVisibility(View.GONE);
 
         dataStore.getInInteractionSync((inInteraction) -> {
             if (inInteraction) {
-                logInteractionMessage(InteractionLogType.Confirm);
+                if (askedAnotherInteraction) {
+                    logInteractionMessage(InteractionLogType.ConfirmSameInteraction);
+                    floatingWidget.setVisibility(View.GONE);
+                    askedAnotherInteraction = false;
+                } else {
+                    this.questionText.setText(R.string.is_same_interaction);
+                    askedAnotherInteraction = true;
+                }
             } else {
+                floatingWidget.setVisibility(View.GONE);
                 logInteractionMessage(InteractionLogType.Start);
             }
 
@@ -173,9 +184,14 @@ public class InteractionFloatingWidgetService extends Service {
         floatingWidget.setVisibility(View.GONE);
         dataStore.getInInteractionSync((inInteraction) -> {
             if (inInteraction) {
-                logInteractionMessage(InteractionLogType.End);
-                SEApplicationController.getInstance().getEsmHandler().initializeTriggers(dataStore);
-                SEApplicationController.getInstance().getEsmHandler().handleEvent("interactionEnd", this, dataStore);
+                if (askedAnotherInteraction) {
+                    askedAnotherInteraction = false;
+                    logInteractionMessage(InteractionLogType.ConfirmAnotherInteraction);
+                } else {
+                    logInteractionMessage(InteractionLogType.End);
+                    SEApplicationController.getInstance().getEsmHandler().initializeTriggers(dataStore);
+                    SEApplicationController.getInstance().getEsmHandler().handleEvent("interactionEnd", this, dataStore);
+                }
             } else {
                 logInteractionMessage(InteractionLogType.NoInteraction);
             }
@@ -205,6 +221,12 @@ public class InteractionFloatingWidgetService extends Service {
                 break;
             case Confirm:
                 sendDataToLogService("confirm");
+                break;
+            case ConfirmAnotherInteraction:
+                sendDataToLogService("confirmAnotherInteraction");
+                break;
+            case ConfirmSameInteraction:
+                sendDataToLogService("confirmSameInteraction");
                 break;
             case NoInteraction:
                 sendDataToLogService("noInteraction");
