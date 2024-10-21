@@ -8,6 +8,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,12 +42,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -207,6 +221,9 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val study = viewModel.study.collectAsState()
     val context = LocalContext.current
 
+    var visible by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
 
@@ -218,30 +235,73 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
         ),
         title = { Text("WHALE") }
     )}, modifier = Modifier.fillMaxSize()) { innerPadding ->
-        Column(modifier = Modifier
-            .padding(innerPadding)
-            .padding(16.dp)) {
-            Text(stringResource(R.string.welcome_to_whale), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, fontSize = 36.sp)
+        AnimatedVisibility(
+            visible = visible,
+            enter = slideInVertically {
+                // Slide in from 40 dp from the top.
+                with(density) { -60.dp.roundToPx() }
+            } + fadeIn(
+                // Fade in with the initial alpha of 0.3f.
+                initialAlpha = 0.2f
+            ),
+            exit = slideOutVertically() + fadeOut(),
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(16.dp)
+            ) {
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Image(painter = painterResource(id = R.drawable.whale), contentDescription = "")
+                Spacer(modifier = Modifier.height(16.dp))
 
-            if (isEnrolled.value) {
-                Text(stringResource(R.string.day_of, currentDay.value, study.value.durationDays))
+                Text(
+                    stringResource(R.string.welcome_to_whale),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 36.sp
+                )
 
-                StudyActivity(isRunning = isStudyRunning.value, isPaused = isStudyPaused.value, resumeStudy = { viewModel.resumeStudy(context) }, pauseStudy = { viewModel.pauseStudy(context) })
-                SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
-                FilledTonalButton(onClick = { viewModel.openSettings(context) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.study_settings))
-                }
-            } else {
-                Button(onClick = { viewModel.startOnboarding() }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.enroll_in_study))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isEnrolled.value) {
+                    Text(
+                        stringResource(
+                            R.string.day_of,
+                            currentDay.value,
+                            study.value.durationDays
+                        )
+                    )
+
+                    StudyActivity(
+                        isRunning = isStudyRunning.value,
+                        isPaused = isStudyPaused.value,
+                        resumeStudy = { viewModel.resumeStudy(context) },
+                        pauseStudy = { viewModel.pauseStudy(context) })
+                    SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
+                    FilledTonalButton(
+                        onClick = { viewModel.openSettings(context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.study_settings))
+                    }
+                } else {
+                    Button(
+                        onClick = { viewModel.startOnboarding() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.enroll_in_study))
+                    }
                 }
             }
         }
+
         LaunchedEffect(lifecycleState) {
             when(lifecycleState) {
-                androidx.lifecycle.Lifecycle.State.RESUMED -> viewModel.load()
+                androidx.lifecycle.Lifecycle.State.RESUMED -> {
+                    viewModel.load()
+                    visible = true
+                }
                 else -> {}
             }
         }
