@@ -22,5 +22,6 @@ public interface LogDataDao {
     @Update
     public void updateLogData(LogData... logData);
 
-
+    @Query("DELETE FROM logdata")
+    public void deleteAll();
 }

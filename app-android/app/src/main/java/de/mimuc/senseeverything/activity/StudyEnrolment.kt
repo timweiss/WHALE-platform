@@ -40,11 +40,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.room.Room.databaseBuilder
 import com.android.volley.VolleyError
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -56,14 +56,18 @@ import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -228,12 +232,27 @@ class EnrolmentViewModel @Inject constructor(
         }
     }
 
-    fun removeEnrolment() {
+    fun removeEnrolment(context: Context) {
         viewModelScope.launch {
-            dataStoreManager.saveToken("")
-            dataStoreManager.saveParticipantId("")
-            dataStoreManager.saveStudyId(-1)
+            dataStoreManager.eraseAllData()
+
+            withContext(IO) {
+                val db = databaseBuilder(
+                    getApplication(),
+                    AppDatabase::class.java, "senseeverything-roomdb"
+                ).build()
+                db.logDataDao().deleteAll()
+                db.close()
+            }
+
             _isEnrolled.value = false
+
+            val activity = context.getActivity()
+            if (activity != null) {
+                activity.finish()
+            } else {
+                Log.e("OnboardingViewModel", "Could not get activity")
+            }
         }
     }
 
@@ -355,7 +374,7 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
             Spacer(modifier = Modifier.height(36.dp))
             Button(
                     onClick = {
-                        viewModel.removeEnrolment()
+                        viewModel.removeEnrolment(context)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error)

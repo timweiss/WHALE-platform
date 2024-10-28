@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,6 +18,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -118,6 +120,9 @@ class StudyHomeViewModel @Inject constructor(
     private val _study = MutableStateFlow(Study("", -1, "", -1))
     val study: StateFlow<Study> get() = _study
 
+    private val _onboardingStep = MutableStateFlow(OnboardingStep.WELCOME)
+    val onboardingStep: StateFlow<OnboardingStep> get() = _onboardingStep
+
     init {
         load()
     }
@@ -164,7 +169,9 @@ class StudyHomeViewModel @Inject constructor(
     private fun checkEnrolment() {
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
+            val onboardingStep = dataStoreManager.onboardingStepFlow.first()
             _isEnrolled.value = token.isNotEmpty()
+            _onboardingStep.value = onboardingStep
         }
     }
 
@@ -219,6 +226,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val isStudyPaused = viewModel.isStudyPaused.collectAsState()
     val currentDay = viewModel.currentDay.collectAsState()
     val study = viewModel.study.collectAsState()
+    val onboardingStep = viewModel.onboardingStep.collectAsState()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -252,7 +260,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                     .padding(16.dp)
             ) {
 
-                Image(painter = painterResource(id = R.drawable.whale), contentDescription = "")
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
@@ -261,6 +269,11 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 36.sp
                 )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, fontSize = 36.sp)
+                    Image(painter = painterResource(id = R.drawable.whale), contentDescription = "", Modifier.width(96.dp))
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -290,7 +303,11 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         onClick = { viewModel.startOnboarding() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.enroll_in_study))
+                        if (onboardingStep.value.startedButIncomplete()) {
+                            Text(stringResource(R.string.continue_registration))
+                        } else {
+                            Text(stringResource(R.string.enroll_in_study))
+                        }
                     }
                 }
             }

@@ -8,6 +8,7 @@ import androidx.datastore.core.MultiProcessDataStoreFactory
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.mimuc.senseeverything.activity.OnboardingStep
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import kotlinx.coroutines.Dispatchers
@@ -42,29 +43,75 @@ data class AppSettings(
     val remainingStudyDays: Int,
     val timestampStudyStarted: Long,
     val studyPaused: Boolean,
-    val studyPausedUntil: Long
+    val studyPausedUntil: Long,
+    val onboardingStep: OnboardingStep
 )
+
+@Serializable
+data class OptionalAppSettings(
+    val lastUpdate: Long? = null,
+    val token: String? = null,
+    val participantId: String? = null,
+    val studyId: Int? = null,
+    val questionnaires: String? = null,
+    val inInteraction: Boolean? = null,
+    val studyDays: Int? = null,
+    val remainingStudyDays: Int? = null,
+    val timestampStudyStarted: Long? = null,
+    val studyPaused: Boolean? = null,
+    val studyPausedUntil: Long? = null,
+    val onboardingStep: OnboardingStep? = null
+)
+
+val DEFAULT_APP_SETTINGS = AppSettings(
+    lastUpdate = 0,
+    token = "",
+    participantId = "",
+    studyId = -1,
+    questionnaires = "",
+    inInteraction = false,
+    studyDays = -1,
+    remainingStudyDays = -1,
+    timestampStudyStarted = -1,
+    studyPaused = false,
+    studyPausedUntil = -1,
+    onboardingStep = OnboardingStep.WELCOME
+)
+
+fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
+    val defaultAppSettings = DEFAULT_APP_SETTINGS
+
+    return AppSettings(
+        lastUpdate = optionalAppSettings.lastUpdate ?: defaultAppSettings.lastUpdate,
+        token = optionalAppSettings.token ?: defaultAppSettings.token,
+        participantId = optionalAppSettings.participantId ?: defaultAppSettings.participantId,
+        studyId = optionalAppSettings.studyId ?: defaultAppSettings.studyId,
+        questionnaires = optionalAppSettings.questionnaires ?: defaultAppSettings.questionnaires,
+        inInteraction = optionalAppSettings.inInteraction ?: defaultAppSettings.inInteraction,
+        studyDays = optionalAppSettings.studyDays ?: defaultAppSettings.studyDays,
+        remainingStudyDays = optionalAppSettings.remainingStudyDays
+            ?: defaultAppSettings.remainingStudyDays,
+        timestampStudyStarted = optionalAppSettings.timestampStudyStarted
+            ?: defaultAppSettings.timestampStudyStarted,
+        studyPaused = optionalAppSettings.studyPaused ?: defaultAppSettings.studyPaused,
+        studyPausedUntil = optionalAppSettings.studyPausedUntil
+            ?: defaultAppSettings.studyPausedUntil,
+        onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep
+    )
+}
 
 @Singleton
 class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
 
-    override val defaultValue = AppSettings(
-        lastUpdate = 0,
-        token = "",
-        participantId = "",
-        studyId = -1,
-        questionnaires = "",
-        inInteraction = false,
-        studyDays = -1,
-        remainingStudyDays = -1,
-        timestampStudyStarted = -1,
-        studyPaused = false,
-        studyPausedUntil = -1
-    )
+    override val defaultValue = DEFAULT_APP_SETTINGS
 
     override suspend fun readFrom(input: InputStream): AppSettings =
         try {
-            Json.decodeFromString(input.readBytes().decodeToString())
+            recoverFromOptionalOrUseDefault(
+                Json.decodeFromString<OptionalAppSettings>(
+                    input.readBytes().decodeToString()
+                )
+            )
         } catch (serialization: SerializationException) {
             throw CorruptionException("Unable to read Settings", serialization)
         }
@@ -90,6 +137,12 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         serializer = SettingsSerializer(),
         produceFile = { context.appSettingsDataStoreFile(DATASTORE_NAME) }
     )
+
+    suspend fun eraseAllData() {
+        dataStore.updateData {
+            DEFAULT_APP_SETTINGS
+        }
+    }
 
     suspend fun saveToken(token: String) {
         dataStore.updateData { preferences ->
@@ -138,15 +191,6 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
 
     val studyIdFlow = dataStore.data.map { preferences ->
         preferences.studyId ?: -1
-    }
-
-    fun getStudyIdSync(callback: (Int) -> Unit) {
-        runBlocking {
-            studyIdFlow.first { studyId ->
-                callback(studyId)
-                true
-            }
-        }
     }
 
     suspend fun saveEnrolment(token: String, participantId: String, studyId: Int) {
@@ -228,18 +272,12 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.studyDays
     }
 
-    fun getStudyDaysSync(callback: (Int) -> Unit) {
-        runBlocking {
-            studyDaysFlow.first { studyDays ->
-                callback(studyDays)
-                true
-            }
-        }
-    }
-
     suspend fun saveRemainingStudyDays(remainingStudyDays: Int) {
         dataStore.updateData { preferences ->
-            preferences.copy(lastUpdate = System.currentTimeMillis(), remainingStudyDays = remainingStudyDays)
+            preferences.copy(
+                lastUpdate = System.currentTimeMillis(),
+                remainingStudyDays = remainingStudyDays
+            )
         }
     }
 
@@ -247,18 +285,12 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.remainingStudyDays
     }
 
-    fun getRemainingStudyDaysSync(callback: (Int) -> Unit) {
-        runBlocking {
-            remainingStudyDaysFlow.first { remainingStudyDays ->
-                callback(remainingStudyDays)
-                true
-            }
-        }
-    }
-
     suspend fun saveTimestampStudyStarted(timestamp: Long) {
         dataStore.updateData { preferences ->
-            preferences.copy(lastUpdate = System.currentTimeMillis(), timestampStudyStarted = timestamp)
+            preferences.copy(
+                lastUpdate = System.currentTimeMillis(),
+                timestampStudyStarted = timestamp
+            )
         }
     }
 
@@ -284,5 +316,15 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
 
     val studyPausedUntilFlow = dataStore.data.map { preferences ->
         preferences.studyPausedUntil
+    }
+
+    val onboardingStepFlow = dataStore.data.map { preferences ->
+        preferences.onboardingStep
+    }
+
+    suspend fun saveOnboardingStep(onboardingStep: OnboardingStep) {
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), onboardingStep = onboardingStep)
+        }
     }
 }

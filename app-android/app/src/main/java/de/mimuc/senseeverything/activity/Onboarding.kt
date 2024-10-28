@@ -81,32 +81,61 @@ class Onboarding : ComponentActivity() {
     }
 }
 
+enum class OnboardingStep {
+    WELCOME,
+    ENTER_STUDY_ID,
+    ACCEPT_PERMISSIONS,
+    START_STUDY,
+    COMPLETED
+}
+
+fun OnboardingStep.startedButIncomplete(): Boolean {
+    return when (this) {
+        OnboardingStep.WELCOME -> false
+        OnboardingStep.ENTER_STUDY_ID -> true
+        OnboardingStep.ACCEPT_PERMISSIONS -> true
+        OnboardingStep.START_STUDY -> true
+        OnboardingStep.COMPLETED -> false
+    }
+}
+
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager
 ) : AndroidViewModel(application) {
-    enum class Step {
-        WELCOME,
-        ENTER_STUDY_ID,
-        ACCEPT_PERMISSIONS,
-        START_STUDY
+    private val _step = MutableStateFlow(OnboardingStep.WELCOME)
+    val step: StateFlow<OnboardingStep> get() = _step
+
+    init {
+        loadStep()
     }
 
-    private val _step = MutableStateFlow(Step.WELCOME)
-    val step: StateFlow<Step> get() = _step
+    private fun loadStep() {
+        viewModelScope.launch {
+            _step.value = dataStoreManager.onboardingStepFlow.first()
+        }
+    }
 
     fun nextStep() {
         _step.value = when (_step.value) {
-            Step.WELCOME -> Step.ENTER_STUDY_ID
-            Step.ENTER_STUDY_ID -> Step.ACCEPT_PERMISSIONS
-            Step.ACCEPT_PERMISSIONS -> Step.START_STUDY
-            Step.START_STUDY -> Step.WELCOME
+            OnboardingStep.WELCOME -> OnboardingStep.ENTER_STUDY_ID
+            OnboardingStep.ENTER_STUDY_ID -> OnboardingStep.ACCEPT_PERMISSIONS
+            OnboardingStep.ACCEPT_PERMISSIONS -> OnboardingStep.START_STUDY
+            OnboardingStep.START_STUDY -> OnboardingStep.COMPLETED
+            OnboardingStep.COMPLETED -> OnboardingStep.COMPLETED
+        }
+
+        viewModelScope.launch {
+            dataStoreManager.saveOnboardingStep(_step.value)
         }
     }
 
     fun finishOnboarding(context: Context) {
         // save that we've finished onboarding
+        viewModelScope.launch {
+            dataStoreManager.saveOnboardingStep(OnboardingStep.COMPLETED)
+        }
         // pop and open the mainactivity again
         val activity = context.getActivity()
         if (activity != null) {
@@ -132,20 +161,22 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
                 ),
                 title = {
                     when (step.value) {
-                        OnboardingViewModel.Step.WELCOME -> Text("Welcome")
-                        OnboardingViewModel.Step.ENTER_STUDY_ID -> Text("Join Study")
-                        OnboardingViewModel.Step.ACCEPT_PERMISSIONS -> Text("Permissions")
-                        OnboardingViewModel.Step.START_STUDY -> Text("Start Study")
+                        OnboardingStep.WELCOME -> Text("Welcome")
+                        OnboardingStep.ENTER_STUDY_ID -> Text("Join Study")
+                        OnboardingStep.ACCEPT_PERMISSIONS -> Text("Permissions")
+                        OnboardingStep.START_STUDY -> Text("Start Study")
+                        OnboardingStep.COMPLETED -> Text("Completed")
                     }
                 }
             )
         }
     ) { innerPadding ->
         when (step.value) {
-            OnboardingViewModel.Step.WELCOME -> WelcomeScreen(viewModel::nextStep, innerPadding)
-            OnboardingViewModel.Step.ENTER_STUDY_ID -> EnterStudyIdScreen(viewModel::nextStep, innerPadding)
-            OnboardingViewModel.Step.ACCEPT_PERMISSIONS -> AcceptPermissionsScreen(viewModel::nextStep, innerPadding)
-            OnboardingViewModel.Step.START_STUDY -> StartStudyScreen({ viewModel.finishOnboarding(context) }, innerPadding)
+            OnboardingStep.WELCOME -> WelcomeScreen(viewModel::nextStep, innerPadding)
+            OnboardingStep.ENTER_STUDY_ID -> EnterStudyIdScreen(viewModel::nextStep, innerPadding)
+            OnboardingStep.ACCEPT_PERMISSIONS -> AcceptPermissionsScreen(viewModel::nextStep, innerPadding)
+            OnboardingStep.START_STUDY -> StartStudyScreen({ viewModel.finishOnboarding(context) }, innerPadding)
+            OnboardingStep.COMPLETED -> {}
         }
     }
 }
