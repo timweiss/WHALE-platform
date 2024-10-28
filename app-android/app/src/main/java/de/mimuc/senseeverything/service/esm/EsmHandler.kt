@@ -15,10 +15,8 @@ import de.mimuc.senseeverything.api.model.EventQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.invoke
 import kotlinx.coroutines.withContext
@@ -87,7 +85,7 @@ class EsmHandler {
 
     fun scheduleNextPeriodicNotification(context: Context, trigger: PeriodicQuestionnaireTrigger, remainingDays: Int, title: String) {
         val sendNextNotification = remainingDays > 0
-        val nextRemainingDays = remainingDays - 1
+        var nextRemainingDays = remainingDays - 1
 
         if (!sendNextNotification) {
             return
@@ -114,10 +112,18 @@ class EsmHandler {
         val scheduleMinute = trigger.time.split(":")[1].toInt()
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val selectedDate = Calendar.getInstance().apply {
+        val calendar = Calendar.getInstance()
+
+        val selectedDate = calendar.apply {
             timeInMillis = System.currentTimeMillis()
             set(Calendar.HOUR_OF_DAY, scheduleHour)
             set(Calendar.MINUTE, scheduleMinute)
+        }
+
+        // edge-case: registration after schedule time, if already past the time, schedule for next day
+        if (selectedDate.before(Calendar.getInstance())) {
+            selectedDate.add(Calendar.DATE, 1)
+            nextRemainingDays -= 1
         }
 
         val year = selectedDate.get(Calendar.YEAR)
@@ -126,7 +132,6 @@ class EsmHandler {
         val hour = selectedDate.get(Calendar.HOUR_OF_DAY)
         val minute = selectedDate.get(Calendar.MINUTE)
 
-        val calendar = Calendar.getInstance()
         calendar.set(year, month, day, hour, minute)
 
         alarmManager.setExactAndAllowWhileIdle(
