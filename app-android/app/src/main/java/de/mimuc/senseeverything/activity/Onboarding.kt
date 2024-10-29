@@ -9,6 +9,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.provider.Settings.SettingNotFoundException
+import android.text.TextUtils.SimpleStringSplitter
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -60,6 +63,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
 import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
@@ -175,8 +179,16 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
         when (step.value) {
             OnboardingStep.WELCOME -> WelcomeScreen(viewModel::nextStep, innerPadding)
             OnboardingStep.ENTER_STUDY_ID -> EnterStudyIdScreen(viewModel::nextStep, innerPadding)
-            OnboardingStep.ACCEPT_PERMISSIONS -> AcceptPermissionsScreen(viewModel::nextStep, innerPadding)
-            OnboardingStep.START_STUDY -> StartStudyScreen({ viewModel.finishOnboarding(context) }, innerPadding)
+            OnboardingStep.ACCEPT_PERMISSIONS -> AcceptPermissionsScreen(
+                viewModel::nextStep,
+                innerPadding
+            )
+
+            OnboardingStep.START_STUDY -> StartStudyScreen(
+                { viewModel.finishOnboarding(context) },
+                innerPadding
+            )
+
             OnboardingStep.COMPLETED -> {}
         }
     }
@@ -185,7 +197,11 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
 @Composable
 fun Heading(@DrawableRes id: Int, description: String, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(painter = painterResource(id), contentDescription = description, modifier = Modifier.size(46.dp))
+        Icon(
+            painter = painterResource(id),
+            contentDescription = description,
+            modifier = Modifier.size(46.dp)
+        )
         Spacer(modifier = Modifier.padding(16.dp))
         Text(text, style = MaterialTheme.typography.titleLarge)
     }
@@ -193,10 +209,12 @@ fun Heading(@DrawableRes id: Int, description: String, text: String) {
 
 @Composable
 fun WelcomeScreen(nextStep: () -> Unit, innerPadding: PaddingValues) {
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(innerPadding)
-        .padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(16.dp)
+    ) {
         Heading(R.drawable.rounded_waving_hand_24, "Home symbol", "Welcome")
         Spacer(modifier = Modifier.padding(12.dp))
 
@@ -251,9 +269,16 @@ class AcceptPermissionsViewModel @Inject constructor(
             setPermission(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
         }
 
-        if (NotificationManagerCompat.getEnabledListenerPackages(getApplication()).contains(getApplication<SEApplicationController>().packageName)) {
+        if (NotificationManagerCompat.getEnabledListenerPackages(getApplication())
+                .contains(getApplication<SEApplicationController>().packageName)
+        ) {
             setPermission(Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE, true)
         }
+
+        setPermission(
+            Manifest.permission.BIND_ACCESSIBILITY_SERVICE,
+            isAccessibilityServiceEnabled(getApplication())
+        )
     }
 
     private fun checkAndSetPermission(permission: String) {
@@ -293,7 +318,10 @@ class AcceptPermissionsViewModel @Inject constructor(
                     _permissions.value = _permissions.value.toMutableMap().apply {
                         put(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
                     }
-                    Log.d("AcceptPermissionsViewModel", "SYSTEM_ALERT_WINDOW permission already granted")
+                    Log.d(
+                        "AcceptPermissionsViewModel",
+                        "SYSTEM_ALERT_WINDOW permission already granted"
+                    )
                 }
             }
         } else {
@@ -303,14 +331,62 @@ class AcceptPermissionsViewModel @Inject constructor(
 
     fun requestNotificationListenerPermission(context: Context) {
         context.startActivity(
-            Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+            Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+    }
+
+    fun requestAccessibilityServicePermission(context: Context) {
+        context.startActivity(
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+
+    private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+        var accessibilityEnabled = 0
+
+        try {
+            accessibilityEnabled = Settings.Secure.getInt(
+                context.contentResolver,
+                Settings.Secure.ACCESSIBILITY_ENABLED
+            )
+        } catch (e: SettingNotFoundException) {
+            Log.d("Onboarding", e.toString())
+        }
+
+        val mStringColonSplitter = SimpleStringSplitter(':')
+
+        if (accessibilityEnabled == 1) {
+            val settingValue =
+                Settings.Secure.getString(
+                    context.contentResolver,
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                )
+            if (settingValue != null) {
+                mStringColonSplitter.setString(settingValue)
+                while (mStringColonSplitter.hasNext()) {
+                    val accessibilityService = mStringColonSplitter.next()
+                    if (accessibilityService.equals(
+                            AccessibilityLogService.SERVICE,
+                            ignoreCase = true
+                        )
+                    ) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
 }
 
 @Composable
-fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, viewModel: AcceptPermissionsViewModel = viewModel()) {
+fun AcceptPermissionsScreen(
+    nextStep: () -> Unit,
+    innerPadding: PaddingValues,
+    viewModel: AcceptPermissionsViewModel = viewModel()
+) {
     val permissions = viewModel.permissions.collectAsState()
     val context = LocalContext.current
     val allAccepted = permissions.value.values.all { it }
@@ -318,11 +394,17 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(innerPadding)
-        .padding(16.dp)) {
-        Heading(id = R.drawable.rounded_key_vertical_24, description = "Lock symbol", text = "Necessary Permissions")
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(16.dp)
+    ) {
+        Heading(
+            id = R.drawable.rounded_key_vertical_24,
+            description = "Lock symbol",
+            text = "Necessary Permissions"
+        )
         Spacer(modifier = Modifier.padding(12.dp))
         Text("To participate in the study, we need access to some of your phone's sensors. All data will be pseudonymized and stored securely.")
 
@@ -332,84 +414,144 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
             // Wake Lock
             Text("Wake Lock: ${permissions.value[Manifest.permission.WAKE_LOCK] ?: false}")
             if (permissions.value[Manifest.permission.WAKE_LOCK] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.WAKE_LOCK, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.WAKE_LOCK,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Record Audio
             Text("Record Audio: ${permissions.value[Manifest.permission.RECORD_AUDIO] ?: false}")
             if (permissions.value[Manifest.permission.RECORD_AUDIO] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.RECORD_AUDIO, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.RECORD_AUDIO,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Access Wifi
             Text("Access Wifi: ${permissions.value[Manifest.permission.ACCESS_WIFI_STATE] ?: false}")
             if (permissions.value[Manifest.permission.ACCESS_WIFI_STATE] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_WIFI_STATE, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.ACCESS_WIFI_STATE,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Bluetooth Scan
             Text("Bluetooth Scan: ${permissions.value[Manifest.permission.BLUETOOTH_SCAN] ?: false}")
             if (permissions.value[Manifest.permission.BLUETOOTH_SCAN] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.BLUETOOTH_SCAN, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.BLUETOOTH_SCAN,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Access Network State
             Text("Access Network State: ${permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] ?: false}")
             if (permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_NETWORK_STATE, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.ACCESS_NETWORK_STATE,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Receive Boot Completed
             Text("Receive Boot Completed: ${permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] ?: false}")
             if (permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.RECEIVE_BOOT_COMPLETED, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.RECEIVE_BOOT_COMPLETED,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Read Phone State
             Text("Read Phone State: ${permissions.value[Manifest.permission.READ_PHONE_STATE] ?: false}")
             if (permissions.value[Manifest.permission.READ_PHONE_STATE] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.READ_PHONE_STATE, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.READ_PHONE_STATE,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Foreground Service
             Text("Foreground Service: ${permissions.value[Manifest.permission.FOREGROUND_SERVICE] ?: false}")
             if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.FOREGROUND_SERVICE, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.FOREGROUND_SERVICE,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Post Notifications
             Text("Notifications: ${permissions.value[Manifest.permission.POST_NOTIFICATIONS] ?: false}")
             if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.POST_NOTIFICATIONS, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.POST_NOTIFICATIONS,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Schedule Exact Alarm
             Text("Schedule Exact Alarm: ${permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] ?: false}")
             if (permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.SCHEDULE_EXACT_ALARM, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.SCHEDULE_EXACT_ALARM,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Access Fine Location
             Text("Access Fine Location: ${permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] ?: false}")
             if (permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_FINE_LOCATION, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
             // Background Location
             Text("Background Location: ${permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] ?: false}")
             if (permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] == false) {
-                Button(onClick = { viewModel.requestPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, context) }) {
+                Button(onClick = {
+                    viewModel.requestPermission(
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                        context
+                    )
+                }) {
                     Text("Request Permission")
                 }
             }
@@ -427,6 +569,13 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
                     Text("Request Permission")
                 }
             }
+            // Accessibility Events
+            Text("Accessibility Events: ${permissions.value[Manifest.permission.BIND_ACCESSIBILITY_SERVICE] ?: false}")
+            if (permissions.value[Manifest.permission.BIND_ACCESSIBILITY_SERVICE] == false) {
+                Button(onClick = { viewModel.requestAccessibilityServicePermission(context) }) {
+                    Text("Request Permission")
+                }
+            }
 
             Spacer(modifier = Modifier.padding(16.dp))
             Text("Please accept all permissions to continue. You can pause or stop the study at any time, and have the ability to delete all data collected.")
@@ -438,7 +587,7 @@ fun AcceptPermissionsScreen(nextStep: () -> Unit, innerPadding: PaddingValues, v
         }
 
         LaunchedEffect(lifecycleState) {
-            when(lifecycleState) {
+            when (lifecycleState) {
                 androidx.lifecycle.Lifecycle.State.RESUMED -> viewModel.checkPermissions()
                 else -> {}
             }
@@ -458,7 +607,10 @@ class StartStudyViewModel @Inject constructor(
         viewModelScope.launch {
             _pending.value = true
 
-            getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager)
+            getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(
+                context,
+                dataStoreManager
+            )
             val token = dataStoreManager.tokenFlow.first()
             enqueueSensorReadingsUploadWorker(context, token)
             enqueueUpdateQuestionnaireWorker(context)
@@ -468,6 +620,7 @@ class StartStudyViewModel @Inject constructor(
             val api = ApiClient.getInstance(getApplication())
             val study = loadStudy(api, studyId)
             if (study != null) {
+                Log.d("StartStudyViewModel", "Loaded study: $study")
                 dataStoreManager.saveStudy(study)
             } else {
                 Log.e("StartStudyViewModel", "Could not load study")
@@ -480,24 +633,42 @@ class StartStudyViewModel @Inject constructor(
 }
 
 @Composable
-fun StartStudyScreen(finish: () -> Unit, innerPadding: PaddingValues, viewModel: StartStudyViewModel = viewModel()) {
+fun StartStudyScreen(
+    finish: () -> Unit,
+    innerPadding: PaddingValues,
+    viewModel: StartStudyViewModel = viewModel()
+) {
     val context = LocalContext.current
     val pending = viewModel.pending.collectAsState()
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(innerPadding)
-        .padding(16.dp)) {
-        Heading(id = R.drawable.rounded_sentiment_very_satisfied_24, description = "Happy face", text = "All set!")
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .padding(16.dp)
+    ) {
+        Heading(
+            id = R.drawable.rounded_sentiment_very_satisfied_24,
+            description = "Happy face",
+            text = "All set!"
+        )
         Spacer(modifier = Modifier.padding(12.dp))
         Text(stringResource(R.string.everything_set_up))
 
         if (pending.value) {
-            CircularProgressIndicator(
-                modifier = Modifier.width(64.dp),
-                color = MaterialTheme.colorScheme.secondary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .width(64.dp)
+                        .height(64.dp),
+                    color = MaterialTheme.colorScheme.secondary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+                Text("Finalizing setup, this may take a while...")
+            }
         }
 
         Spacer(modifier = Modifier.padding(16.dp))
