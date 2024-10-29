@@ -27,6 +27,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.serialization.decodeFromString as decodeFromStringJson
 
 fun Context.appSettingsDataStoreFile(name: String): File =
     this.dataStoreFile("$name.appsettings.json")
@@ -112,7 +113,7 @@ class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
     override suspend fun readFrom(input: InputStream): AppSettings =
         try {
             recoverFromOptionalOrUseDefault(
-                Json.decodeFromString<OptionalAppSettings>(
+                Json.decodeFromStringJson<OptionalAppSettings>(
                     input.readBytes().decodeToString()
                 )
             )
