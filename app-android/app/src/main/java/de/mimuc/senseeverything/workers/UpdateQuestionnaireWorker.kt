@@ -1,16 +1,13 @@
-package de.mimuc.senseeverything.network
+package de.mimuc.senseeverything.workers
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
-import androidx.room.Update
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.Worker
 import androidx.work.WorkerParameters
-import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient

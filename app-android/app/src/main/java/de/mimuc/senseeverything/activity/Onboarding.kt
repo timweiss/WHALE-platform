@@ -1,15 +1,12 @@
 package de.mimuc.senseeverything.activity
 
 import android.Manifest
-import android.app.Activity
 import android.app.Application
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Build.VERSION
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -50,7 +47,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
-import androidx.core.view.ScrollingView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,9 +55,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.data.DataStoreManager
-import de.mimuc.senseeverything.network.enqueueSensorReadingsUploadWorker
-import de.mimuc.senseeverything.network.enqueueUpdateQuestionnaireWorker
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
+import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first

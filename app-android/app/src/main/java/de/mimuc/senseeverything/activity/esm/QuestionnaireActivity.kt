@@ -52,13 +52,10 @@ import de.mimuc.senseeverything.api.model.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.emptyValueForElement
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
-import de.mimuc.senseeverything.network.enqueueQuestionnaireUploadWorker
+import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject

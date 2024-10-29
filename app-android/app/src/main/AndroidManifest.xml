@@ -104,10 +104,6 @@
             android:exported="false"
             android:label="@string/app_name" />
         <service
-            android:name=".network.UploadJobService"
-            android:exported="false"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
-        <service
             android:name=".sensor.implementation.deepactivity.WindowContentAccessibilityService"
             android:label="Deep Activity Accessibility Service"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

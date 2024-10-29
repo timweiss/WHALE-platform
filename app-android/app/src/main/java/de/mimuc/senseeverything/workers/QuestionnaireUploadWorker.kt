@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.network
+package de.mimuc.senseeverything.workers
 
 import android.content.Context
 import android.util.Log
@@ -7,11 +7,9 @@ import androidx.work.CoroutineWorker
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.Worker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.android.volley.NetworkError
-import com.android.volley.NoConnectionError
 import com.android.volley.TimeoutError
 import de.mimuc.senseeverything.api.ApiClient
 import kotlinx.coroutines.Dispatchers
