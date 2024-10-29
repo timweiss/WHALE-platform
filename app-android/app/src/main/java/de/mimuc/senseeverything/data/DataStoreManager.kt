@@ -10,6 +10,7 @@ import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.OnboardingStep
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -18,7 +19,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.json.JSONArray
@@ -44,7 +44,8 @@ data class AppSettings(
     val timestampStudyStarted: Long,
     val studyPaused: Boolean,
     val studyPausedUntil: Long,
-    val onboardingStep: OnboardingStep
+    val onboardingStep: OnboardingStep,
+    val study: Study?
 )
 
 @Serializable
@@ -60,7 +61,8 @@ data class OptionalAppSettings(
     val timestampStudyStarted: Long? = null,
     val studyPaused: Boolean? = null,
     val studyPausedUntil: Long? = null,
-    val onboardingStep: OnboardingStep? = null
+    val onboardingStep: OnboardingStep? = null,
+    val study: Study? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -75,7 +77,8 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     timestampStudyStarted = -1,
     studyPaused = false,
     studyPausedUntil = -1,
-    onboardingStep = OnboardingStep.WELCOME
+    onboardingStep = OnboardingStep.WELCOME,
+    study = null
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -96,7 +99,8 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         studyPaused = optionalAppSettings.studyPaused ?: defaultAppSettings.studyPaused,
         studyPausedUntil = optionalAppSettings.studyPausedUntil
             ?: defaultAppSettings.studyPausedUntil,
-        onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep
+        onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep,
+        study = optionalAppSettings.study ?: defaultAppSettings.study
     )
 }
 
@@ -325,6 +329,16 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     suspend fun saveOnboardingStep(onboardingStep: OnboardingStep) {
         dataStore.updateData {
             it.copy(lastUpdate = System.currentTimeMillis(), onboardingStep = onboardingStep)
+        }
+    }
+
+    val studyFlow = dataStore.data.map { preferences ->
+        preferences.study
+    }
+
+    suspend fun saveStudy(study: Study) {
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), study = study)
         }
     }
 }

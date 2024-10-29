@@ -22,9 +22,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
@@ -54,6 +57,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
+import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
@@ -446,13 +451,29 @@ class StartStudyViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager
 ) : AndroidViewModel(application) {
-    fun scheduleTasks(context: Context, finish: () -> Unit) {
+    private val _pending = MutableStateFlow(false)
+    val pending: StateFlow<Boolean> get() = _pending
+
+    fun prepareStudy(context: Context, finish: () -> Unit) {
         viewModelScope.launch {
+            _pending.value = true
+
             getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager)
             val token = dataStoreManager.tokenFlow.first()
             enqueueSensorReadingsUploadWorker(context, token)
             enqueueUpdateQuestionnaireWorker(context)
             dataStoreManager.saveTimestampStudyStarted(System.currentTimeMillis())
+
+            val studyId = dataStoreManager.studyIdFlow.first()
+            val api = ApiClient.getInstance(getApplication())
+            val study = loadStudy(api, studyId)
+            if (study != null) {
+                dataStoreManager.saveStudy(study)
+            } else {
+                Log.e("StartStudyViewModel", "Could not load study")
+            }
+
+            _pending.value = false
             finish()
         }
     }
@@ -461,6 +482,7 @@ class StartStudyViewModel @Inject constructor(
 @Composable
 fun StartStudyScreen(finish: () -> Unit, innerPadding: PaddingValues, viewModel: StartStudyViewModel = viewModel()) {
     val context = LocalContext.current
+    val pending = viewModel.pending.collectAsState()
 
     Column(modifier = Modifier
         .fillMaxSize()
@@ -468,13 +490,21 @@ fun StartStudyScreen(finish: () -> Unit, innerPadding: PaddingValues, viewModel:
         .padding(16.dp)) {
         Heading(id = R.drawable.rounded_sentiment_very_satisfied_24, description = "Happy face", text = "All set!")
         Spacer(modifier = Modifier.padding(12.dp))
-        Text("Everything has been set up, you can now proceed and start your participation in the study.")
+        Text(stringResource(R.string.everything_set_up))
+
+        if (pending.value) {
+            CircularProgressIndicator(
+                modifier = Modifier.width(64.dp),
+                color = MaterialTheme.colorScheme.secondary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
 
         Spacer(modifier = Modifier.padding(16.dp))
         Button(onClick = {
-            viewModel.scheduleTasks(context, finish)
-        }, modifier = Modifier.fillMaxWidth()) {
-            Text("Start Study")
+            viewModel.prepareStudy(context, finish)
+        }, modifier = Modifier.fillMaxWidth(), enabled = !pending.value) {
+            Text(stringResource(R.string.start_study))
         }
     }
 }

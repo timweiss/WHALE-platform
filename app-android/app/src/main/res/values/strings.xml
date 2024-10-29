@@ -54,7 +54,7 @@
     <string name="notif_channel_name">WHALE Notifications</string>
     <string name="notification_sleep_text">Today, WHALE is not recording any data from you. Please keep it running for the study to continue tomorrow.</string>
     <string name="welcome_to_whale">Welcome to</string>
-    <string name="day_of">Day %1$s of %2$s</string>
+    <string name="day_of">Day %1$s of %2$s in %3$s</string>
     <string name="study_settings">Study Settings</string>
     <string name="enroll_in_study">Enroll in Study</string>
     <string name="study_is_running">Study is running</string>
@@ -65,4 +65,6 @@
     <string name="service_not_running_resume_study">Resume Study</string>
     <string name="is_same_interaction">Is this the same interaction?</string>
     <string name="continue_registration">Continue Registration</string>
+    <string name="everything_set_up">Everything has been set up, you can now proceed and start your participation in the study.</string>
+    <string name="start_study">Start Study</string>
 </resources>

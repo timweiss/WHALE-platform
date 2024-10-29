@@ -5,15 +5,12 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
@@ -51,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -81,7 +77,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -200,11 +195,19 @@ class StudyHomeViewModel @Inject constructor(
     private fun getStudyDetails() {
         viewModelScope.launch {
             setCurrentStudyDay()
-            val studyId = dataStoreManager.studyIdFlow.first()
-            val api = ApiClient.getInstance(getApplication())
-            val study = loadStudy(api, studyId)
+            var study = dataStoreManager.studyFlow.first()
             if (study != null) {
                 _study.value = study
+            } else {
+                // try fetching from backend
+                val studyId = dataStoreManager.studyIdFlow.first()
+                val api = ApiClient.getInstance(getApplication())
+                study = loadStudy(api, studyId)
+                if (study != null) {
+                    _study.value = study
+                    // persist study
+                    dataStoreManager.saveStudy(study)
+                }
             }
         }
     }
@@ -282,7 +285,8 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         stringResource(
                             R.string.day_of,
                             currentDay.value,
-                            study.value.durationDays
+                            study.value.durationDays,
+                            study.value.name
                         )
                     )
 
