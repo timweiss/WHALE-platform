@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.db;
 
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
 import androidx.room.Update;
@@ -21,6 +22,9 @@ public interface LogDataDao {
 
     @Update
     public void updateLogData(LogData... logData);
+
+    @Delete
+    public void deleteLogData(LogData... logData);
 
     @Query("DELETE FROM logdata")
     public void deleteAll();

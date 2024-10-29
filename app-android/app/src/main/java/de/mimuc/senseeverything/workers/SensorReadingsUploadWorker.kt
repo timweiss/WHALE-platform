@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.network
+package de.mimuc.senseeverything.workers
 
 import android.content.Context
 import android.util.Log
@@ -28,6 +28,8 @@ class SensorReadingsUploadWorker(
     appContext: Context,
     workerParams: WorkerParameters):
     CoroutineWorker(appContext, workerParams) {
+    val TAG = "SensorReadingsUploadWorker"
+
     override suspend fun doWork(): Result {
         val db = Room.databaseBuilder(
             applicationContext,
@@ -81,16 +83,16 @@ class SensorReadingsUploadWorker(
                     })
             }
 
-            db.logDataDao().updateLogData(*data.toTypedArray<LogData>())
-            Log.i(UploadJobService.TAG, "batch synced successful")
-
-            // todo: check if we also need to upload files
+            db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
+            Log.i(TAG, "batch synced successful, removed ${data.size} entries")
 
             return syncNextNActivities(db, context, token, n)
         } catch (e: Exception) {
             if (e is NetworkError || e is TimeoutError) {
                 return Result.retry()
             }
+
+            Log.e(TAG, "Error uploading sensor readings: $e, ${e.stackTraceToString()}")
             return Result.failure()
         }
     }
