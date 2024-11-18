@@ -28,6 +28,7 @@ import de.mimuc.senseeverything.data.DataStoreManager;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
+import de.mimuc.senseeverything.service.esm.SamplingEventReceiver;
 import kotlin.Unit;
 
 @AndroidEntryPoint
@@ -194,7 +195,8 @@ public class InteractionFloatingWidgetService extends Service {
                 } else {
                     logInteractionMessage(InteractionLogType.End);
                     SEApplicationController.getInstance().getEsmHandler().initializeTriggers(dataStore);
-                    SEApplicationController.getInstance().getEsmHandler().handleEvent("interactionEnd", this, dataStore, database);
+
+                    SamplingEventReceiver.Companion.sendBroadcast(this, "interactionEnd");
                 }
             } else {
                 logInteractionMessage(InteractionLogType.NoInteraction);

@@ -73,6 +73,10 @@
             android:enabled="true" />
 
         <receiver
+            android:name=".service.esm.SamplingEventReceiver"
+            android:enabled="true" />
+
+        <receiver
             android:name=".service.sampling.ResumeSamplingReceiver"
             android:enabled="true" />
 

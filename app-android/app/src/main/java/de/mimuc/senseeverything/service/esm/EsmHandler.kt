@@ -16,6 +16,7 @@ import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -36,7 +37,7 @@ class EsmHandler {
         }
     }
 
-    fun handleEvent(
+    suspend fun handleEvent(
         eventName: String,
         context: Context,
         dataStoreManager: DataStoreManager,
@@ -49,14 +50,16 @@ class EsmHandler {
                 eventTriggers.find { (it as EventQuestionnaireTrigger).eventName == eventName }
             if (matching != null) {
                 val trigger = matching as EventQuestionnaireTrigger
-                dataStoreManager.getQuestionnairesSync { questionnaires ->
-                    val matchingQuestionnaire =
-                        questionnaires.find { it.questionnaire.id == trigger.questionnaireId }
-                    if (matchingQuestionnaire != null) {
-                        // todo: save pending questionnaire
-                        /*
+                val questionnaires = dataStoreManager.questionnairesFlow.first()
+
+                val matchingQuestionnaire =
+                    questionnaires.find { it.questionnaire.id == trigger.questionnaireId }
+                if (matchingQuestionnaire != null) {
+                    var pendingId: Long
+
+                    coroutineScope {
                         withContext(Dispatchers.IO) {
-                            val pendingId = database.pendingQuestionnaireDao().insert(
+                            pendingId = database.pendingQuestionnaireDao().insert(
                                 PendingQuestionnaire(
                                     0,
                                     System.currentTimeMillis(),
@@ -65,19 +68,18 @@ class EsmHandler {
                                 )
                             )
                         }
-                        */
-
-                        // open questionnaire
-                        val intent = Intent(context, QuestionnaireActivity::class.java)
-                        intent.putExtra("questionnaire", matchingQuestionnaire.toJson().toString())
-                        // intent.putExtra("pendingId", pendingId)
-
-                        // this will make it appear but not go back to the MainActivity afterwards
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-
-                        context.startActivity(intent)
                     }
+
+                    // open questionnaire
+                    val intent = Intent(context, QuestionnaireActivity::class.java)
+                    intent.putExtra("questionnaire", matchingQuestionnaire.toJson().toString())
+                    intent.putExtra("pendingId", pendingId)
+
+                    // this will make it appear but not go back to the MainActivity afterwards
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+
+                    context.startActivity(intent)
                 }
             }
         }
