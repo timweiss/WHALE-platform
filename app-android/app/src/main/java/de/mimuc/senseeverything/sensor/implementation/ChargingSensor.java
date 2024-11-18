@@ -1,20 +1,20 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
-import android.util.Log;
 import android.view.View;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class ChargingSensor extends AbstractSensor {
 	
 	private static final long serialVersionUID = 1L;
-	
-	public ChargingSensor(Context applicationContext) {
-		super(applicationContext);
+
+	public ChargingSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Charging";

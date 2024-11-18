@@ -8,7 +8,6 @@ import android.os.AsyncTask;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -20,8 +19,8 @@ import java.nio.ByteOrder;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.implementation.conversation.VadReader;
 
@@ -34,8 +33,8 @@ public class ConversationSensor extends AbstractSensor {
 
 	private AsyncTask<File, Void, Object[]> runningTask;
 
-	public ConversationSensor(Context applicationContext) {
-		super(applicationContext);
+	public ConversationSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		context = applicationContext;
 		m_IsRunning = false;
 		TAG = getClass().getName();

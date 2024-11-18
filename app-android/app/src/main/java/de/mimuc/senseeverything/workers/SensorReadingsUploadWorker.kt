@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.workers
 
 import android.content.Context
 import android.util.Log
+import androidx.hilt.work.HiltWorker
 import androidx.room.Room
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -12,7 +13,10 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.LogData
 import kotlinx.coroutines.Dispatchers
@@ -24,16 +28,17 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class SensorReadingsUploadWorker(
-    appContext: Context,
-    workerParams: WorkerParameters):
+@HiltWorker
+class SensorReadingsUploadWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val database: AppDatabase
+) :
     CoroutineWorker(appContext, workerParams) {
     val TAG = "SensorReadingsUploadWorker"
 
     override suspend fun doWork(): Result {
-        val db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java, "senseeverything-roomdb").build()
+        val db = database
 
         val token = inputData.getString("token") ?: ""
 

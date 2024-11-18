@@ -15,6 +15,7 @@ import de.mimuc.senseeverything.api.model.EventQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -35,19 +36,42 @@ class EsmHandler {
         }
     }
 
-    fun handleEvent(eventName: String, context: Context, dataStoreManager: DataStoreManager) {
+    fun handleEvent(
+        eventName: String,
+        context: Context,
+        dataStoreManager: DataStoreManager,
+        database: AppDatabase
+    ) {
         val eventTriggers = triggers.filter { it.type == "event" }
         if (eventTriggers.isNotEmpty()) {
             // Handle event
-            val matching = eventTriggers.find { (it as EventQuestionnaireTrigger).eventName == eventName }
+            val matching =
+                eventTriggers.find { (it as EventQuestionnaireTrigger).eventName == eventName }
             if (matching != null) {
                 val trigger = matching as EventQuestionnaireTrigger
                 dataStoreManager.getQuestionnairesSync { questionnaires ->
-                    val matchingQuestionnaire = questionnaires.find { it.questionnaire.id == trigger.questionnaireId }
+                    val matchingQuestionnaire =
+                        questionnaires.find { it.questionnaire.id == trigger.questionnaireId }
                     if (matchingQuestionnaire != null) {
+                        // todo: save pending questionnaire
+                        /*
+                        withContext(Dispatchers.IO) {
+                            val pendingId = database.pendingQuestionnaireDao().insert(
+                                PendingQuestionnaire(
+                                    0,
+                                    System.currentTimeMillis(),
+                                    System.currentTimeMillis() + 1000 * 60 * 15,
+                                    matchingQuestionnaire.toJson().toString()
+                                )
+                            )
+                        }
+                        */
+
                         // open questionnaire
                         val intent = Intent(context, QuestionnaireActivity::class.java)
                         intent.putExtra("questionnaire", matchingQuestionnaire.toJson().toString())
+                        // intent.putExtra("pendingId", pendingId)
+
                         // this will make it appear but not go back to the MainActivity afterwards
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -59,7 +83,11 @@ class EsmHandler {
         }
     }
 
-    suspend fun schedulePeriodicQuestionnaires(context: Context, dataStoreManager: DataStoreManager) {
+    suspend fun schedulePeriodicQuestionnaires(
+        context: Context,
+        dataStoreManager: DataStoreManager,
+        database: AppDatabase
+    ) {
         coroutineScope {
             val questionnaires = (Dispatchers.IO) {
                 dataStoreManager.questionnairesFlow.first()
@@ -78,12 +106,23 @@ class EsmHandler {
                     dataStoreManager.saveRemainingStudyDays(nextRemainingDays)
                 }
 
-                scheduleNextPeriodicNotification(context, periodicTrigger, remainingStudyDays, questionnaires.find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire?.name ?: "Unknown")
+                scheduleNextPeriodicNotification(
+                    context,
+                    periodicTrigger,
+                    remainingStudyDays,
+                    questionnaires.find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire?.name
+                        ?: "Unknown"
+                )
             }
         }
     }
 
-    fun scheduleNextPeriodicNotification(context: Context, trigger: PeriodicQuestionnaireTrigger, remainingDays: Int, title: String) {
+    fun scheduleNextPeriodicNotification(
+        context: Context,
+        trigger: PeriodicQuestionnaireTrigger,
+        remainingDays: Int,
+        title: String
+    ) {
         val sendNextNotification = remainingDays > 0
         var nextRemainingDays = remainingDays - 1
 
@@ -140,7 +179,10 @@ class EsmHandler {
             pendingIntent
         )
 
-        Log.d("EsmHandler", "Scheduled periodic questionnaire for ${title}, remaining days: ${nextRemainingDays}")
+        Log.d(
+            "EsmHandler",
+            "Scheduled periodic questionnaire for ${title}, remaining days: ${nextRemainingDays}"
+        )
     }
 }
 
@@ -159,9 +201,11 @@ class ReminderNotification(private val context: Context) {
             .setContentTitle(title)
             .setSmallIcon(R.drawable.ic_launcher)
             .setLargeIcon(
-                BitmapFactory.decodeResource(context.resources,
-                R.drawable.ic_launcher
-            ))
+                BitmapFactory.decodeResource(
+                    context.resources,
+                    R.drawable.ic_launcher
+                )
+            )
             .setPriority(NotificationManager.IMPORTANCE_HIGH)
             .setStyle(
                 NotificationCompat.BigTextStyle()

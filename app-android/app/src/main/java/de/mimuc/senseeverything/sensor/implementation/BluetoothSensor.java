@@ -1,8 +1,6 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
 
-import static androidx.core.content.ContextCompat.registerReceiver;
-
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -11,19 +9,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
 
 import androidx.core.app.ActivityCompat;
 
-import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class BluetoothSensor extends AbstractSensor {
@@ -34,8 +28,8 @@ public class BluetoothSensor extends AbstractSensor {
 
 	private ExecutorService executor;
 
-	public BluetoothSensor(Context applicationContext) {
-		super(applicationContext);
+	public BluetoothSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Nearby Bluetooth";

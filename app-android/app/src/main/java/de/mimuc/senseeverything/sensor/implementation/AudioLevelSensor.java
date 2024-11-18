@@ -1,14 +1,15 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import java.io.IOException;
-
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.media.MediaRecorder;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+
+import java.io.IOException;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class AudioLevelSensor extends AbstractSensor {
 	
@@ -18,9 +19,9 @@ public class AudioLevelSensor extends AbstractSensor {
 	
 	private final Handler handler = new Handler();
 	private MediaRecorder mediaRecorder;
-	
-	public AudioLevelSensor(Context applicationContext) {
-		super(applicationContext);
+
+	public AudioLevelSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Audio Level";

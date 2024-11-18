@@ -1,30 +1,28 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import java.io.IOException;
-
-import de.mimuc.senseeverything.activity.CONST;
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+
+import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 public class OrientationSensor extends AbstractSensor implements SensorEventListener {
 
 	private static final long serialVersionUID = 1L;
 	
 	private SensorManager sensorManager;
 
-	public OrientationSensor(Context applicationContext) {
-		super(applicationContext);
+	public OrientationSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		TAG = getClass().getName();
 		m_IsRunning = false;
 		SENSOR_NAME = "Orientation Sensor";

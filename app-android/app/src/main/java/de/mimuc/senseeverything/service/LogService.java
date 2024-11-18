@@ -1,17 +1,5 @@
 package de.mimuc.senseeverything.service;
 
-import java.lang.ref.WeakReference;
-import java.util.List;
-
-import dagger.hilt.android.AndroidEntryPoint;
-import de.mimuc.senseeverything.R;
-import de.mimuc.senseeverything.data.DataStoreManager;
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-import de.mimuc.senseeverything.sensor.SensorNotRunningException;
-import de.mimuc.senseeverything.sensor.SingletonSensorList;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlinx.coroutines.BuildersKt;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,7 +11,20 @@ import android.os.Message;
 import android.os.Messenger;
 import android.util.Log;
 
+import java.lang.ref.WeakReference;
+import java.util.List;
+
 import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import de.mimuc.senseeverything.R;
+import de.mimuc.senseeverything.data.DataStoreManager;
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
+import de.mimuc.senseeverything.sensor.SensorNotRunningException;
+import de.mimuc.senseeverything.sensor.SingletonSensorList;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlinx.coroutines.BuildersKt;
 
 @AndroidEntryPoint
 public class LogService extends AbstractService {
@@ -49,6 +50,9 @@ public class LogService extends AbstractService {
 
     @Inject
     public DataStoreManager dataStoreManager;
+
+    @Inject
+    public AppDatabase database;
 
     @Override
     public void onCreate() {
@@ -217,7 +221,7 @@ public class LogService extends AbstractService {
         try {
             Class<?> sensorClass = Class.forName(sensorName);
             AbstractSensor sensor = singletonSensorList.getSensorOfType(sensorClass);
-            Log.d(TAG, "sensors active: " + singletonSensorList.getList(this).stream().filter(s -> s.isRunning()).count());
+            Log.d(TAG, "sensors active: " + singletonSensorList.getList(this, database).stream().filter(s -> s.isRunning()).count());
             if (sensor != null) {
                 sensor.tryLogStringData(sensorData);
             }
@@ -279,12 +283,12 @@ public class LogService extends AbstractService {
     /* Section: Sensor Handling */
 
     private void initializeSensors() {
-        sensorList = singletonSensorList.getList(this);
+        sensorList = singletonSensorList.getList(this, database);
     }
 
     private void startSensors(boolean onlyPeriodic, boolean includeContinous) {
         // use the singleton list because we want to keep our sensor's state inbetween activations
-        sensorList = singletonSensorList.getList(this);
+        sensorList = singletonSensorList.getList(this, database);
 
         Log.d(TAG, "size: " + sensorList.size());
         for (AbstractSensor sensor : sensorList) {

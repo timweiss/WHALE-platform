@@ -1,22 +1,20 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import java.io.IOException;
-
-import de.mimuc.senseeverything.activity.CONST;
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+
+import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class MyLightSensor extends AbstractSensor implements SensorEventListener {
 	
@@ -25,8 +23,8 @@ public class MyLightSensor extends AbstractSensor implements SensorEventListener
 	private SensorManager sensorManager;
 	private long count;
 
-	public MyLightSensor(Context applicationContext) {
-		super(applicationContext);
+	public MyLightSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Light Sensor";

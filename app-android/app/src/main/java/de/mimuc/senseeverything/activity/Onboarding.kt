@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.activity
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -63,6 +64,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
@@ -279,6 +281,18 @@ class AcceptPermissionsViewModel @Inject constructor(
             Manifest.permission.BIND_ACCESSIBILITY_SERVICE,
             isAccessibilityServiceEnabled(getApplication())
         )
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager =
+                getApplication<SEApplicationController>().getSystemService(Context.ALARM_SERVICE) as AlarmManager?
+            if (alarmManager != null) {
+                setPermission(
+                    Manifest.permission.SCHEDULE_EXACT_ALARM,
+                    alarmManager.canScheduleExactAlarms()
+                )
+            }
+        }
     }
 
     private fun checkAndSetPermission(permission: String) {
@@ -311,6 +325,7 @@ class AcceptPermissionsViewModel @Inject constructor(
                 if (!Settings.canDrawOverlays(activity)) {
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+
                         Uri.parse("package:" + context.packageName)
                     )
                     startActivityForResult(activity, intent, 1001, null)
@@ -341,6 +356,21 @@ class AcceptPermissionsViewModel @Inject constructor(
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+    }
+
+    fun requestExactAlarmPermission(context: Context) {
+        // permission is only not granted above API 31
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager?
+            if (alarmManager != null) {
+                if (!alarmManager.canScheduleExactAlarms()) {
+                    context.startActivity(
+                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }
+            }
+        }
     }
 
     private fun isAccessibilityServiceEnabled(context: Context): Boolean {
@@ -523,8 +553,7 @@ fun AcceptPermissionsScreen(
             Text("Schedule Exact Alarm: ${permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] ?: false}")
             if (permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] == false) {
                 Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.SCHEDULE_EXACT_ALARM,
+                    viewModel.requestExactAlarmPermission(
                         context
                     )
                 }) {
@@ -598,7 +627,8 @@ fun AcceptPermissionsScreen(
 @HiltViewModel
 class StartStudyViewModel @Inject constructor(
     application: Application,
-    private val dataStoreManager: DataStoreManager
+    private val dataStoreManager: DataStoreManager,
+    private val database: AppDatabase,
 ) : AndroidViewModel(application) {
     private val _pending = MutableStateFlow(false)
     val pending: StateFlow<Boolean> get() = _pending
@@ -609,7 +639,8 @@ class StartStudyViewModel @Inject constructor(
 
             getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(
                 context,
-                dataStoreManager
+                dataStoreManager,
+                database
             )
             val token = dataStoreManager.tokenFlow.first()
             enqueueSensorReadingsUploadWorker(context, token)

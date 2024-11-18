@@ -25,6 +25,7 @@ import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.data.DataStoreManager;
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import kotlin.Unit;
@@ -56,6 +57,9 @@ public class InteractionFloatingWidgetService extends Service {
 
     @Inject
     SingletonSensorList singletonSensorList;
+
+    @Inject
+    AppDatabase database;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -190,7 +194,7 @@ public class InteractionFloatingWidgetService extends Service {
                 } else {
                     logInteractionMessage(InteractionLogType.End);
                     SEApplicationController.getInstance().getEsmHandler().initializeTriggers(dataStore);
-                    SEApplicationController.getInstance().getEsmHandler().handleEvent("interactionEnd", this, dataStore);
+                    SEApplicationController.getInstance().getEsmHandler().handleEvent("interactionEnd", this, dataStore, database);
                 }
             } else {
                 logInteractionMessage(InteractionLogType.NoInteraction);

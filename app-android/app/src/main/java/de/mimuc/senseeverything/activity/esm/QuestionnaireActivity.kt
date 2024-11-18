@@ -52,6 +52,7 @@ import de.mimuc.senseeverything.api.model.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.emptyValueForElement
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -76,7 +77,8 @@ class QuestionnaireActivity : ComponentActivity() {
 @HiltViewModel
 class QuestionnaireViewModel  @Inject constructor(
     application: Application,
-    private val dataStoreManager: DataStoreManager
+    private val dataStoreManager: DataStoreManager,
+    private val database: AppDatabase
 ) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> get() = _isLoading
@@ -89,6 +91,8 @@ class QuestionnaireViewModel  @Inject constructor(
 
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
     val elementValues: StateFlow<Map<Int, ElementValue>> = _elementValues
+
+    private var pendingId = -1
 
     init {
         _isLoading.value = true
@@ -136,6 +140,8 @@ class QuestionnaireViewModel  @Inject constructor(
                 }
             }
         }
+
+        pendingId = intent.getIntExtra("pendingId", -1)
     }
 
     fun setElementValue(elementId: Int, value: ElementValue) {
@@ -163,6 +169,11 @@ class QuestionnaireViewModel  @Inject constructor(
                 // schedule to upload answers
                 Log.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
                 enqueueQuestionnaireUploadWorker(context, makeAnswerJsonArray(), questionnaire.value.questionnaire.id, studyId, token)
+
+                // remove pending questionnaire
+                if (pendingId != -1) {
+                    database.pendingQuestionnaireDao()?.deleteById(pendingId)
+                }
 
                 // pop activity
                 val activity = (context as? Activity)

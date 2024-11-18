@@ -78,17 +78,17 @@ class StudyEnrolment : ComponentActivity() {
         setContent {
             AppandroidTheme {
                 Scaffold(
-                        topBar = {
-                            TopAppBar(
-                                    colors = TopAppBarDefaults.topAppBarColors(
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            titleContentColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                                    title = {
-                                        Text("Enrolment")
-                                    }
-                            )
-                        }
+                    topBar = {
+                        TopAppBar(
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                titleContentColor = MaterialTheme.colorScheme.primary,
+                            ),
+                            title = {
+                                Text("Enrolment")
+                            }
+                        )
+                    }
                 ) { innerPadding ->
                     EnrolmentScreen(innerPadding = innerPadding, finishedEnrolment = {
                         // whatever
@@ -101,8 +101,9 @@ class StudyEnrolment : ComponentActivity() {
 
 @HiltViewModel
 class EnrolmentViewModel @Inject constructor(
-        application: Application,
-        private val dataStoreManager: DataStoreManager
+    application: Application,
+    private val dataStoreManager: DataStoreManager,
+    private val database: AppDatabase
 ) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> get() = _isLoading
@@ -128,9 +129,9 @@ class EnrolmentViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             combine(
-                    dataStoreManager.tokenFlow,
-                    dataStoreManager.participantIdFlow,
-                    dataStoreManager.studyIdFlow
+                dataStoreManager.tokenFlow,
+                dataStoreManager.participantIdFlow,
+                dataStoreManager.studyIdFlow
             ) { token, participantId, studyId ->
                 if (token.isNotEmpty()) {
                     _isEnrolled.value = true
@@ -237,12 +238,8 @@ class EnrolmentViewModel @Inject constructor(
             dataStoreManager.eraseAllData()
 
             withContext(IO) {
-                val db = databaseBuilder(
-                    getApplication(),
-                    AppDatabase::class.java, "senseeverything-roomdb"
-                ).build()
-                db.logDataDao().deleteAll()
-                db.close()
+                database.logDataDao().deleteAll()
+                database.close()
             }
 
             _isEnrolled.value = false
@@ -263,7 +260,11 @@ class EnrolmentViewModel @Inject constructor(
 }
 
 @Composable
-fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : PaddingValues, finishedEnrolment: () -> Unit) {
+fun EnrolmentScreen(
+    viewModel: EnrolmentViewModel = viewModel(),
+    innerPadding: PaddingValues,
+    finishedEnrolment: () -> Unit
+) {
     val textState = remember { mutableStateOf("") }
     val isLoading = viewModel.isLoading.collectAsState()
     val isEnrolled = viewModel.isEnrolled.collectAsState()
@@ -282,10 +283,10 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
     ) {
         if (!isEnrolled.value) {
             TextField(
-                    value = textState.value,
-                    onValueChange = { textState.value = it },
-                    label = { Text("Enrolment Key") },
-                    modifier = Modifier.fillMaxWidth()
+                value = textState.value,
+                onValueChange = { textState.value = it },
+                label = { Text("Enrolment Key") },
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -294,10 +295,10 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
                 CircularProgressIndicator()
             } else {
                 Button(
-                        onClick = {
-                            viewModel.performAction(context, textState.value, finishedEnrolment)
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                    onClick = {
+                        viewModel.performAction(context, textState.value, finishedEnrolment)
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Enrol in Study")
                 }
@@ -307,7 +308,7 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
                 AlertDialog(
                     title = {
                         if (errorCode.value == "full" || errorCode.value == "closed") {
-                            Text ("Study closed")
+                            Text("Study closed")
                         } else {
                             Text("Incorrect enrolment key")
                         }
@@ -334,7 +335,11 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
                 )
             }
         } else {
-            Icon(Icons.Rounded.Check, contentDescription = "success!", modifier = Modifier.size(32.dp))
+            Icon(
+                Icons.Rounded.Check,
+                contentDescription = "success!",
+                modifier = Modifier.size(32.dp)
+            )
             Text("Enrolment Successful!")
             if (study.value.id != -1) {
                 Text("Current Study: ${study.value.name}")
@@ -344,10 +349,10 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
             Text("Participant ID: ${participantId.value}")
             Spacer(modifier = Modifier.height(16.dp))
             Button(
-                    onClick = {
-                        viewModel.fetchQuestionnaires()
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                onClick = {
+                    viewModel.fetchQuestionnaires()
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Fetch Questionnaires")
             }
@@ -373,11 +378,14 @@ fun EnrolmentScreen(viewModel: EnrolmentViewModel = viewModel(), innerPadding : 
 
             Spacer(modifier = Modifier.height(36.dp))
             Button(
-                    onClick = {
-                        viewModel.removeEnrolment(context)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.error)
+                onClick = {
+                    viewModel.removeEnrolment(context)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.error
+                )
             ) {
                 Text("Remove Enrolment")
             }

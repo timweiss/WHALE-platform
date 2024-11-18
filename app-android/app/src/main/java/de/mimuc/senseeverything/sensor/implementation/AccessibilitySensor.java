@@ -1,16 +1,14 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import java.io.IOException;
-
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-import de.mimuc.senseeverything.service.AccessibilityLogService;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.util.Log;
 import android.view.View;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
+import de.mimuc.senseeverything.service.AccessibilityLogService;
 
 public class AccessibilitySensor extends AbstractSensor {
 
@@ -20,10 +18,10 @@ public class AccessibilitySensor extends AbstractSensor {
 	private Intent m_Intent;
 
 	private DataUpdateReceiver m_Receiver;
-	
-	
-	public AccessibilitySensor(Context applicationContext) {
-		super(applicationContext);
+
+
+	public AccessibilitySensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Accessibility";

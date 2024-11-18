@@ -8,6 +8,7 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
 import de.mimuc.senseeverything.sensor.implementation.BluetoothSensor;
@@ -30,23 +31,23 @@ public class SingletonSensorList {
 	SingletonSensorList() {
 	}
 
-	private void initializeList(Context pContext) {
+	private void initializeList(Context pContext, AppDatabase database) {
 		this.list.clear();
 
 		Context aContext = pContext.getApplicationContext();
 
-		this.list.add(new ConversationSensor(aContext));
-		this.list.add(new ScreenOrientationSensor(aContext));
-		this.list.add(new MyProximitySensor(aContext));
-		this.list.add(new ScreenOnOffSensor(aContext));
-		this.list.add(new ConnectedWifiSensor(aContext));
-		this.list.add(new MyAccelerometerSensor(aContext));
-		this.list.add(new MyGyroscopeSensor(aContext));
-		this.list.add(new AccessibilitySensor(aContext));
-		this.list.add(new MyLightSensor(aContext));
-		this.list.add(new BluetoothSensor(aContext));
-		this.list.add(new InteractionLogSensor(aContext));
-		this.list.add(new NotificationSensor(aContext));
+		this.list.add(new ConversationSensor(aContext, database));
+		this.list.add(new ScreenOrientationSensor(aContext, database));
+		this.list.add(new MyProximitySensor(aContext, database));
+		this.list.add(new ScreenOnOffSensor(aContext, database));
+		this.list.add(new ConnectedWifiSensor(aContext, database));
+		this.list.add(new MyAccelerometerSensor(aContext, database));
+		this.list.add(new MyGyroscopeSensor(aContext, database));
+		this.list.add(new AccessibilitySensor(aContext, database));
+		this.list.add(new MyLightSensor(aContext, database));
+		this.list.add(new BluetoothSensor(aContext, database));
+		this.list.add(new InteractionLogSensor(aContext, database));
+		this.list.add(new NotificationSensor(aContext, database));
 
 		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
 
@@ -59,16 +60,16 @@ public class SingletonSensorList {
 		db.close();
 	}
 
-	public List<AbstractSensor> getOrInitializeList(Context pContext) {
+	public List<AbstractSensor> getOrInitializeList(Context pContext, AppDatabase database) {
 		if (this.list.isEmpty()) {
-			initializeList(pContext);
+			initializeList(pContext, database);
 		}
 
 		return this.list;
 	}
 
-	public List<AbstractSensor> getList(Context pContext) {
-		return getOrInitializeList(pContext);
+	public List<AbstractSensor> getList(Context pContext, AppDatabase database) {
+		return getOrInitializeList(pContext, database);
 	}
 
 	public AbstractSensor getSensorOfType(Class<?> sensorType) {

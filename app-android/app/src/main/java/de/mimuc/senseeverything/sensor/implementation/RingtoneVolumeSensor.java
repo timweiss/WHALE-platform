@@ -1,18 +1,18 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.media.AudioManager;
-import android.util.Log;
 import android.view.View;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class RingtoneVolumeSensor extends AbstractSensor {
 
 	private static final long serialVersionUID = 1L;
-	
-	public RingtoneVolumeSensor(Context applicationContext) {
-		super(applicationContext);
+
+	public RingtoneVolumeSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 
 		TAG = getClass().getName();

@@ -1,19 +1,19 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.provider.Settings;
-import android.util.Log;
 import android.view.View;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 
 public class AirplaneModeSensor extends AbstractSensor {
 	
 	private static final long serialVersionUID = 1L;
 
-	public AirplaneModeSensor(Context applicationContext) {
-		super(applicationContext);
+	public AirplaneModeSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Airplane Mode";

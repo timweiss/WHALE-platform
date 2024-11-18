@@ -1,20 +1,21 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
 
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Log;
 import android.view.View;
 
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
+
 public class ConnectedWifiSensor extends AbstractSensor {
 	
 	private static final long serialVersionUID = 1L;
-	
-	public ConnectedWifiSensor(Context applicationContext) {
-		super(applicationContext);
+
+	public ConnectedWifiSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Wi-Fi SSID";

@@ -2,13 +2,13 @@ package de.mimuc.senseeverything.sensor.implementation;
 
 import android.content.Context;
 import android.media.MediaRecorder;
-import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 
 import java.io.IOException;
 import java.util.UUID;
 
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class AudioSampleSensor extends AbstractSensor {
@@ -18,8 +18,8 @@ public class AudioSampleSensor extends AbstractSensor {
 	private final String guid = UUID.randomUUID().toString();
 	private String currentRecordingFilename;
 
-	public AudioSampleSensor(Context applicationContext) {
-		super(applicationContext);
+	public AudioSampleSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		context = applicationContext;
 		m_IsRunning = false;
 		TAG = getClass().getName();

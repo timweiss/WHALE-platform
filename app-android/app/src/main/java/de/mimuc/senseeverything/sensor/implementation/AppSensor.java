@@ -1,11 +1,11 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.app.ActivityManager;
 import android.content.Context;
-import android.util.Log;
 import android.view.View;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 @Deprecated
 /**
@@ -15,8 +15,8 @@ public class AppSensor extends AbstractSensor {
 	
 	private static final long serialVersionUID = 1L;
 
-	public AppSensor(Context applicationContext) {
-		super(applicationContext);
+	public AppSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "App";

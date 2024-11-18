@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.sensor.implementation;
 
 import java.io.IOException;
 
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 import android.content.Context;
@@ -29,8 +30,8 @@ public class StillAliveSensor extends AbstractSensor {
 
     private final OkHttpClient client = new OkHttpClient();
 
-	public StillAliveSensor(Context applicationContext) {
-		super(applicationContext);
+	public StillAliveSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		TAG = getClass().getName();
 		SENSOR_NAME = "Still Alive";
 		FILE_NAME = "stillalive.csv";

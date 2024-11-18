@@ -1,7 +1,5 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +7,9 @@ import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.util.Log;
 import android.view.View;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class ScreenOrientationSensor extends AbstractSensor {
 	
@@ -18,9 +19,9 @@ public class ScreenOrientationSensor extends AbstractSensor {
 	private Context m_context;
 	
 	public boolean m_WasScreenOn = true;
-	
-	public ScreenOrientationSensor(Context applicationContext) {
-		super(applicationContext);
+
+	public ScreenOrientationSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Screen Orientation";

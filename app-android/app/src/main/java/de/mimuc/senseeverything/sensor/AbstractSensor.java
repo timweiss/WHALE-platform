@@ -1,17 +1,15 @@
 package de.mimuc.senseeverything.sensor;
 
-import java.io.Serializable;
-
-import de.mimuc.senseeverything.data.SensorReadingDiskDataSource;
-import de.mimuc.senseeverything.db.AppDatabase;
-import de.mimuc.senseeverything.db.LogData;
-
 import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.view.View;
 
-import androidx.room.Room;
+import java.io.Serializable;
+
+import de.mimuc.senseeverything.data.SensorReadingDiskDataSource;
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.db.LogData;
 
 public abstract class AbstractSensor implements Serializable  {
 
@@ -28,11 +26,9 @@ public abstract class AbstractSensor implements Serializable  {
 	protected boolean m_isSensorAvailable = false;
 
 	private final AppDatabase db;
-	
-	protected AbstractSensor(Context applicationContext) {
-		db = Room.databaseBuilder(applicationContext,
-				AppDatabase.class, "senseeverything-roomdb").build();
 
+	protected AbstractSensor(Context applicationContext, AppDatabase database) {
+		db = database;
 	}
 	
 	protected boolean m_IsRunning = false;

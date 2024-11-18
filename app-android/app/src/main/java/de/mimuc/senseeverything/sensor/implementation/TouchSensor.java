@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.sensor.implementation;
 
 import java.util.Random;
 
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.handler.HandlerListener;
 import de.mimuc.senseeverything.handler.TouchHandler;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
@@ -20,8 +21,8 @@ public class TouchSensor extends AbstractSensor implements HandlerListener {
 	
 	private long count;
 
-	public TouchSensor(Context applicationContext) {
-		super(applicationContext);
+	public TouchSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		TAG = getClass().getSimpleName();
 		SENSOR_NAME = "Touch Log";

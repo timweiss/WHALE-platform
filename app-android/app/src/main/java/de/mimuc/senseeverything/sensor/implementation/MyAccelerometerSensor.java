@@ -1,8 +1,5 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import de.mimuc.senseeverything.activity.CONST;
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -16,6 +13,10 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
+
 public class MyAccelerometerSensor extends AbstractSensor implements SensorEventListener {
 
 	private static final long serialVersionUID = 1L;
@@ -23,8 +24,8 @@ public class MyAccelerometerSensor extends AbstractSensor implements SensorEvent
 	private SensorManager sensorManager;
 	private long count;
 
-	public MyAccelerometerSensor(Context applicationContext) {
-		super(applicationContext);
+	public MyAccelerometerSensor(Context applicationContext, AppDatabase database) {
+		super(applicationContext, database);
 		m_IsRunning = false;
 		SENSOR_NAME = "Accelerometer";
 		FILE_NAME = "accelerometer.csv";
