@@ -130,23 +130,6 @@ class EsmHandler {
             return
         }
 
-        val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
-        intent.apply {
-            putExtra("title", "Es ist Zeit für ${title}")
-            putExtra("id", trigger.id)
-            putExtra("triggerJson", trigger.toJson().toString())
-            putExtra("questionnaireId", trigger.questionnaireId)
-            putExtra("questionnaireName", title)
-            putExtra("remainingDays", nextRemainingDays)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context.applicationContext,
-            trigger.id,
-            intent,
-            PendingIntent.FLAG_MUTABLE
-        )
-
         val scheduleHour = trigger.time.split(":")[0].toInt()
         val scheduleMinute = trigger.time.split(":")[1].toInt()
 
@@ -172,6 +155,23 @@ class EsmHandler {
         val minute = selectedDate.get(Calendar.MINUTE)
 
         calendar.set(year, month, day, hour, minute)
+
+        val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
+        intent.apply {
+            putExtra("title", "Es ist Zeit für ${title}")
+            putExtra("id", trigger.id)
+            putExtra("triggerJson", trigger.toJson().toString())
+            putExtra("questionnaireId", trigger.questionnaireId)
+            putExtra("questionnaireName", title)
+            putExtra("remainingDays", nextRemainingDays)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context.applicationContext,
+            trigger.id,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
+        )
 
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
