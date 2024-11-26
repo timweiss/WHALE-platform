@@ -1,12 +1,12 @@
 import request from 'supertest';
 import { usePool } from '../src/config/database';
 import { makeExpressApp } from '../src';
-import { Repository } from '../src/data/repository';
 import { Config } from '../src/config';
 import jwt from 'jsonwebtoken';
+import { initializeRepositories } from '../src/data/repositoryHelper';
 
 const pool = usePool();
-const app = makeExpressApp(pool, new Repository(pool));
+const app = makeExpressApp(pool, initializeRepositories(pool));
 
 function generateAdminToken() {
   return jwt.sign({ role: 'admin' }, Config.auth.jwtSecret, {
@@ -27,6 +27,13 @@ afterAll(async () => {
 
 // study tests
 
+const dummyStudy = {
+  enrolmentKey: 'key',
+  name: 'name',
+  maxEnrolments: -1,
+  durationDays: 10,
+};
+
 test('should fetch studies', async () => {
   const res = await request(app).get('/v1/study');
   expect(res.statusCode).toBe(200);
@@ -38,9 +45,9 @@ test('should create a study', async () => {
   const res = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
   expect(res.statusCode).toBe(200);
-  expect(res.body).toMatchObject({ enrolmentKey: 'key', name: 'name' });
+  expect(res.body).toMatchObject(dummyStudy);
 });
 
 test('should fetch a study by id', async () => {
@@ -48,7 +55,7 @@ test('should fetch a study by id', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const res = await request(app).get(`/v1/study/${study.body.id}`);
   expect(res.statusCode).toBe(200);
@@ -76,12 +83,12 @@ test('should fail creating a study with duplicate enrolment key', async () => {
   await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const res = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   expect(res.statusCode).toBe(400);
   expect(res.body).toEqual({
@@ -96,7 +103,7 @@ test('should enrol in study', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const res = await request(app)
     .post('/v1/enrolment')
@@ -112,7 +119,7 @@ test('should enrol in study with participant id', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const enrol = await request(app)
     .post('/v1/enrolment')
@@ -129,12 +136,16 @@ test('should enrol in study with participant id', async () => {
 
 // sensor reading tests
 
+function getTimestampInSeconds() {
+  return Math.floor(Date.now() / 1000);
+}
+
 test('should create a sensor reading', async () => {
   const token = generateAdminToken();
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const enrol = await request(app)
     .post('/v1/enrolment')
@@ -143,7 +154,11 @@ test('should create a sensor reading', async () => {
   const res = await request(app)
     .post('/v1/reading')
     .set({ Authorization: 'Bearer ' + enrol.body.token })
-    .send({ sensorType: 'type', data: 'data' });
+    .send({
+      sensorType: 'type',
+      data: 'data',
+      timestamp: getTimestampInSeconds().toString(),
+    });
 
   expect(res.statusCode).toBe(200);
   expect(res.body).toMatchObject({ sensorType: 'type', data: 'data' });
@@ -154,7 +169,7 @@ test('should create a batch of sensor readings', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const enrol = await request(app)
     .post('/v1/enrolment')
@@ -164,8 +179,16 @@ test('should create a batch of sensor readings', async () => {
     .post('/v1/reading/batch')
     .set({ Authorization: 'Bearer ' + enrol.body.token })
     .send([
-      { sensorType: 'type', data: 'data' },
-      { sensorType: 'type', data: 'data' },
+      {
+        sensorType: 'type',
+        data: 'data',
+        timestamp: getTimestampInSeconds().toString(),
+      },
+      {
+        sensorType: 'type',
+        data: 'data',
+        timestamp: getTimestampInSeconds().toString(),
+      },
     ]);
 
   expect(res.statusCode).toBe(200);
@@ -180,7 +203,7 @@ test('should fetch questionnaires in a study', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const questionnaire = await request(app)
     .post(`/v1/study/${study.body.id}/questionnaire`)
@@ -202,7 +225,7 @@ test('should create a questionnaire in a study', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const res = await request(app)
     .post(`/v1/study/${study.body.id}/questionnaire`)
@@ -218,7 +241,7 @@ test('should add elements to a questionnaire', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const questionnaire = await request(app)
     .post(`/v1/study/${study.body.id}/questionnaire`)
@@ -235,6 +258,7 @@ test('should add elements to a questionnaire', async () => {
       configuration: { content: 'Please enter your name' },
       step: 1,
       position: 1,
+      name: 'text',
     });
 
   const res = await request(app).get(
@@ -246,6 +270,7 @@ test('should add elements to a questionnaire', async () => {
   expect(res.body.elements).toBeInstanceOf(Array);
   expect(res.body.elements).toHaveLength(1);
   expect(res.body.elements[0]).toMatchObject({
+    name: 'text',
     type: 'text_view',
     configuration: { content: 'Please enter your name' },
   });
@@ -256,7 +281,7 @@ test('should add a trigger to a questionnaire', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const questionnaire = await request(app)
     .post(`/v1/study/${study.body.id}/questionnaire`)
@@ -293,7 +318,7 @@ test('should update a questionnaire element', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const questionnaire = await request(app)
     .post(`/v1/study/${study.body.id}/questionnaire`)
@@ -310,6 +335,7 @@ test('should update a questionnaire element', async () => {
       configuration: { content: 'Please enter your name' },
       step: 1,
       position: 1,
+      name: 'text',
     });
 
   const res = await request(app)
@@ -322,6 +348,7 @@ test('should update a questionnaire element', async () => {
       configuration: { content: 'Please enter your age' },
       step: 1,
       position: 1,
+      name: 'text',
     });
 
   expect(res.statusCode).toBe(200);
@@ -336,7 +363,7 @@ test('should delete a questionnaire element', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const questionnaire = await request(app)
     .post(`/v1/study/${study.body.id}/questionnaire`)
@@ -353,6 +380,7 @@ test('should delete a questionnaire element', async () => {
       configuration: { content: 'Please enter your name' },
       step: 1,
       position: 1,
+      name: 'text',
     });
 
   const res = await request(app)
@@ -369,7 +397,7 @@ test('should delete a questionnaire trigger', async () => {
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send({ enrolmentKey: 'key', name: 'name' });
+    .send(dummyStudy);
 
   const questionnaire = await request(app)
     .post(`/v1/study/${study.body.id}/questionnaire`)

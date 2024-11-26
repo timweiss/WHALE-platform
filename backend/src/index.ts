@@ -2,13 +2,13 @@ import express from 'express';
 import { usePool } from './config/database';
 import { Config } from './config';
 import { createStudyController } from './controllers/study';
-import { IRepository, Repository } from './data/repository';
 import { createEnrolmentController } from './controllers/enrolment';
 import { createReadingController } from './controllers/reading';
 import { Pool } from 'pg';
 import { createESMController } from './controllers/esm';
+import { initializeRepositories, Repositories } from './data/repositoryHelper';
 
-export function makeExpressApp(pool: Pool, repository: IRepository) {
+export function makeExpressApp(pool: Pool, repositories: Repositories) {
   const app = express();
   app.use(express.json());
 
@@ -16,18 +16,22 @@ export function makeExpressApp(pool: Pool, repository: IRepository) {
     res.send('Social Interaction Sensing!');
   });
 
-  createStudyController(repository, app);
-  createEnrolmentController(repository, app);
-  createReadingController(repository, app);
-  createESMController(repository, app);
+  createStudyController(repositories.study, app);
+  createEnrolmentController(repositories.enrolment, repositories.study, app);
+  createReadingController(
+    repositories.sensorReading,
+    repositories.enrolment,
+    app,
+  );
+  createESMController(repositories.experienceSampling, repositories.study, app);
 
   return app;
 }
 
 export async function main() {
   const pool = usePool();
-  const repository = new Repository(pool);
-  const app = makeExpressApp(pool, repository);
+
+  const app = makeExpressApp(pool, initializeRepositories(pool));
 
   const server = app.listen(Config.app.port, () => {
     console.log(`Server listening on port ${Config.app.port}`);

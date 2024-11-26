@@ -1,19 +1,24 @@
-import {
-  ExperienceSamplingQuestionnaire,
-  IRepository,
-} from '../data/repository';
 import { Express, Request, Response } from 'express';
 import {
   authenticate,
   RequestUser,
   requireAdmin,
 } from '../middleware/authenticate';
+import {
+  ExperienceSamplingQuestionnaire,
+  IExperienceSamplingRepository,
+} from '../data/experienceSamplingRepository';
+import { IStudyRepository } from '../data/studyRepository';
 
-export function createESMController(repository: IRepository, app: Express) {
+export function createESMController(
+  esmRepository: IExperienceSamplingRepository,
+  studyRepository: IStudyRepository,
+  app: Express,
+) {
   app.get('/v1/study/:studyId/questionnaire', async (req, res) => {
     const studyId = parseInt(req.params.studyId);
     const questionnaires =
-      await repository.getESMQuestionnairesByStudyId(studyId);
+      await esmRepository.getESMQuestionnairesByStudyId(studyId);
     if (!questionnaires) {
       return res.status(404).send({ error: 'Study not found' });
     }
@@ -27,12 +32,12 @@ export function createESMController(repository: IRepository, app: Express) {
     requireAdmin,
     async (req, res) => {
       const studyId = parseInt(req.params.studyId);
-      const study = await repository.getStudyById(studyId);
+      const study = await studyRepository.getStudyById(studyId);
       if (!study) {
         return res.status(400).send({ error: 'Study not found' });
       }
 
-      const questionnaire = await repository.createESMQuestionnaire({
+      const questionnaire = await esmRepository.createESMQuestionnaire({
         studyId,
         ...req.body,
       });
@@ -47,12 +52,12 @@ export function createESMController(repository: IRepository, app: Express) {
       const studyId = parseInt(req.params.studyId);
       const questionnaireId = parseInt(req.params.questionnaireId);
       const questionnaire =
-        await repository.getESMQuestionnaireById(questionnaireId);
+        await esmRepository.getESMQuestionnaireById(questionnaireId);
 
       const elements =
-        await repository.getESMElementsByQuestionnaireId(questionnaireId);
+        await esmRepository.getESMElementsByQuestionnaireId(questionnaireId);
       const triggers =
-        await repository.getESMQuestionnaireTriggersByQuestionnaireId(
+        await esmRepository.getESMQuestionnaireTriggersByQuestionnaireId(
           questionnaireId,
         );
 
@@ -68,7 +73,7 @@ export function createESMController(repository: IRepository, app: Express) {
     const studyId = parseInt(req.params.studyId);
     const questionnaireId = parseInt(req.params.questionnaireId);
     const questionnaire =
-      await repository.getESMQuestionnaireById(questionnaireId);
+      await esmRepository.getESMQuestionnaireById(questionnaireId);
     if (!questionnaire) {
       res.status(404).send({ error: 'Questionnaire not found' });
       return null;
@@ -90,7 +95,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
 
-      const updated = await repository.updateESMQuestionnaire(
+      const updated = await esmRepository.updateESMQuestionnaire(
         req.body as ExperienceSamplingQuestionnaire,
       );
       res.json(updated);
@@ -105,7 +110,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
 
-      const element = await repository.createESMElement({
+      const element = await esmRepository.createESMElement({
         questionnaireId: questionnaire.id,
         ...req.body,
       });
@@ -122,7 +127,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
 
-      const element = await repository.updateESMElement({
+      const element = await esmRepository.updateESMElement({
         id: parseInt(req.params.elementId),
         ...req.body,
       });
@@ -139,7 +144,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
 
-      await repository.deleteESMElement(parseInt(req.params.elementId));
+      await esmRepository.deleteESMElement(parseInt(req.params.elementId));
 
       res.status(204).send();
     },
@@ -153,7 +158,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
 
-      const trigger = await repository.createESMQuestionnaireTrigger({
+      const trigger = await esmRepository.createESMQuestionnaireTrigger({
         questionnaireId: questionnaire.id,
         ...req.body,
       });
@@ -170,7 +175,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
 
-      const trigger = await repository.updateESMQuestionnaireTrigger({
+      const trigger = await esmRepository.updateESMQuestionnaireTrigger({
         id: parseInt(req.params.triggerId),
         ...req.body,
       });
@@ -186,7 +191,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
 
-      await repository.deleteESMQuestionnaireTrigger(
+      await esmRepository.deleteESMQuestionnaireTrigger(
         parseInt(req.params.triggerId),
       );
 
@@ -201,7 +206,7 @@ export function createESMController(repository: IRepository, app: Express) {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return res.status(404).send();
 
-      const answer = await repository.createESMAnswer({
+      const answer = await esmRepository.createESMAnswer({
         questionnaireId: questionnaire.id,
         enrolmentId: (req.user! as RequestUser).enrolmentId,
         answers: JSON.stringify(req.body.answers), // fixme: this could be vulnerable

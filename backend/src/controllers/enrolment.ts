@@ -1,12 +1,14 @@
-import { Enrolment, IRepository } from '../data/repository';
 import { Express } from 'express';
 import ksuid from 'ksuid';
 import { UserPayload } from '../middleware/authenticate';
 import { Config } from '../config';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import { Enrolment, IEnrolmentRepository } from '../data/enrolmentRepository';
+import { IStudyRepository } from '../data/studyRepository';
 
 export function createEnrolmentController(
-  repository: IRepository,
+  enrolmentRepository: IEnrolmentRepository,
+  studyRepository: IStudyRepository,
   app: Express,
 ) {
   // creates an enrolment and generates a token
@@ -17,7 +19,7 @@ export function createEnrolmentController(
         .send({ error: 'Missing required fields (enrolmentKey)' });
     }
 
-    const study = await repository.getStudyByEnrolmentKey(
+    const study = await studyRepository.getStudyByEnrolmentKey(
       req.body.enrolmentKey,
     );
     if (!study) {
@@ -26,7 +28,7 @@ export function createEnrolmentController(
         .send({ error: 'Study not found', code: 'not_found' });
     }
 
-    const enrolmentCount = await repository.getEnrolmentCountByStudyId(
+    const enrolmentCount = await enrolmentRepository.getEnrolmentCountByStudyId(
       study.id,
     );
 
@@ -44,7 +46,7 @@ export function createEnrolmentController(
       participantId: participantId,
     };
 
-    const enrolment = await repository.createEnrolment(newEnrolment);
+    const enrolment = await enrolmentRepository.createEnrolment(newEnrolment);
 
     const token = generateTokenForEnrolment(enrolment.id);
 
@@ -52,7 +54,7 @@ export function createEnrolmentController(
   });
 
   app.post('/v1/enrolment/:participantId', async (req, res) => {
-    const enrolment = await repository.getEnrolmentByParticipantId(
+    const enrolment = await enrolmentRepository.getEnrolmentByParticipantId(
       req.params.participantId,
     );
     if (!enrolment) {

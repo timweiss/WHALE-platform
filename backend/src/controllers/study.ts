@@ -1,10 +1,13 @@
 import { Express } from 'express';
-import { IRepository } from '../data/repository';
 import { authenticate, requireAdmin } from '../middleware/authenticate';
+import { IStudyRepository } from '../data/studyRepository';
 
-export function createStudyController(repository: IRepository, app: Express) {
+export function createStudyController(
+  studyRepository: IStudyRepository,
+  app: Express,
+) {
   app.get('/v1/study', async (req, res) => {
-    const studies = await repository.getStudies();
+    const studies = await studyRepository.getStudies();
     res.json(studies);
   });
 
@@ -15,7 +18,7 @@ export function createStudyController(repository: IRepository, app: Express) {
         .send({ error: 'Missing required fields (enrolmentKey or name)' });
     }
 
-    const existing = await repository.getStudyByEnrolmentKey(
+    const existing = await studyRepository.getStudyByEnrolmentKey(
       req.body.enrolmentKey,
     );
     if (existing) {
@@ -24,7 +27,7 @@ export function createStudyController(repository: IRepository, app: Express) {
         .send({ error: 'Study with enrolment key already exists' });
     }
 
-    const study = await repository.createStudy(req.body);
+    const study = await studyRepository.createStudy(req.body);
     res.json(study);
   });
 
@@ -34,12 +37,12 @@ export function createStudyController(repository: IRepository, app: Express) {
       return res.status(400).send({ error: 'Invalid study ID' });
     }
 
-    const study = await repository.getStudyById(id);
+    const study = await studyRepository.getStudyById(id);
     if (!study) {
       return res.status(404).send({ error: 'Study not found' });
     }
 
-    const updatedStudy = await repository.updateStudy(req.body);
+    const updatedStudy = await studyRepository.updateStudy(req.body);
     res.json(updatedStudy);
   });
 
@@ -49,7 +52,7 @@ export function createStudyController(repository: IRepository, app: Express) {
       return res.status(400).send({ error: 'Invalid study ID' });
     }
 
-    const study = await repository.getStudyById(id);
+    const study = await studyRepository.getStudyById(id);
     if (!study) {
       return res.status(404).send({ error: 'Study not found' });
     }
