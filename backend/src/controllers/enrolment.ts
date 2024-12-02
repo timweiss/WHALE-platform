@@ -55,7 +55,7 @@ export function createEnrolmentController(
 
     if (experimentalGroups.length === 0) {
       return res.status(400).send({
-        error: 'Study has no experimental groups',
+        error: 'Invalid Study Configuration: Study has no experimental groups',
         code: 'invalid_study_configuration',
       });
     }
@@ -77,7 +77,12 @@ export function createEnrolmentController(
 
       const token = generateTokenForEnrolment(enrolment.id);
 
-      res.json({ participantId, studyId: enrolment.studyId, token });
+      res.json({
+        participantId,
+        studyId: enrolment.studyId,
+        configuration: configurationFromExperimentalGroup(experimentalGroup),
+        token,
+      });
     } catch (e) {
       console.error(e);
 
@@ -99,13 +104,28 @@ export function createEnrolmentController(
       return res.status(404).send({ error: 'Enrolment not found' });
     }
 
+    const experimentalGroup = await studyRepository.getExperimentalGroupById(
+      enrolment.studyExperimentalGroupId,
+    );
+
+    if (!experimentalGroup) {
+      return res.status(404).send({ error: 'Experimental Group not found' });
+    }
+
     const token = generateTokenForEnrolment(enrolment.id);
 
     res.json({
       participantId: enrolment.participantId,
       studyId: enrolment.studyId,
+      configuration: configurationFromExperimentalGroup(experimentalGroup),
       token,
     });
+  });
+
+  const configurationFromExperimentalGroup = (
+    group: StudyExperimentalGroup,
+  ) => ({
+    interactionWidgetStrategy: group.interactionWidgetStrategy,
   });
 
   const pickExperimentalGroup = async (

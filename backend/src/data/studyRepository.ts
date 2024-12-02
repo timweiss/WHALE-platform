@@ -60,6 +60,8 @@ export interface IStudyRepository {
   getExperimentalGroupsByStudyId(
     studyId: number,
   ): Promise<StudyExperimentalGroup[]>;
+
+  getExperimentalGroupById(id: number): Promise<StudyExperimentalGroup | null>;
 }
 
 export class StudyRepository extends Repository implements IStudyRepository {
@@ -219,6 +221,29 @@ export class StudyRepository extends Repository implements IStudyRepository {
         allocation: row.allocation,
         interactionWidgetStrategy: row.interaction_widget_strategy,
       }));
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async getExperimentalGroupById(
+    id: number,
+  ): Promise<StudyExperimentalGroup | null> {
+    try {
+      const res = await this.pool.query(
+        'SELECT * FROM study_experimental_groups WHERE id = $1',
+        [id],
+      );
+      if (res.rows.length === 0) {
+        return null;
+      }
+      return {
+        id: res.rows[0].id,
+        internalName: res.rows[0].internal_name,
+        studyId: res.rows[0].study_id,
+        allocation: res.rows[0].allocation,
+        interactionWidgetStrategy: res.rows[0].interaction_widget_strategy,
+      };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }
