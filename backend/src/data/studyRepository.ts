@@ -14,26 +14,26 @@ enum InteractionWidgetStrategy {
   Bucketed = 'Bucketed',
 }
 
-enum StudyConfigurationAllocationType {
+enum StudyExperimentalGroupAllocationType {
   Percentage = 'Percentage',
   Manual = 'Manual',
 }
 
-interface StudyConfigurationAllocation {
-  type: StudyConfigurationAllocationType;
+interface StudyExperimentalGroupAllocation {
+  type: StudyExperimentalGroupAllocationType;
 }
 
-interface PercentageConfigurationAllocation
-  extends StudyConfigurationAllocation {
+export interface PercentageGroupAllocation
+  extends StudyExperimentalGroupAllocation {
   percentage: number;
 }
 
-export interface StudyConfiguration {
+export interface StudyExperimentalGroup {
   id: number;
   studyId: number;
 
   internalName: string;
-  allocation: StudyConfigurationAllocation;
+  allocation: StudyExperimentalGroupAllocation;
 
   // configuration parameters
   interactionWidgetStrategy: InteractionWidgetStrategy;
@@ -49,6 +49,17 @@ export interface IStudyRepository {
   getStudyByEnrolmentKey(enrolmentKey: string): Promise<Study | null>;
 
   updateStudy(study: Study): Promise<Study>;
+
+  createExperimentalGroup(
+    group: Pick<
+      StudyExperimentalGroup,
+      'studyId' | 'allocation' | 'internalName' | 'interactionWidgetStrategy'
+    >,
+  ): Promise<StudyExperimentalGroup>;
+
+  getExperimentalGroupsByStudyId(
+    studyId: number,
+  ): Promise<StudyExperimentalGroup[]>;
 }
 
 export class StudyRepository extends Repository implements IStudyRepository {
@@ -119,11 +130,16 @@ export class StudyRepository extends Repository implements IStudyRepository {
     }
   }
 
-  async getStudyById(id: number): Promise<Study> {
+  async getStudyById(id: number): Promise<Study | null> {
     try {
       const res = await this.pool.query('SELECT * FROM studies WHERE id = $1', [
         id,
       ]);
+
+      if (res.rowCount === 0) {
+        return null;
+      }
+
       return {
         id: res.rows[0].id,
         name: res.rows[0].name,
@@ -152,6 +168,57 @@ export class StudyRepository extends Repository implements IStudyRepository {
         maxEnrolments: res.rows[0].max_enrolments,
         durationDays: res.rows[0].duration_days,
       };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  // Study Configuration
+
+  async createExperimentalGroup(
+    group: Pick<
+      StudyExperimentalGroup,
+      'studyId' | 'allocation' | 'internalName' | 'interactionWidgetStrategy'
+    >,
+  ): Promise<StudyExperimentalGroup> {
+    try {
+      const res = await this.pool.query(
+        'INSERT INTO study_experimental_groups (internal_name, study_id, allocation, interaction_widget_strategy) VALUES ($1, $2, $3, $4) RETURNING *',
+        [
+          group.internalName,
+          group.studyId,
+          group.allocation,
+          group.interactionWidgetStrategy,
+        ],
+      );
+
+      return {
+        id: res.rows[0].id,
+        internalName: res.rows[0].internal_name,
+        studyId: res.rows[0].study_id,
+        allocation: res.rows[0].allocation,
+        interactionWidgetStrategy: res.rows[0].interaction_widget_strategy,
+      };
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async getExperimentalGroupsByStudyId(
+    studyId: number,
+  ): Promise<StudyExperimentalGroup[]> {
+    try {
+      const res = await this.pool.query(
+        'SELECT * FROM study_experimental_groups WHERE study_id = $1',
+        [studyId],
+      );
+      return res.rows.map((row) => ({
+        id: row.id,
+        internalName: row.internal_name,
+        studyId: row.study_id,
+        allocation: row.allocation,
+        interactionWidgetStrategy: row.interaction_widget_strategy,
+      }));
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }

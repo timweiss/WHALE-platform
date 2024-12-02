@@ -34,6 +34,39 @@ const dummyStudy = {
   durationDays: 10,
 };
 
+async function initializeBetweenGroupsStudy() {
+  const token = generateAdminToken();
+
+  const study = await request(app)
+    .post('/v1/study')
+    .set({ Authorization: 'Bearer ' + token })
+    .send(dummyStudy);
+
+  const group1 = await request(app)
+    .post(`/v1/study/${study.body.id}/group`)
+    .set({ Authorization: 'Bearer ' + token })
+    .send({
+      internalName: 'group1',
+      allocation: {
+        type: 'Percentage',
+        percentage: 0.5,
+      },
+      interactionWidgetStrategy: 'Bucketed',
+    });
+
+  const group2 = await request(app)
+    .post(`/v1/study/${study.body.id}/group`)
+    .set({ Authorization: 'Bearer ' + token })
+    .send({
+      internalName: 'group2',
+      allocation: {
+        type: 'Percentage',
+        percentage: 0.5,
+      },
+      interactionWidgetStrategy: 'Default',
+    });
+}
+
 test('should fetch studies', async () => {
   const res = await request(app).get('/v1/study');
   expect(res.statusCode).toBe(200);
@@ -99,11 +132,7 @@ test('should fail creating a study with duplicate enrolment key', async () => {
 // enrolment tests
 
 test('should enrol in study', async () => {
-  const token = generateAdminToken();
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(dummyStudy);
+  await initializeBetweenGroupsStudy();
 
   const res = await request(app)
     .post('/v1/enrolment')
@@ -115,11 +144,7 @@ test('should enrol in study', async () => {
 });
 
 test('should enrol in study with participant id', async () => {
-  const token = generateAdminToken();
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(dummyStudy);
+  await initializeBetweenGroupsStudy();
 
   const enrol = await request(app)
     .post('/v1/enrolment')
@@ -141,11 +166,7 @@ function getTimestampInSeconds() {
 }
 
 test('should create a sensor reading', async () => {
-  const token = generateAdminToken();
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(dummyStudy);
+  await initializeBetweenGroupsStudy();
 
   const enrol = await request(app)
     .post('/v1/enrolment')
@@ -165,11 +186,7 @@ test('should create a sensor reading', async () => {
 });
 
 test('should create a batch of sensor readings', async () => {
-  const token = generateAdminToken();
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(dummyStudy);
+  await initializeBetweenGroupsStudy();
 
   const enrol = await request(app)
     .post('/v1/enrolment')

@@ -4,7 +4,17 @@ import { UserPayload } from '../middleware/authenticate';
 import { Config } from '../config';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Enrolment, IEnrolmentRepository } from '../data/enrolmentRepository';
-import { IStudyRepository } from '../data/studyRepository';
+import {
+  IStudyRepository,
+  PercentageGroupAllocation,
+  StudyExperimentalGroup,
+} from '../data/studyRepository';
+import { InvalidStudyConfigurationError } from '../config/errors';
+import {
+  listGroupNames,
+  rollDiceOverProbabilities,
+  validateProbabilities,
+} from '../experiment/groups';
 
 export function createEnrolmentController(
   enrolmentRepository: IEnrolmentRepository,
@@ -40,17 +50,45 @@ export function createEnrolmentController(
       return res.status(400).send({ error: 'Study is full', code: 'full' });
     }
 
-    const participantId = (await ksuid.random()).string;
-    const newEnrolment: Pick<Enrolment, 'studyId' | 'participantId'> = {
-      studyId: study.id,
-      participantId: participantId,
-    };
+    const experimentalGroups =
+      await studyRepository.getExperimentalGroupsByStudyId(study.id);
 
-    const enrolment = await enrolmentRepository.createEnrolment(newEnrolment);
+    if (experimentalGroups.length === 0) {
+      return res.status(400).send({
+        error: 'Study has no experimental groups',
+        code: 'invalid_study_configuration',
+      });
+    }
 
-    const token = generateTokenForEnrolment(enrolment.id);
+    try {
+      const experimentalGroup = await pickExperimentalGroup(experimentalGroups);
 
-    res.json({ participantId, studyId: enrolment.studyId, token });
+      const participantId = (await ksuid.random()).string;
+      const newEnrolment: Pick<
+        Enrolment,
+        'studyId' | 'participantId' | 'studyExperimentalGroupId'
+      > = {
+        studyId: study.id,
+        participantId: participantId,
+        studyExperimentalGroupId: experimentalGroup.id,
+      };
+
+      const enrolment = await enrolmentRepository.createEnrolment(newEnrolment);
+
+      const token = generateTokenForEnrolment(enrolment.id);
+
+      res.json({ participantId, studyId: enrolment.studyId, token });
+    } catch (e) {
+      console.error(e);
+
+      if (e instanceof InvalidStudyConfigurationError) {
+        return res
+          .status(400)
+          .send({ error: e.message, code: 'invalid_study_configuration' });
+      }
+
+      return res.status(500).send({ error: 'Internal server error' });
+    }
   });
 
   app.post('/v1/enrolment/:participantId', async (req, res) => {
@@ -69,6 +107,35 @@ export function createEnrolmentController(
       token,
     });
   });
+
+  const pickExperimentalGroup = async (
+    experimentalGroups: StudyExperimentalGroup[],
+  ): Promise<StudyExperimentalGroup> => {
+    if (experimentalGroups.find((g) => g.allocation.type === 'Manual')) {
+      return experimentalGroups[0];
+    }
+    if (experimentalGroups.every((g) => g.allocation.type === 'Percentage')) {
+      const probabilities = experimentalGroups.map(
+        (g) => (g.allocation as PercentageGroupAllocation).percentage,
+      );
+
+      validateProbabilities(probabilities);
+
+      const index = await rollDiceOverProbabilities(probabilities);
+
+      if (index === -1) {
+        throw new InvalidStudyConfigurationError(
+          'Forbidden dice roll over percentages',
+        );
+      }
+
+      return experimentalGroups[index];
+    }
+
+    throw new InvalidStudyConfigurationError(
+      `Experimental groups are not uniform. Got ${listGroupNames(experimentalGroups)}`,
+    );
+  };
 
   console.log('loaded enrolment controller');
 }

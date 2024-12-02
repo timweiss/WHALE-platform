@@ -5,14 +5,17 @@ export interface Enrolment {
   id: number;
   studyId: number;
   participantId: string;
-  studyConfigurationId: number;
+  studyExperimentalGroupId: number;
 }
 
 export interface IEnrolmentRepository {
   getEnrolmentCountByStudyId(studyId: number): Promise<number>;
 
   createEnrolment(
-    enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
+    enrolment: Pick<
+      Enrolment,
+      'studyId' | 'participantId' | 'studyExperimentalGroupId'
+    >,
   ): Promise<Enrolment>;
 
   getEnrolmentByParticipantId(participantId: string): Promise<Enrolment | null>;
@@ -37,7 +40,7 @@ export class EnrolmentRepository
         id: res.rows[0].id,
         studyId: res.rows[0].study_id,
         participantId: res.rows[0].participant_id,
-        studyConfigurationId: res.rows[0].study_configuration_id,
+        studyExperimentalGroupId: res.rows[0].study_experimental_group_id,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -57,18 +60,25 @@ export class EnrolmentRepository
   }
 
   async createEnrolment(
-    enrolment: Pick<Enrolment, 'studyId' | 'participantId'>,
+    enrolment: Pick<
+      Enrolment,
+      'studyId' | 'participantId' | 'studyExperimentalGroupId'
+    >,
   ): Promise<Enrolment> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO enrolments (study_id, participant_id) VALUES ($1, $2) RETURNING *',
-        [enrolment.studyId, enrolment.participantId],
+        'INSERT INTO enrolments (study_id, participant_id, study_experimental_group_id) VALUES ($1, $2, $3) RETURNING *',
+        [
+          enrolment.studyId,
+          enrolment.participantId,
+          enrolment.studyExperimentalGroupId,
+        ],
       );
       return {
         id: res.rows[0].id,
         studyId: res.rows[0].study_id,
         participantId: res.rows[0].participant_id,
-        studyConfigurationId: res.rows[0].study_configuration_id,
+        studyExperimentalGroupId: res.rows[0].study_experimental_group_id,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -90,7 +100,7 @@ export class EnrolmentRepository
         id: res.rows[0].id,
         studyId: res.rows[0].study_id,
         participantId: res.rows[0].participant_id,
-        studyConfigurationId: res.rows[0].study_configuration_id,
+        studyExperimentalGroupId: res.rows[0].study_experimental_group_id,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());

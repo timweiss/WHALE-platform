@@ -59,5 +59,30 @@ export function createStudyController(
     res.json(study);
   });
 
+  app.post(
+    '/v1/study/:id/group',
+    authenticate,
+    requireAdmin,
+    async (req, res) => {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).send({ error: 'Invalid study ID' });
+      }
+
+      const study = await studyRepository.getStudyById(id);
+      if (!study) {
+        return res.status(404).send({ error: 'Study not found' });
+      }
+
+      const configuration = await studyRepository.createExperimentalGroup({
+        studyId: id,
+        allocation: req.body.allocation,
+        internalName: req.body.internalName,
+        interactionWidgetStrategy: req.body.interactionWidgetStrategy,
+      });
+      res.json(configuration);
+    },
+  );
+
   console.log('loaded study controller');
 }
