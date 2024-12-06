@@ -3,9 +3,9 @@ package de.mimuc.senseeverything.api
 import android.util.Log
 import com.android.volley.VolleyError
 import de.mimuc.senseeverything.api.model.Study
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 
 data class ApiError(val httpCode: Int, val appCode: String, val message: String)
@@ -28,7 +28,12 @@ fun decodeError(error: VolleyError): ApiError {
 }
 
 suspend fun loadStudy(apiClient: ApiClient, studyId: Int): Study? {
-    val response = suspendCoroutine { continuation ->
+    if (studyId == -1) {
+        return null
+    }
+
+    val response = suspendCancellableCoroutine { continuation ->
+        Log.d("Api", "Loading study $studyId")
         apiClient.getJson("https://sisensing.medien.ifi.lmu.de/v1/study/$studyId",
             { response ->
                 continuation.resume(response)

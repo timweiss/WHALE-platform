@@ -62,6 +62,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
@@ -637,22 +638,26 @@ class StartStudyViewModel @Inject constructor(
         viewModelScope.launch {
             _pending.value = true
 
-            getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(
-                context,
-                dataStoreManager,
-                database
-            )
-            val token = dataStoreManager.tokenFlow.first()
-            enqueueSensorReadingsUploadWorker(context, token)
-            enqueueUpdateQuestionnaireWorker(context)
-            dataStoreManager.saveTimestampStudyStarted(System.currentTimeMillis())
-
             val studyId = dataStoreManager.studyIdFlow.first()
             val api = ApiClient.getInstance(getApplication())
             val study = loadStudy(api, studyId)
             if (study != null) {
                 Log.d("StartStudyViewModel", "Loaded study: $study")
                 dataStoreManager.saveStudy(study)
+                dataStoreManager.saveStudyDays(study.durationDays)
+                dataStoreManager.saveRemainingStudyDays(study.durationDays)
+
+                fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)
+
+                getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(
+                    context,
+                    dataStoreManager,
+                    database
+                )
+                val token = dataStoreManager.tokenFlow.first()
+                enqueueSensorReadingsUploadWorker(context, token)
+                enqueueUpdateQuestionnaireWorker(context)
+                dataStoreManager.saveTimestampStudyStarted(System.currentTimeMillis())
             } else {
                 Log.e("StartStudyViewModel", "Could not load study")
             }

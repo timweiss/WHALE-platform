@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.room.Room.databaseBuilder
 import com.android.volley.VolleyError
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,6 +52,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.decodeError
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
+import de.mimuc.senseeverything.api.model.EnrolmentResponse
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -60,14 +60,12 @@ import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
-import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -128,20 +126,18 @@ class EnrolmentViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(
-                dataStoreManager.tokenFlow,
-                dataStoreManager.participantIdFlow,
-                dataStoreManager.studyIdFlow
-            ) { token, participantId, studyId ->
-                if (token.isNotEmpty()) {
-                    _isEnrolled.value = true
-                    loadStudy(getApplication(), studyId)
-                }
+            val token = dataStoreManager.tokenFlow.first()
+            val participantId = dataStoreManager.participantIdFlow.first()
+            val studyId = dataStoreManager.studyIdFlow.first()
 
-                if (participantId.isNotEmpty()) {
-                    _participantId.value = participantId
-                }
-            }.collect()
+            if (token.isNotEmpty()) {
+                _isEnrolled.value = true
+                loadStudy(getApplication(), studyId)
+            }
+
+            if (participantId.isNotEmpty()) {
+                _participantId.value = participantId
+            }
         }
     }
 
@@ -171,17 +167,21 @@ class EnrolmentViewModel @Inject constructor(
                 _errorCode.value = error.appCode
                 _showErrorDialog.value = true
             } else if (response is JSONObject) {
-                val token = response.getString("token")
-                val participantId = response.getString("participantId")
-                val studyId = response.getInt("studyId")
+                val enrolmentResponse = EnrolmentResponse.fromJson(response)
+
+                val participantId = enrolmentResponse.participantId
+                val studyId = enrolmentResponse.studyId
 
                 _isLoading.value = false
                 _isEnrolled.value = true
                 _participantId.value = participantId
 
-                dataStoreManager.saveEnrolment(token, participantId, studyId)
-                loadStudy(context, studyId)
-                fetchQuestionnaires()
+                dataStoreManager.saveEnrolment(
+                    enrolmentResponse.token,
+                    participantId,
+                    studyId,
+                    enrolmentResponse.configuration
+                )
                 finishedEnrolment()
             }
         }
@@ -194,7 +194,7 @@ class EnrolmentViewModel @Inject constructor(
 
         viewModelScope.launch {
             val client = ApiClient.getInstance(context)
-            val response = suspendCoroutine { continuation ->
+            val response = suspendCancellableCoroutine { continuation ->
                 client.getJson("https://sisensing.medien.ifi.lmu.de/v1/study/$studyId",
                     { response ->
                         continuation.resume(response)
