@@ -1,9 +1,7 @@
 package de.mimuc.senseeverything.api.model
 
-import androidx.compose.ui.text.toUpperCase
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Locale
 
 data class Questionnaire(
     val name: String,
@@ -43,7 +41,7 @@ class EventQuestionnaireTrigger(
     id: Int,
     questionnaireId: Int,
     configuration: Any,
-    val eventName: String
+    val eventName: String,
 ) : QuestionnaireTrigger(id, questionnaireId, "event", configuration)
 
 data class FullQuestionnaire(
@@ -105,7 +103,7 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
                 id,
                 questionnaireId,
                 configuration,
-                configuration.getString("eventName")
+                configuration.getString("eventName"),
             )
         }
 

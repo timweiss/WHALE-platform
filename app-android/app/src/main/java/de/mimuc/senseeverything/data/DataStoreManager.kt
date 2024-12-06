@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.OnboardingStep
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
+import de.mimuc.senseeverything.api.model.StudyConfiguration
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -46,7 +47,8 @@ data class AppSettings(
     val studyPaused: Boolean,
     val studyPausedUntil: Long,
     val onboardingStep: OnboardingStep,
-    val study: Study?
+    val study: Study?,
+    val studyConfiguration: StudyConfiguration?
 )
 
 @Serializable
@@ -63,7 +65,8 @@ data class OptionalAppSettings(
     val studyPaused: Boolean? = null,
     val studyPausedUntil: Long? = null,
     val onboardingStep: OnboardingStep? = null,
-    val study: Study? = null
+    val study: Study? = null,
+    val studyConfiguration: StudyConfiguration? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -79,7 +82,8 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     studyPaused = false,
     studyPausedUntil = -1,
     onboardingStep = OnboardingStep.WELCOME,
-    study = null
+    study = null,
+    studyConfiguration = null
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -101,7 +105,9 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         studyPausedUntil = optionalAppSettings.studyPausedUntil
             ?: defaultAppSettings.studyPausedUntil,
         onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep,
-        study = optionalAppSettings.study ?: defaultAppSettings.study
+        study = optionalAppSettings.study ?: defaultAppSettings.study,
+        studyConfiguration = optionalAppSettings.studyConfiguration
+            ?: defaultAppSettings.studyConfiguration
     )
 }
 
@@ -198,13 +204,19 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.studyId ?: -1
     }
 
-    suspend fun saveEnrolment(token: String, participantId: String, studyId: Int) {
+    suspend fun saveEnrolment(
+        token: String,
+        participantId: String,
+        studyId: Int,
+        studyConfiguration: StudyConfiguration
+    ) {
         dataStore.updateData { preferences ->
             preferences.copy(
                 lastUpdate = System.currentTimeMillis(),
                 token = token,
                 participantId = participantId,
-                studyId = studyId
+                studyId = studyId,
+                studyConfiguration = studyConfiguration
             )
         }
     }
@@ -340,6 +352,19 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     suspend fun saveStudy(study: Study) {
         dataStore.updateData {
             it.copy(lastUpdate = System.currentTimeMillis(), study = study)
+        }
+    }
+
+    val studyConfigurationFlow = dataStore.data.map { preferences ->
+        preferences.studyConfiguration
+    }
+
+    suspend fun saveStudyConfiguration(studyConfiguration: StudyConfiguration) {
+        dataStore.updateData {
+            it.copy(
+                lastUpdate = System.currentTimeMillis(),
+                studyConfiguration = studyConfiguration
+            )
         }
     }
 }

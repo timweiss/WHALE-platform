@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.EventQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -55,34 +56,50 @@ class EsmHandler {
                 val matchingQuestionnaire =
                     questionnaires.find { it.questionnaire.id == trigger.questionnaireId }
                 if (matchingQuestionnaire != null) {
-                    var pendingId: Long
-
-                    coroutineScope {
-                        withContext(Dispatchers.IO) {
-                            pendingId = database.pendingQuestionnaireDao().insert(
-                                PendingQuestionnaire(
-                                    0,
-                                    System.currentTimeMillis(),
-                                    System.currentTimeMillis() + 1000 * 60 * 15,
-                                    matchingQuestionnaire.toJson().toString()
-                                )
-                            )
-                        }
-                    }
-
-                    // open questionnaire
-                    val intent = Intent(context, QuestionnaireActivity::class.java)
-                    intent.putExtra("questionnaire", matchingQuestionnaire.toJson().toString())
-                    intent.putExtra("pendingId", pendingId)
-
-                    // this will make it appear but not go back to the MainActivity afterwards
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-
-                    context.startActivity(intent)
+                    handleEventOnQuestionnaire(
+                        matchingQuestionnaire,
+                        trigger,
+                        context,
+                        dataStoreManager,
+                        database
+                    )
                 }
             }
         }
+    }
+
+    suspend fun handleEventOnQuestionnaire(
+        questionnaire: FullQuestionnaire,
+        trigger: EventQuestionnaireTrigger,
+        context: Context,
+        dataStoreManager: DataStoreManager,
+        database: AppDatabase
+    ) {
+        var pendingId: Long
+
+        coroutineScope {
+            withContext(Dispatchers.IO) {
+                pendingId = database.pendingQuestionnaireDao().insert(
+                    PendingQuestionnaire(
+                        0,
+                        System.currentTimeMillis(),
+                        System.currentTimeMillis() + 1000 * 60 * 15,
+                        questionnaire.toJson().toString()
+                    )
+                )
+            }
+        }
+
+        // open questionnaire
+        val intent = Intent(context, QuestionnaireActivity::class.java)
+        intent.putExtra("questionnaire", questionnaire.toJson().toString())
+        intent.putExtra("pendingId", pendingId)
+
+        // this will make it appear but not go back to the MainActivity afterwards
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+
+        context.startActivity(intent)
     }
 
     suspend fun schedulePeriodicQuestionnaires(
