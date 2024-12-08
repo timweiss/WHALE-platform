@@ -1,270 +1,292 @@
-package de.mimuc.senseeverything.service;
+package de.mimuc.senseeverything.service
 
-import android.app.Service;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.graphics.PixelFormat;
-import android.os.Bundle;
-import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
-import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.TextView;
-
-import javax.inject.Inject;
-
-import dagger.hilt.android.AndroidEntryPoint;
-import de.mimuc.senseeverything.R;
-import de.mimuc.senseeverything.data.DataStoreManager;
-import de.mimuc.senseeverything.db.AppDatabase;
-import de.mimuc.senseeverything.sensor.SingletonSensorList;
-import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
-import de.mimuc.senseeverything.service.esm.SamplingEventReceiver;
-import kotlin.Unit;
+import android.app.Service
+import android.content.ComponentName
+import android.content.Intent
+import android.content.ServiceConnection
+import android.graphics.PixelFormat
+import android.os.Bundle
+import android.os.IBinder
+import android.os.Message
+import android.os.Messenger
+import android.os.RemoteException
+import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
+import android.view.View.OnTouchListener
+import android.view.WindowManager
+import android.widget.Button
+import android.widget.TextView
+import dagger.hilt.android.AndroidEntryPoint
+import de.mimuc.senseeverything.R
+import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
+import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
+import de.mimuc.senseeverything.helpers.shouldDisplayFromRandomDiceThrow
+import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor
+import de.mimuc.senseeverything.service.esm.SamplingEventReceiver.Companion.sendBroadcast
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
-public class InteractionFloatingWidgetService extends Service {
-    enum InteractionLogType {
+class InteractionFloatingWidgetService : Service() {
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.Main + job)
+
+    internal enum class InteractionLogType {
         Asked,
         Start,
         End,
         Confirm,
         ConfirmAnotherInteraction,
         ConfirmSameInteraction,
-        NoInteraction
+        NoInteraction,
+        NotAskedAlreadyDisplayedInBucket,
+        NotAskedNotDisplayedInBucket
     }
 
-    private WindowManager windowManager;
-    private View floatingWidget;
-    private TextView questionText;
+    private var windowManager: WindowManager? = null
+    private var floatingWidget: View? = null
+    private var questionTextView: TextView? = null
+    private var questionText = ""
 
-    private boolean askedAnotherInteraction = false;
+    private var askedAnotherInteraction = false
 
-    private String TAG = "InteractionFloatingWidgetService";
+    private val TAG = "InteractionFloatingWidgetService"
 
-    private Messenger logServiceMessenger;
-
-    @Inject
-    DataStoreManager dataStore;
+    private var logServiceMessenger: Messenger? = null
 
     @Inject
-    SingletonSensorList singletonSensorList;
+    lateinit var dataStore: DataStoreManager
 
     @Inject
-    AppDatabase database;
+    lateinit var database: AppDatabase
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    override fun onBind(intent: Intent): IBinder? {
+        return null
     }
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
+    override fun onCreate() {
+        super.onCreate()
 
         // bind to LogService
-        Intent intent = new Intent(this, LogService.class);
-        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        val intent = Intent(this, LogService::class.java)
+        bindService(intent, connection, BIND_AUTO_CREATE)
 
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        // Inflate the floating widget layout
-        floatingWidget = LayoutInflater.from(this).inflate(R.layout.floating_widget_layout, null);
+        questionText = resources.getString(R.string.are_you_interacting)
 
-        Button yesButton = floatingWidget.findViewById(R.id.yes_button);
-        Button noButton = floatingWidget.findViewById(R.id.no_button);
-        this.questionText = floatingWidget.findViewById(R.id.interaction_question);
+        scope.launch {
+            val studyConfiguration = dataStore.studyConfigurationFlow.first()
+            val isInInteraction = dataStore.inInteractionFlow.first()
 
-        // Set the question text
-        dataStore.getInInteractionSync((inInteraction) -> {
-            if (inInteraction) {
-                this.questionText.setText(R.string.still_interacting);
+            // set the question text depending on interaction state
+            if (isInInteraction) {
+                questionText = resources.getString(R.string.still_interacting)
+                renderWidget()
+
+                Log.d("FloatingWidget", "already in interaction, rendering widget")
+                // no need to check strategy because we are already in interaction
+                return@launch
             } else {
-                this.questionText.setText(R.string.are_you_interacting);
+                questionText = resources.getString(R.string.are_you_interacting)
             }
-            return Unit.INSTANCE;
-        });
 
-        yesButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                answerYes();
-            }
-        });
+            val displayStrategy = studyConfiguration?.interactionWidgetStrategy
+                ?: InteractionWidgetDisplayStrategy.DEFAULT
+            when (displayStrategy) {
+                InteractionWidgetDisplayStrategy.DEFAULT -> {
+                    renderWidget()
+                    Log.d("FloatingWidget", "default display strategy, rendering widget")
+                }
 
-        noButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                answerNo();
+                InteractionWidgetDisplayStrategy.BUCKETED -> {
+                    val timeBuckets = dataStore.interactionWidgetTimeBucketFlow.first()
+                    val currentBucket = getCurrentTimeBucket()
+
+                    // not yet displayed in this time bucket
+                    if (!timeBuckets.contains(currentBucket)) {
+                        if (shouldDisplayFromRandomDiceThrow()) {
+                            renderWidget()
+                            timeBuckets[currentBucket] = true
+                            dataStore.setInteractionWidgetTimeBucket(timeBuckets)
+                            Log.d("FloatingWidget", "now displayed in this time bucket")
+                        } else {
+                            Log.d("FloatingWidget", "not displayed in this time bucket")
+                        }
+                    } else {
+                        Log.d("FloatingWidget", "already displayed in this time bucket")
+                    }
+                }
             }
-        });
+        }
+
+    }
+
+    private fun renderWidget() {
+        // Inflate the floating widget layout
+        floatingWidget = LayoutInflater.from(this).inflate(R.layout.floating_widget_layout, null)
+        this.questionTextView = floatingWidget!!.findViewById(R.id.interaction_question)
+        questionTextView!!.text = questionText
+
+        val yesButton = floatingWidget!!.findViewById<Button>(R.id.yes_button)
+        val noButton = floatingWidget!!.findViewById<Button>(R.id.no_button)
+
+        yesButton.setOnClickListener { answerYes() }
+
+        noButton.setOnClickListener { answerNo() }
 
         // Set up layout parameters
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, // For Android O and above
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT
-        );
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,  // For Android O and above
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        )
 
         // put it in the top right corner, a bit lower than the status bar
-        params.gravity = android.view.Gravity.TOP | Gravity.END;
-        params.verticalMargin = 0.075f;
+        params.gravity = Gravity.TOP or Gravity.END
+        params.verticalMargin = 0.075f
 
         // Add the view to the window
-        windowManager.addView(floatingWidget, params);
-        Log.d("FloatingWidget", "Floating widget added to screen");
+        windowManager?.addView(floatingWidget, params)
+        Log.d("FloatingWidget", "Floating widget added to screen")
 
         // Handle the widget's movement and interactions
-        floatingWidget.setOnTouchListener(new View.OnTouchListener() {
-            private int lastAction;
-            private int initialX;
-            private int initialY;
-            private float initialTouchX;
-            private float initialTouchY;
+        floatingWidget?.setOnTouchListener(object : OnTouchListener {
+            private var lastAction = 0
+            private var initialX = 0
+            private var initialY = 0
+            private var initialTouchX = 0f
+            private var initialTouchY = 0f
 
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        initialX = params.x;
-                        initialY = params.y;
-                        initialTouchX = event.getRawX();
-                        initialTouchY = event.getRawY();
-                        lastAction = event.getAction();
-                        return true;
-                    case MotionEvent.ACTION_UP:
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = params.x
+                        initialY = params.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        lastAction = event.action
+                        return true
+                    }
+
+                    MotionEvent.ACTION_UP -> {
                         if (lastAction == MotionEvent.ACTION_DOWN) {
                             // Handle click event
                         }
-                        lastAction = event.getAction();
-                        return true;
-                    case MotionEvent.ACTION_MOVE:
-                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                        params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                        windowManager.updateViewLayout(floatingWidget, params);
-                        lastAction = event.getAction();
-                        return true;
+                        lastAction = event.action
+                        return true
+                    }
+
+                    MotionEvent.ACTION_MOVE -> {
+                        params.x = initialX + (event.rawX - initialTouchX).toInt()
+                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        windowManager!!.updateViewLayout(floatingWidget, params)
+                        lastAction = event.action
+                        return true
+                    }
                 }
-                return false;
+                return false
             }
-        });
+        })
     }
 
-    private void answerYes() {
-        Log.d("FloatingWidget", "Yes button clicked");
+    private fun answerYes() {
+        Log.d("FloatingWidget", "Yes button clicked")
 
-        dataStore.getInInteractionSync((inInteraction) -> {
+        dataStore.getInInteractionSync { inInteraction: Boolean ->
             if (inInteraction) {
                 if (askedAnotherInteraction) {
-                    logInteractionMessage(InteractionLogType.ConfirmSameInteraction);
-                    floatingWidget.setVisibility(View.GONE);
-                    askedAnotherInteraction = false;
+                    logInteractionMessage(InteractionLogType.ConfirmSameInteraction)
+                    floatingWidget!!.visibility = View.GONE
+                    askedAnotherInteraction = false
                 } else {
-                    this.questionText.setText(R.string.is_same_interaction);
-                    askedAnotherInteraction = true;
+                    questionTextView!!.setText(R.string.is_same_interaction)
+                    askedAnotherInteraction = true
                 }
             } else {
-                floatingWidget.setVisibility(View.GONE);
-                logInteractionMessage(InteractionLogType.Start);
+                floatingWidget!!.visibility = View.GONE
+                logInteractionMessage(InteractionLogType.Start)
             }
-
-            dataStore.setInInteractionSync(true);
-            return Unit.INSTANCE;
-        });
+            dataStore.setInInteractionSync(true)
+        }
     }
 
-    private void answerNo() {
-        Log.d("FloatingWidget", "No button clicked");
-        floatingWidget.setVisibility(View.GONE);
-        dataStore.getInInteractionSync((inInteraction) -> {
+    private fun answerNo() {
+        Log.d("FloatingWidget", "No button clicked")
+        floatingWidget!!.visibility = View.GONE
+        dataStore.getInInteractionSync { inInteraction: Boolean ->
             if (inInteraction) {
                 if (askedAnotherInteraction) {
-                    askedAnotherInteraction = false;
-                    logInteractionMessage(InteractionLogType.ConfirmAnotherInteraction);
+                    askedAnotherInteraction = false
+                    logInteractionMessage(InteractionLogType.ConfirmAnotherInteraction)
                 } else {
-                    logInteractionMessage(InteractionLogType.End);
-                    SEApplicationController.getInstance().getEsmHandler().initializeTriggers(dataStore);
+                    logInteractionMessage(InteractionLogType.End)
+                    SEApplicationController.getInstance().esmHandler.initializeTriggers(dataStore)
 
-                    SamplingEventReceiver.Companion.sendBroadcast(this, "interactionEnd");
+                    sendBroadcast(this, "interactionEnd")
                 }
             } else {
-                logInteractionMessage(InteractionLogType.NoInteraction);
+                logInteractionMessage(InteractionLogType.NoInteraction)
             }
-
-            dataStore.setInInteractionSync(false);
-            return Unit.INSTANCE;
-        });
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (floatingWidget != null) windowManager.removeView(floatingWidget);
-        unbindService(connection);
-    }
-
-    private void logInteractionMessage(InteractionLogType type) {
-        switch (type) {
-            case Asked:
-                sendDataToLogService("asked");
-                break;
-            case Start:
-                sendDataToLogService("start");
-                break;
-            case End:
-                sendDataToLogService("end");
-                break;
-            case Confirm:
-                sendDataToLogService("confirm");
-                break;
-            case ConfirmAnotherInteraction:
-                sendDataToLogService("confirmAnotherInteraction");
-                break;
-            case ConfirmSameInteraction:
-                sendDataToLogService("confirmSameInteraction");
-                break;
-            case NoInteraction:
-                sendDataToLogService("noInteraction");
-                break;
+            dataStore.setInInteractionSync(false)
         }
     }
 
-    private ServiceConnection connection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            logServiceMessenger = new Messenger(service);
-            logInteractionMessage(InteractionLogType.Asked); // needs to be logged here because otherwise we have a race condition
+    override fun onDestroy() {
+        super.onDestroy()
+        if (floatingWidget != null) windowManager!!.removeView(floatingWidget)
+        unbindService(connection)
+        job.cancel()
+    }
+
+    private fun logInteractionMessage(type: InteractionLogType) {
+        when (type) {
+            InteractionLogType.Asked -> sendDataToLogService("asked")
+            InteractionLogType.Start -> sendDataToLogService("start")
+            InteractionLogType.End -> sendDataToLogService("end")
+            InteractionLogType.Confirm -> sendDataToLogService("confirm")
+            InteractionLogType.ConfirmAnotherInteraction -> sendDataToLogService("confirmAnotherInteraction")
+            InteractionLogType.ConfirmSameInteraction -> sendDataToLogService("confirmSameInteraction")
+            InteractionLogType.NoInteraction -> sendDataToLogService("noInteraction")
+            InteractionLogType.NotAskedAlreadyDisplayedInBucket -> sendDataToLogService("notAskedAlreadyDisplayedInBucket")
+            InteractionLogType.NotAskedNotDisplayedInBucket -> sendDataToLogService("notAskedNotDisplayedInBucket")
+        }
+    }
+
+    private val connection: ServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            logServiceMessenger = Messenger(service)
+            logInteractionMessage(InteractionLogType.Asked) // needs to be logged here because otherwise we have a race condition
         }
 
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            logServiceMessenger = null;
+        override fun onServiceDisconnected(name: ComponentName) {
+            logServiceMessenger = null
         }
-    };
+    }
 
-    private void sendDataToLogService(String message) {
+    private fun sendDataToLogService(message: String) {
         if (logServiceMessenger != null) {
-            Message msg = Message.obtain(null, LogService.SEND_SENSOR_LOG_DATA);
-            Bundle bundle = new Bundle();
-            bundle.putString("sensorData", message);
-            bundle.putString("sensorName", InteractionLogSensor.class.getName());
-            msg.setData(bundle);
+            val msg = Message.obtain(null, LogService.SEND_SENSOR_LOG_DATA)
+            val bundle = Bundle()
+            bundle.putString("sensorData", message)
+            bundle.putString("sensorName", InteractionLogSensor::class.java.name)
+            msg.data = bundle
 
             try {
-                logServiceMessenger.send(msg);
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to send message to LogService", e);
+                logServiceMessenger!!.send(msg)
+            } catch (e: RemoteException) {
+                Log.e(TAG, "Failed to send message to LogService", e)
             }
         }
     }

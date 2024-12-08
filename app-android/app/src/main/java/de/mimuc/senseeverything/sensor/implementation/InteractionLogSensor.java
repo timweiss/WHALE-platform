@@ -39,24 +39,4 @@ public class InteractionLogSensor extends AbstractSensor {
         super.start(context);
         m_IsRunning = true;
     }
-
-    public void logInteractionStart() {
-        onLogDataItem(System.currentTimeMillis(), "start");
-    }
-
-    public void logContinued() {
-        onLogDataItem(System.currentTimeMillis(), "confirm");
-    }
-
-    public void logInteractionEnd() {
-        onLogDataItem(System.currentTimeMillis(), "end");
-    }
-
-    public void logNoInteraction() {
-        onLogDataItem(System.currentTimeMillis(), "noInteraction");
-    }
-
-    public void logInteractionAsked() {
-        onLogDataItem(System.currentTimeMillis(), "asked");
-    }
 }

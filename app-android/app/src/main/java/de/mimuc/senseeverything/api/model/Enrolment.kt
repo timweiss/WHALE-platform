@@ -36,6 +36,5 @@ data class StudyConfiguration(
 
 enum class InteractionWidgetDisplayStrategy {
     DEFAULT,
-    BUCKETED,
-    RANDOM
+    BUCKETED
 }

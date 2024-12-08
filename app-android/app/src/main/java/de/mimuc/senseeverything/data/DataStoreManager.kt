@@ -48,7 +48,8 @@ data class AppSettings(
     val studyPausedUntil: Long,
     val onboardingStep: OnboardingStep,
     val study: Study?,
-    val studyConfiguration: StudyConfiguration?
+    val studyConfiguration: StudyConfiguration?,
+    val interactionWidgetTimeBucket: HashMap<String, Boolean>
 )
 
 @Serializable
@@ -66,7 +67,8 @@ data class OptionalAppSettings(
     val studyPausedUntil: Long? = null,
     val onboardingStep: OnboardingStep? = null,
     val study: Study? = null,
-    val studyConfiguration: StudyConfiguration? = null
+    val studyConfiguration: StudyConfiguration? = null,
+    val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -83,7 +85,8 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     studyPausedUntil = -1,
     onboardingStep = OnboardingStep.WELCOME,
     study = null,
-    studyConfiguration = null
+    studyConfiguration = null,
+    interactionWidgetTimeBucket = hashMapOf()
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -107,7 +110,9 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep,
         study = optionalAppSettings.study ?: defaultAppSettings.study,
         studyConfiguration = optionalAppSettings.studyConfiguration
-            ?: defaultAppSettings.studyConfiguration
+            ?: defaultAppSettings.studyConfiguration,
+        interactionWidgetTimeBucket = optionalAppSettings.interactionWidgetTimeBucket
+            ?: defaultAppSettings.interactionWidgetTimeBucket
     )
 }
 
@@ -359,12 +364,43 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.studyConfiguration
     }
 
+    fun getStudyConfigurationSync(callback: (StudyConfiguration?) -> Unit) {
+        runBlocking {
+            studyConfigurationFlow.first { studyConfiguration ->
+                callback(studyConfiguration)
+                true
+            }
+        }
+    }
+
     suspend fun saveStudyConfiguration(studyConfiguration: StudyConfiguration) {
         dataStore.updateData {
             it.copy(
                 lastUpdate = System.currentTimeMillis(),
                 studyConfiguration = studyConfiguration
             )
+        }
+    }
+
+    val interactionWidgetTimeBucketFlow = dataStore.data.map { preferences ->
+        preferences.interactionWidgetTimeBucket
+    }
+
+    suspend fun setInteractionWidgetTimeBucket(interactionWidgetTimeBucket: HashMap<String, Boolean>) {
+        dataStore.updateData {
+            it.copy(
+                lastUpdate = System.currentTimeMillis(),
+                interactionWidgetTimeBucket = interactionWidgetTimeBucket
+            )
+        }
+    }
+
+    fun getInteractionWidgetTimeBucketSync(callback: (HashMap<String, Boolean>) -> Unit) {
+        runBlocking {
+            interactionWidgetTimeBucketFlow.first { interactionWidgetTimeBucket ->
+                callback(interactionWidgetTimeBucket)
+                true
+            }
         }
     }
 }
