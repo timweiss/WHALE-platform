@@ -68,6 +68,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.workers.enqueueClearInteractionWidgetTimeBucketsWorker
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
 import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -654,9 +655,12 @@ class StartStudyViewModel @Inject constructor(
                     dataStoreManager,
                     database
                 )
+
                 val token = dataStoreManager.tokenFlow.first()
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
+                enqueueClearInteractionWidgetTimeBucketsWorker(context)
+
                 dataStoreManager.saveTimestampStudyStarted(System.currentTimeMillis())
             } else {
                 Log.e("StartStudyViewModel", "Could not load study")
