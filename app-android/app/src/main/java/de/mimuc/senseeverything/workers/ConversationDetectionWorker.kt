@@ -22,17 +22,18 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.LogData
-import de.mimuc.senseeverything.sensor.implementation.conversation.VadReader
-import de.mimuc.senseeverything.sensor.implementation.conversation.VadReader.Companion.calculateLength
-import de.mimuc.senseeverything.sensor.implementation.conversation.VadReader.Companion.calculateSpeechPercentage
-import de.mimuc.senseeverything.sensor.implementation.conversation.VadReaderYamNet
+import de.mimuc.senseeverything.workers.conversation.VadReader
+import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateLength
+import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateSpeechPercentage
+import de.mimuc.senseeverything.workers.conversation.WebRTCReader
+import de.mimuc.senseeverything.workers.conversation.YAMNetReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.invoke
 import java.io.File
 import java.util.Locale
 
 @HiltWorker
-class SpeechDetectionWorker @AssistedInject constructor(
+class ConversationDetectionWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val dataStoreManager: DataStoreManager,
@@ -59,35 +60,22 @@ class SpeechDetectionWorker @AssistedInject constructor(
     }
 
     private suspend fun run(filename: String, timestamp: Long) {
-        runDetectionWebRTC(filename, timestamp)
-        runDetectionYamNet(filename, timestamp)
+        runDetection(filename, timestamp, WebRTCReader())
+        runDetection(filename, timestamp, YAMNetReader())
         deleteFile(filename)
     }
 
-    private suspend fun runDetectionWebRTC(filename: String, timestamp: Long) {
-        val reader = VadReader()
-        val segments = reader.detect(filename)
+    private suspend fun runDetection(filename: String, timestamp: Long, reader: VadReader) {
+        val segments = reader.detect(filename, applicationContext)
         val speechPercentage = calculateSpeechPercentage(segments)
         val lengthInSeconds = calculateLength(segments, 44100, 16)
 
         val log = String.format(Locale.GERMAN, "%.2f;%2f", lengthInSeconds, speechPercentage)
 
-        Log.d(TAG, "speech detected in audio $log")
+        val name = reader.TAG
+        Log.d(TAG, "speech detected in $name audio $log")
 
-        logSpeechDetectionResult("WebRTC", timestamp, log)
-    }
-
-    private suspend fun runDetectionYamNet(filename: String, timestamp: Long) {
-        val reader = VadReaderYamNet()
-        val segments = reader.detectWithLabels(filename, applicationContext)
-        val speechPercentage = calculateSpeechPercentage(segments)
-        val lengthInSeconds = calculateLength(segments, 44100, 16)
-
-        val log = String.format(Locale.GERMAN, "%.2f;%2f", lengthInSeconds, speechPercentage)
-
-        Log.d(TAG, "speech detected in labeled audio $log")
-
-        logSpeechDetectionResult("YAMNet", timestamp, log)
+        logSpeechDetectionResult(name, timestamp, log)
     }
 
     private suspend fun logSpeechDetectionResult(type: String, timestamp: Long, line: String) {
@@ -137,13 +125,13 @@ class SpeechDetectionWorker @AssistedInject constructor(
 }
 
 
-fun enqueueSpeechDetectionWorker(context: Context, filename: String, timestamp: Long) {
+fun enqueueConversationDetectionWorker(context: Context, filename: String, timestamp: Long) {
     val data = workDataOf(
         "filename" to filename,
         "timestamp" to timestamp
     )
 
-    val uploadWorkRequest = OneTimeWorkRequestBuilder<SpeechDetectionWorker>()
+    val uploadWorkRequest = OneTimeWorkRequestBuilder<ConversationDetectionWorker>()
         .setInputData(data)
         .build()
 

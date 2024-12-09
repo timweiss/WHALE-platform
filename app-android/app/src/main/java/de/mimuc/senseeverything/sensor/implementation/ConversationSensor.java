@@ -1,6 +1,6 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import static de.mimuc.senseeverything.workers.SpeechDetectionWorkerKt.enqueueSpeechDetectionWorker;
+import static de.mimuc.senseeverything.workers.ConversationDetectionWorkerKt.enqueueConversationDetectionWorker;
 
 import android.content.Context;
 import android.media.AudioFormat;
@@ -80,7 +80,7 @@ public class ConversationSensor extends AbstractSensor {
     private void stopRecording() {
         runningTask.cancel(true);
         Log.d(TAG, "Enqueueing speech detection worker");
-        enqueueSpeechDetectionWorker(this.context, currentRecordingFilename, System.currentTimeMillis() / 1000);
+        enqueueConversationDetectionWorker(this.context, currentRecordingFilename, System.currentTimeMillis() / 1000);
     }
 
     private void startRecording(Context context) {

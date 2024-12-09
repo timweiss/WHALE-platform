@@ -1,5 +1,6 @@
-package de.mimuc.senseeverything.sensor.implementation.conversation
+package de.mimuc.senseeverything.workers.conversation
 
+import android.content.Context
 import android.util.Log
 import com.konovalov.vad.webrtc.VadWebRTC
 import com.konovalov.vad.webrtc.config.FrameSize
@@ -7,10 +8,10 @@ import com.konovalov.vad.webrtc.config.Mode
 import com.konovalov.vad.webrtc.config.SampleRate
 import java.io.File
 
-class VadReader {
-    val TAG = "VadReader"
+class WebRTCReader : VadReader() {
+    override val TAG = "WebRTCReader"
 
-    fun detect(path: String): List<AudioSegment> {
+    override fun detect(path: String, context: Context): List<AudioSegment> {
         val frames = arrayListOf<AudioSegment>()
 
         VadWebRTC(
@@ -66,37 +67,4 @@ class VadReader {
         return frames
     }
 
-    companion object {
-        fun calculateSpeechPercentage(segments: List<AudioSegment>): Double {
-            val totalLength = segments
-                .fold(0) { acc, segment -> acc + segment.length }
-            val speechLength = segments
-                .filter { segment -> segment.hasSpeech }
-                .fold(0) { acc, segment -> acc + segment.length }
-
-            Log.d("VadReader", "total $totalLength and speech $speechLength")
-
-            if (totalLength == 0) return 0.0
-
-            if (speechLength == 0) return 0.0
-
-            return speechLength.toDouble() / totalLength.toDouble()
-        }
-
-        fun calculateLength(segments: List<AudioSegment>, sampleRate: Int, depth: Int): Double {
-            val totalBytes = segments
-                .fold(0) { acc, segment -> acc + segment.length }
-
-            val byterate = depth * sampleRate / 8
-
-            return totalBytes.toDouble() / byterate.toDouble()
-        }
-    }
-
-    data class AudioSegment(
-        val position: Int,
-        val length: Int,
-        val hasSpeech: Boolean,
-        val label: String = ""
-    )
 }

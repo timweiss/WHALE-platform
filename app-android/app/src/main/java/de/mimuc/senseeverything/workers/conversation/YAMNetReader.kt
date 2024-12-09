@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.sensor.implementation.conversation
+package de.mimuc.senseeverything.workers.conversation
 
 import android.content.Context
 import android.util.Log
@@ -6,13 +6,12 @@ import com.konovalov.vad.yamnet.VadYamnet
 import com.konovalov.vad.yamnet.config.FrameSize
 import com.konovalov.vad.yamnet.config.Mode
 import com.konovalov.vad.yamnet.config.SampleRate
-import de.mimuc.senseeverything.sensor.implementation.conversation.VadReader.AudioSegment
 import java.io.File
 
-class VadReaderYamNet {
-    val TAG = "VadReaderYamNet"
+class YAMNetReader : VadReader() {
+    override val TAG = "YAMNetReader"
 
-    fun detectWithLabels(path: String, context: Context): List<AudioSegment> {
+    override fun detect(path: String, context: Context): List<AudioSegment> {
         val frames = arrayListOf<AudioSegment>()
 
         VadYamnet(
