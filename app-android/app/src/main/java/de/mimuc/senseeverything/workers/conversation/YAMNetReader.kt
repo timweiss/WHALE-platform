@@ -80,9 +80,6 @@ class YAMNetReader : VadReader() {
             }
         }
 
-        val labels = frames.map { it.label }
-        Log.d(TAG, "All detected labels: $labels")
-
         return frames
     }
 }

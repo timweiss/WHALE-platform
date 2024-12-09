@@ -65,7 +65,13 @@ class ConversationDetectionWorker @AssistedInject constructor(
         val speechPercentage = calculateSpeechPercentage(segments)
         val lengthInSeconds = calculateLength(segments, 44100, 16)
 
-        val log = String.format(Locale.GERMAN, "%.2f;%2f", lengthInSeconds, speechPercentage)
+        val log = String.format(
+            Locale.GERMAN,
+            "%.2f;%2f;labels:[%s]",
+            lengthInSeconds,
+            speechPercentage,
+            segments.map { it.label }.toSet().joinToString(",")
+        )
 
         val name = reader.TAG
         Log.d(TAG, "speech detected in $name audio $log")
