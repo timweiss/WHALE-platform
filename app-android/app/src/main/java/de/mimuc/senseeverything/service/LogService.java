@@ -247,7 +247,7 @@ public class LogService extends AbstractService {
             Log.e(TAG, "Could not save study paused", e);
         }
         // Sleep Notification
-        replaceNotification(getString(R.string.app_name), getString(R.string.notification_sleep_text), R.drawable.ic_launcher);
+        replaceNotification(getString(R.string.app_name), getString(R.string.notification_sleep_text), R.drawable.notification_whale);
     }
 
     private void stopSleepMode() {
@@ -264,7 +264,7 @@ public class LogService extends AbstractService {
 
         if (isInSleepMode) {
             isInSleepMode = false;
-            replaceNotification(getString(R.string.app_name), getString(R.string.notif_title), R.drawable.ic_launcher);
+            replaceNotification(getString(R.string.app_name), getString(R.string.notif_title), R.drawable.notification_whale);
         }
     }
 

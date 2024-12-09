@@ -1,8 +1,5 @@
 package de.mimuc.senseeverything.service;
 
-import de.mimuc.senseeverything.R;
-import de.mimuc.senseeverything.activity.MainActivity;
-
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -20,6 +17,9 @@ import android.util.Log;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
+
+import de.mimuc.senseeverything.R;
+import de.mimuc.senseeverything.activity.MainActivity;
 
 public abstract class ForegroundService extends Service {
 
@@ -39,7 +39,7 @@ public abstract class ForegroundService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
         NotificationCompat.Builder notification = new NotificationCompat.Builder(
-                getApplicationContext()).setSmallIcon(R.drawable.ic_launcher)
+                getApplicationContext()).setSmallIcon(R.drawable.notification_whale)
                 .setTicker(getText(R.string.notif_ticker))
                 .setContentTitle(getText(R.string.notif_title))
                 .setContentText(getText(R.string.notif_text))
@@ -63,7 +63,7 @@ public abstract class ForegroundService extends Service {
         Notification notification = new NotificationCompat.Builder(this, channelId)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(getString(R.string.notif_title))
-                .setSmallIcon(R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.notification_whale)
                 .setContentIntent(pendingIntent)
                 .build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

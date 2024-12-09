@@ -218,11 +218,11 @@ class ReminderNotification(private val context: Context) {
         val notification = NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
             .setContentTitle(title)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.notification_whale)
             .setLargeIcon(
                 BitmapFactory.decodeResource(
                     context.resources,
-                    R.drawable.ic_launcher
+                    R.drawable.ic_launcher_whale_foreground
                 )
             )
             .setPriority(NotificationManager.IMPORTANCE_HIGH)
