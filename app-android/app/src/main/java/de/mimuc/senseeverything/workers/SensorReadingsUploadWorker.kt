@@ -16,11 +16,10 @@ import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.LogData
-import de.mimuc.senseeverything.helpers.makeForegroundInfo
+import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -55,20 +54,12 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         }
 
         setForeground(
-            makeForegroundInfo(
-                notificationId,
-                applicationContext.getString(R.string.background_work_channel_id),
-                applicationContext.getString(R.string.background_work_channel_name),
-                applicationContext.getString(R.string.background_work_title),
-                applicationContext.getString(R.string.background_work_detail),
-                applicationContext,
-                notificationManager
-            )
+            backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
         )
 
         return withContext(Dispatchers.IO) {
             try {
-                syncNextNActivities(db, applicationContext, token,200)
+                syncNextNActivities(db, applicationContext, token, 200)
                 Result.success()
             } catch (e: Exception) {
                 Result.retry()
@@ -76,7 +67,12 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun syncNextNActivities(db: AppDatabase, context: Context, token: String, n: Int): Result {
+    private suspend fun syncNextNActivities(
+        db: AppDatabase,
+        context: Context,
+        token: String,
+        n: Int
+    ): Result {
         val data = db.logDataDao().getNextNUnsynced(n)
         if (data.isEmpty()) {
             return Result.success()

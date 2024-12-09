@@ -19,7 +19,7 @@ class WebRTCReader : VadReader() {
             frameSize = FrameSize.FRAME_SIZE_320,
             mode = Mode.VERY_AGGRESSIVE,
             silenceDurationMs = 600,
-            speechDurationMs = 50
+            speechDurationMs = 150
         ).use { vad ->
             val chunkSize = vad.frameSize.value * 2
 

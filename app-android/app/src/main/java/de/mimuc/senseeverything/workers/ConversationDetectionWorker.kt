@@ -11,11 +11,10 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.LogData
-import de.mimuc.senseeverything.helpers.makeForegroundInfo
+import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import de.mimuc.senseeverything.workers.conversation.VadReader
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateLength
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateSpeechPercentage
@@ -32,14 +31,12 @@ class ConversationDetectionWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val dataStoreManager: DataStoreManager,
     private val database: AppDatabase
-) :
-    CoroutineWorker(appContext, workerParams) {
+) : CoroutineWorker(appContext, workerParams) {
 
     val TAG = "SpeechDetectionWorker"
 
     private val notificationManager =
-        appContext.getSystemService(Context.NOTIFICATION_SERVICE) as
-                NotificationManager
+        appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     private val notificationId = 1011
 
@@ -48,14 +45,8 @@ class ConversationDetectionWorker @AssistedInject constructor(
         val timestamp = inputData.getLong("timestamp", 0)
 
         setForeground(
-            makeForegroundInfo(
-                notificationId,
-                applicationContext.getString(R.string.background_work_channel_id),
-                applicationContext.getString(R.string.background_work_channel_name),
-                applicationContext.getString(R.string.background_work_title),
-                applicationContext.getString(R.string.background_work_detail),
-                applicationContext,
-                notificationManager
+            backgroundWorkForegroundInfo(
+                notificationId, applicationContext, notificationManager
             )
         )
         run(filename, timestamp)
@@ -99,13 +90,11 @@ class ConversationDetectionWorker @AssistedInject constructor(
 
 fun enqueueConversationDetectionWorker(context: Context, filename: String, timestamp: Long) {
     val data = workDataOf(
-        "filename" to filename,
-        "timestamp" to timestamp
+        "filename" to filename, "timestamp" to timestamp
     )
 
-    val uploadWorkRequest = OneTimeWorkRequestBuilder<ConversationDetectionWorker>()
-        .setInputData(data)
-        .build()
+    val uploadWorkRequest =
+        OneTimeWorkRequestBuilder<ConversationDetectionWorker>().setInputData(data).build()
 
     WorkManager.getInstance(context).enqueue(uploadWorkRequest)
 }

@@ -9,6 +9,22 @@ import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
 import de.mimuc.senseeverything.R
 
+fun backgroundWorkForegroundInfo(
+    notificationId: Int,
+    context: Context,
+    notificationManager: NotificationManager
+): ForegroundInfo {
+    return makeForegroundInfo(
+        notificationId,
+        context.getString(R.string.background_work_channel_id),
+        context.getString(R.string.background_work_channel_name),
+        context.getString(R.string.background_work_title),
+        context.getString(R.string.background_work_detail),
+        context,
+        notificationManager
+    )
+}
+
 fun makeForegroundInfo(
     notificationId: Int,
     channelId: String,
