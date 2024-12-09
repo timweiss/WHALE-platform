@@ -49,7 +49,8 @@ data class AppSettings(
     val onboardingStep: OnboardingStep,
     val study: Study?,
     val studyConfiguration: StudyConfiguration?,
-    val interactionWidgetTimeBucket: HashMap<String, Boolean>
+    val interactionWidgetTimeBucket: HashMap<String, Boolean>,
+    val studyEnded: Boolean
 )
 
 @Serializable
@@ -68,7 +69,8 @@ data class OptionalAppSettings(
     val onboardingStep: OnboardingStep? = null,
     val study: Study? = null,
     val studyConfiguration: StudyConfiguration? = null,
-    val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null
+    val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null,
+    val studyEnded: Boolean? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -86,7 +88,8 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     onboardingStep = OnboardingStep.WELCOME,
     study = null,
     studyConfiguration = null,
-    interactionWidgetTimeBucket = hashMapOf()
+    interactionWidgetTimeBucket = hashMapOf(),
+    studyEnded = false
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -112,7 +115,8 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         studyConfiguration = optionalAppSettings.studyConfiguration
             ?: defaultAppSettings.studyConfiguration,
         interactionWidgetTimeBucket = optionalAppSettings.interactionWidgetTimeBucket
-            ?: defaultAppSettings.interactionWidgetTimeBucket
+            ?: defaultAppSettings.interactionWidgetTimeBucket,
+        studyEnded = optionalAppSettings.studyEnded ?: defaultAppSettings.studyEnded
     )
 }
 
@@ -402,5 +406,15 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
                 true
             }
         }
+    }
+
+    suspend fun saveStudyEnded(studyEnded: Boolean) {
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), studyEnded = studyEnded)
+        }
+    }
+
+    val studyEndedFlow = dataStore.data.map { preferences ->
+        preferences.studyEnded
     }
 }

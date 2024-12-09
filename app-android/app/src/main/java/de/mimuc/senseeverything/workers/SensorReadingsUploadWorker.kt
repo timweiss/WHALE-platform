@@ -1,12 +1,13 @@
 package de.mimuc.senseeverything.workers
 
+import android.app.NotificationManager
 import android.content.Context
 import android.util.Log
 import androidx.hilt.work.HiltWorker
-import androidx.room.Room
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -15,10 +16,11 @@ import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.api.ApiClient
-import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.LogData
+import de.mimuc.senseeverything.helpers.makeForegroundInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -37,6 +39,12 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
     CoroutineWorker(appContext, workerParams) {
     val TAG = "SensorReadingsUploadWorker"
 
+    private val notificationManager =
+        appContext.getSystemService(Context.NOTIFICATION_SERVICE) as
+                NotificationManager
+
+    private val notificationId = 1012
+
     override suspend fun doWork(): Result {
         val db = database
 
@@ -45,6 +53,18 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         if (token.isEmpty()) {
             return Result.failure()
         }
+
+        setForeground(
+            makeForegroundInfo(
+                notificationId,
+                applicationContext.getString(R.string.background_work_channel_id),
+                applicationContext.getString(R.string.background_work_channel_name),
+                applicationContext.getString(R.string.background_work_title),
+                applicationContext.getString(R.string.background_work_detail),
+                applicationContext,
+                notificationManager
+            )
+        )
 
         return withContext(Dispatchers.IO) {
             try {
@@ -119,6 +139,23 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
 
     // reset
     WorkManager.getInstance(context).cancelAllWorkByTag("readingsUpload")
+
+    WorkManager.getInstance(context).enqueue(uploadWorkRequest)
+}
+
+fun enqueueFinalSensorReadingsUploadWorker(context: Context, token: String) {
+    val data = workDataOf("token" to token)
+
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .setRequiresCharging(true)
+        .build()
+
+    val uploadWorkRequest = OneTimeWorkRequestBuilder<SensorReadingsUploadWorker>()
+        .addTag("finalReadingsUpload")
+        .setInputData(data)
+        .setConstraints(constraints)
+        .build()
 
     WorkManager.getInstance(context).enqueue(uploadWorkRequest)
 }

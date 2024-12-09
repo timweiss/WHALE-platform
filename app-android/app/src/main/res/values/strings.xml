@@ -67,8 +67,8 @@
     <string name="continue_registration">Continue Registration</string>
     <string name="everything_set_up">Everything has been set up, you can now proceed and start your participation in the study.</string>
     <string name="start_study">Start Study</string>
-    <string name="speech_detection_channel_id">BACKGROUND_WORK_CHANNEL</string>
-    <string name="speech_detection_title">Doing some work in the background.</string>
-    <string name="speech_detection_progress">Please do not close WHALE.</string>
-    <string name="speech_detection_channel_name">Background Work</string>
+    <string name="background_work_channel_id">BACKGROUND_WORK_CHANNEL</string>
+    <string name="background_work_title">Doing some work in the background.</string>
+    <string name="background_work_detail">Please do not close WHALE.</string>
+    <string name="background_work_channel_name">Background Work</string>
 </resources>

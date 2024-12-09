@@ -69,6 +69,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.workers.enqueueClearInteractionWidgetTimeBucketsWorker
+import de.mimuc.senseeverything.workers.enqueueEndStudyWorker
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
 import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -660,6 +661,7 @@ class StartStudyViewModel @Inject constructor(
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
                 enqueueClearInteractionWidgetTimeBucketsWorker(context)
+                enqueueEndStudyWorker(context, study.durationDays)
 
                 dataStoreManager.saveTimestampStudyStarted(System.currentTimeMillis())
             } else {

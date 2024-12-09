@@ -1,17 +1,10 @@
 package de.mimuc.senseeverything.workers
 
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.graphics.Color
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
-import androidx.work.ForegroundInfo
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -22,6 +15,7 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.LogData
+import de.mimuc.senseeverything.helpers.makeForegroundInfo
 import de.mimuc.senseeverything.workers.conversation.VadReader
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateLength
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateSpeechPercentage
@@ -53,7 +47,17 @@ class ConversationDetectionWorker @AssistedInject constructor(
         val filename = inputData.getString("filename") ?: return Result.failure()
         val timestamp = inputData.getLong("timestamp", 0)
 
-        setForeground(createForegroundInfo(applicationContext.getString(R.string.speech_detection_progress)))
+        setForeground(
+            makeForegroundInfo(
+                notificationId,
+                applicationContext.getString(R.string.background_work_channel_id),
+                applicationContext.getString(R.string.background_work_channel_name),
+                applicationContext.getString(R.string.background_work_title),
+                applicationContext.getString(R.string.background_work_detail),
+                applicationContext,
+                notificationManager
+            )
+        )
         run(filename, timestamp)
 
         return Result.success()
@@ -89,38 +93,6 @@ class ConversationDetectionWorker @AssistedInject constructor(
         if (existing.exists()) {
             existing.delete()
         }
-    }
-
-    private fun createForegroundInfo(progress: String): ForegroundInfo {
-        val id = applicationContext.getString(R.string.speech_detection_channel_id)
-        val channelName = applicationContext.getString(R.string.speech_detection_channel_name)
-        val title = applicationContext.getString(R.string.speech_detection_title)
-
-        // Create a Notification channel if necessary
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createChannel(id, channelName)
-        }
-
-        val notification = NotificationCompat.Builder(applicationContext, id)
-            .setContentTitle(title)
-            .setTicker(title)
-            .setContentText(progress)
-            .setSmallIcon(R.drawable.ic_launcher)
-            .setOngoing(true)
-            .build()
-
-        return ForegroundInfo(notificationId, notification)
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun createChannel(id: String, channelName: String): String {
-        val chan = NotificationChannel(id, channelName, NotificationManager.IMPORTANCE_NONE)
-        chan.lightColor = Color.BLUE
-        chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-        checkNotNull(notificationManager)
-        notificationManager.createNotificationChannel(chan)
-
-        return id
     }
 }
 
