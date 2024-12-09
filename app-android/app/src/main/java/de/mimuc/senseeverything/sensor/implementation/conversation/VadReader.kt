@@ -66,30 +66,37 @@ class VadReader {
         return frames
     }
 
-    fun calculateSpeechPercentage(segments: List<AudioSegment>): Double {
-        val totalLength = segments
-            .fold(0) { acc, segment -> acc + segment.length }
-        val speechLength = segments
-            .filter { segment -> segment.hasSpeech }
-            .fold(0) { acc, segment -> acc + segment.length }
+    companion object {
+        fun calculateSpeechPercentage(segments: List<AudioSegment>): Double {
+            val totalLength = segments
+                .fold(0) { acc, segment -> acc + segment.length }
+            val speechLength = segments
+                .filter { segment -> segment.hasSpeech }
+                .fold(0) { acc, segment -> acc + segment.length }
 
-        Log.d(TAG, "total $totalLength and speech $speechLength")
+            Log.d("VadReader", "total $totalLength and speech $speechLength")
 
-        if (totalLength == 0) return 0.0
+            if (totalLength == 0) return 0.0
 
-        if (speechLength == 0) return 0.0
+            if (speechLength == 0) return 0.0
 
-        return speechLength.toDouble() / totalLength.toDouble()
+            return speechLength.toDouble() / totalLength.toDouble()
+        }
+
+        fun calculateLength(segments: List<AudioSegment>, sampleRate: Int, depth: Int): Double {
+            val totalBytes = segments
+                .fold(0) { acc, segment -> acc + segment.length }
+
+            val byterate = depth * sampleRate / 8
+
+            return totalBytes.toDouble() / byterate.toDouble()
+        }
     }
 
-    fun calculateLength(segments: List<AudioSegment>, sampleRate: Int, depth: Int): Double {
-        val totalBytes = segments
-            .fold(0) { acc, segment -> acc + segment.length }
-
-        val byterate = depth * sampleRate / 8
-
-        return totalBytes.toDouble() / byterate.toDouble()
-    }
-
-    data class AudioSegment(val position: Int, val length: Int, val hasSpeech: Boolean)
+    data class AudioSegment(
+        val position: Int,
+        val length: Int,
+        val hasSpeech: Boolean,
+        val label: String = ""
+    )
 }
