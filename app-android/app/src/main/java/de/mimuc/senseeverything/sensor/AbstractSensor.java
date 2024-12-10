@@ -69,8 +69,6 @@ public abstract class AbstractSensor implements Serializable  {
 		m_isSensorAvailable = isAvailable(context);
 		if (!m_isSensorAvailable)
 			Log.i(TAG, "Sensor not available");
-
-		dataSource = new SensorReadingDiskDataSource(context, getSensorName());
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){
@@ -96,7 +94,7 @@ public abstract class AbstractSensor implements Serializable  {
 	}
 
 	protected void closeDataSource() {
-		dataSource.close();
+
 	}
 	
 	abstract public void stop();

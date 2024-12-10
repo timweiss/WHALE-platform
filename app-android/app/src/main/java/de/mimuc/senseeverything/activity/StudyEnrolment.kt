@@ -376,6 +376,19 @@ fun EnrolmentScreen(
                 }
             }
 
+            Button(
+                onClick = {
+                    throw RuntimeException("Crashlytics Test")
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Make a Crash")
+            }
+
             Spacer(modifier = Modifier.height(36.dp))
             Button(
                 onClick = {

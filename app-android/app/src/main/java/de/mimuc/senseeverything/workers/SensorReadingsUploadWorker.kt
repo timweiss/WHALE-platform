@@ -60,6 +60,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 syncNextNActivities(db, applicationContext, token, 200)
+                Log.i(TAG, "Completed Sensor Reading Sync")
                 Result.success()
             } catch (e: Exception) {
                 Result.retry()

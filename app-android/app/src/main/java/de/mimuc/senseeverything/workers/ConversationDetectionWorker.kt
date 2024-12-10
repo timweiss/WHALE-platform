@@ -81,7 +81,12 @@ class ConversationDetectionWorker @AssistedInject constructor(
 
     private suspend fun logSpeechDetectionResult(type: String, timestamp: Long, line: String) {
         (Dispatchers.IO) {
-            database.logDataDao().insertAll(LogData(timestamp, "Conversation ${type}", line))
+            try {
+                database.logDataDao().insertAll(LogData(timestamp, "Conversation ${type}", line))
+            } catch (e: Exception) {
+                Log.e(TAG, "Error logging speech detection result", e)
+                throw e
+            }
         }
     }
 

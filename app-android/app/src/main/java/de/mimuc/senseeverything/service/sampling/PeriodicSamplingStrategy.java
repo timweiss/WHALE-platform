@@ -52,6 +52,6 @@ public class PeriodicSamplingStrategy implements SamplingStrategy {
 
     private PendingIntent getPendingIntent(Context context) {
         Intent alarmIntent = new Intent(context.getApplicationContext(), LogService.class);
-        return PendingIntent.getService(context, 0, alarmIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return PendingIntent.getService(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 }

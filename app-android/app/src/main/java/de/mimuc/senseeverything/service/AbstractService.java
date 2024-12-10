@@ -31,9 +31,6 @@ public class AbstractService extends ForegroundService {
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		if(CONST.ROOT_FOLDER == null)
-			CONST.setSavePath(this);
-				
 		return super.onStartCommand(intent, flags, startId);
 	}
 
