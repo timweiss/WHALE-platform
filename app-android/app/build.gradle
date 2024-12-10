@@ -6,6 +6,8 @@ plugins {
     id 'kotlin-parcelize'
     id 'kotlinx-serialization'
     id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
 }
 
 android {
@@ -14,11 +16,11 @@ android {
     buildToolsVersion android_version
 
     defaultConfig {
-        applicationId "de.mimuc.senseeverything"
+        applicationId "de.mimuc.whale"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
-        versionCode 7
-        versionName "0.25"
+        versionCode 8
+        versionName "1.0.0"
 
         multiDexEnabled true
         vectorDrawables {
@@ -125,6 +127,10 @@ dependencies {
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-core:1.4.1"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1"
+
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation("com.google.firebase:firebase-crashlytics")
+    implementation("com.google.firebase:firebase-analytics")
 }
 
 // Allow references to generated code
