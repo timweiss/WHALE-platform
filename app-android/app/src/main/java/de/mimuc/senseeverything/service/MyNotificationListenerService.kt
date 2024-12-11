@@ -73,7 +73,10 @@ class MyNotificationListenerService : NotificationListenerService() {
         for (notification in activeNotifications) {
             val currentRanking = Ranking()
             ranking.getRanking(notification.key, currentRanking)
-            channelsList.add(currentRanking.channel)
+            val channel = currentRanking.channel
+            if (channel != null) {
+                channelsList.add(channel)
+            }
         }
         return channelsList
     }
