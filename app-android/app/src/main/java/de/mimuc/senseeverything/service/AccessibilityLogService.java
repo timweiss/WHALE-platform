@@ -18,7 +18,7 @@ public class AccessibilityLogService extends AccessibilityService {
 
 	public static final String TAG = AccessibilityLogService.class.getSimpleName();
 	
-	public static final String SERVICE = "de.mimuc.senseeverything/de.mimuc.senseeverything.service.AccessibilityLogService";
+	public static final String SERVICE = "de.mimuc.whale/de.mimuc.senseeverything.service.AccessibilityLogService";
 	
 	private final AccessibilityServiceInfo info = new AccessibilityServiceInfo();
 	
