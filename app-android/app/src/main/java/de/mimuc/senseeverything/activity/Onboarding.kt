@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.provider.Settings.SettingNotFoundException
 import android.text.TextUtils.SimpleStringSplitter
@@ -296,6 +297,15 @@ class AcceptPermissionsViewModel @Inject constructor(
                 )
             }
         }
+
+        val powerManager =
+            getApplication<SEApplicationController>().getSystemService(Context.POWER_SERVICE) as PowerManager?
+        val packageName = getApplication<SEApplicationController>().packageName
+        if (powerManager != null && powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            setPermission(Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)
+        } else {
+            setPermission(Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, false)
+        }
     }
 
     private fun checkAndSetPermission(permission: String) {
@@ -374,6 +384,16 @@ class AcceptPermissionsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun requestPowerExemptionPermission(context: Context) {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager?
+        val packageName = context.packageName
+        context.startActivity(
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .setData(Uri.parse("package:$packageName"))
+        )
     }
 
     private fun isAccessibilityServiceEnabled(context: Context): Boolean {
@@ -605,6 +625,13 @@ fun AcceptPermissionsScreen(
             Text("Accessibility Events: ${permissions.value[Manifest.permission.BIND_ACCESSIBILITY_SERVICE] ?: false}")
             if (permissions.value[Manifest.permission.BIND_ACCESSIBILITY_SERVICE] == false) {
                 Button(onClick = { viewModel.requestAccessibilityServicePermission(context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Power Exemptions
+            Text("Power Management: ${permissions.value[Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS] ?: false}")
+            if (permissions.value[Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS] == false) {
+                Button(onClick = { viewModel.requestPowerExemptionPermission(context) }) {
                     Text("Request Permission")
                 }
             }

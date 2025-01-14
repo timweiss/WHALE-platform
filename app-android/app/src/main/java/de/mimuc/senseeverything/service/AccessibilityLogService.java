@@ -1,44 +1,40 @@
 package de.mimuc.senseeverything.service;
 
 
-import de.mimuc.senseeverything.R;
-import de.mimuc.senseeverything.activity.CONST;
-
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.PowerManager;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
+import de.mimuc.senseeverything.activity.CONST;
+
 public class AccessibilityLogService extends AccessibilityService {
 
-	public static final String TAG = AccessibilityLogService.class.getSimpleName();
-	
-	public static final String SERVICE = "de.mimuc.whale/de.mimuc.senseeverything.service.AccessibilityLogService";
-	
-	private final AccessibilityServiceInfo info = new AccessibilityServiceInfo();
-	
-	@Override
+    public static final String TAG = AccessibilityLogService.class.getSimpleName();
+
+    public static final String SERVICE = "de.mimuc.whale/de.mimuc.senseeverything.service.AccessibilityLogService";
+
+    private final AccessibilityServiceInfo info = new AccessibilityServiceInfo();
+
+    @Override
     public void onCreate() {
-		super.onCreate();
-		Log.d(TAG, "onCreate");
-	}
-	
-	@Override
+        super.onCreate();
+        Log.d(TAG, "onCreate");
+    }
+
+    @Override
     public void onInterrupt() {
         Log.v(TAG, "onInterrupt");
     }
- 
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
         Log.v(TAG, "onServiceConnected");
-        
-        
+
+
         // Set the type of events that this service wants to listen to.  Others
         // won't be passed to this service.
         info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK;
@@ -65,9 +61,7 @@ public class AccessibilityLogService extends AccessibilityService {
         this.setServiceInfo(info);
     }
 
-	
-	
- 
+
     private String getEventText(AccessibilityEvent event) {
         StringBuilder sb = new StringBuilder();
         for (CharSequence s : event.getText()) {
@@ -75,51 +69,51 @@ public class AccessibilityLogService extends AccessibilityService {
         }
         return sb.toString();
     }
-    
-    @Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
-		super.onStartCommand(intent, flags, startId);
-		Log.d(TAG, "onStartCommand() was called");
 
-		return Service.START_STICKY;
-	}
-	    
     @Override
-	public void onDestroy() {
-		Log.d(TAG, "service stopped");
-		stopForeground(true);
-		super.onDestroy();
-	}
-    
-    
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        super.onStartCommand(intent, flags, startId);
+        Log.d(TAG, "onStartCommand() was called");
+
+        return Service.START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.d(TAG, "service stopped");
+        stopForeground(true);
+        super.onDestroy();
+    }
+
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-	    Log.d(TAG,"onAccessibilityEvent: "+getEventType(event));
-    	
-    	if (AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED == event.getEventType())
-    		return;
-    	
-    	String s = String.format("%s,%s,%s,%s,%s\n",
-    			CONST.dateFormat.format(System.currentTimeMillis()), event.getEventTime(), getEventType(event),
+        Log.d(TAG, "onAccessibilityEvent: " + getEventType(event));
+
+        if (AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED == event.getEventType())
+            return;
+
+        String s = String.format("%s,%s,%s,%s,%s\n",
+                CONST.dateFormat.format(System.currentTimeMillis()), event.getEventTime(), getEventType(event),
                 event.getClassName(), event.getPackageName());
-		
-		Intent message = new Intent(TAG);
-		message.putExtra(android.content.Intent.EXTRA_TEXT, s);
-		sendBroadcast(message);   
+
+        Intent message = new Intent(TAG);
+        message.putExtra(android.content.Intent.EXTRA_TEXT, s);
+        sendBroadcast(message);
     }
-    
+
     private String getEventType(AccessibilityEvent event) {
         switch (event.getEventType()) {
-        	case AccessibilityEvent.TYPE_ANNOUNCEMENT:
-        		return "TYPE_ANNOUNCEMENT";
-        	case AccessibilityEvent.TYPE_GESTURE_DETECTION_END:
-            	return "TYPE_GESTURE_DETECTION_END";
-        	case AccessibilityEvent.TYPE_GESTURE_DETECTION_START:
-            	return "TYPE_GESTURE_DETECTION_START";
-        	case AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_END:
-            	return "TYPE_TOUCH_EXPLORATION_GESTURE_END";
-        	case AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_START:
-            	return "TYPE_TOUCH_EXPLORATION_GESTURE_START";
+            case AccessibilityEvent.TYPE_ANNOUNCEMENT:
+                return "TYPE_ANNOUNCEMENT";
+            case AccessibilityEvent.TYPE_GESTURE_DETECTION_END:
+                return "TYPE_GESTURE_DETECTION_END";
+            case AccessibilityEvent.TYPE_GESTURE_DETECTION_START:
+                return "TYPE_GESTURE_DETECTION_START";
+            case AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_END:
+                return "TYPE_TOUCH_EXPLORATION_GESTURE_END";
+            case AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_START:
+                return "TYPE_TOUCH_EXPLORATION_GESTURE_START";
             case AccessibilityEvent.TYPE_TOUCH_INTERACTION_END:
                 return "TYPE_TOUCH_INTERACTION_END";
             case AccessibilityEvent.TYPE_TOUCH_INTERACTION_START:
@@ -135,9 +129,9 @@ public class AccessibilityLogService extends AccessibilityService {
             case AccessibilityEvent.TYPE_VIEW_HOVER_ENTER:
                 return "TYPE_VIEW_HOVER_ENTER";
             case AccessibilityEvent.TYPE_VIEW_HOVER_EXIT:
-            	return "TYPE_VIEW_HOVER_EXIT";
+                return "TYPE_VIEW_HOVER_EXIT";
             case AccessibilityEvent.TYPE_VIEW_LONG_CLICKED:
-            	return "TYPE_VIEW_LONG_CLICKED";
+                return "TYPE_VIEW_LONG_CLICKED";
             case AccessibilityEvent.TYPE_VIEW_SCROLLED:
                 return "TYPE_VIEW_SCROLLED";
             case AccessibilityEvent.TYPE_VIEW_SELECTED:
@@ -151,10 +145,10 @@ public class AccessibilityLogService extends AccessibilityService {
             case AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED:
                 return "TYPE_WINDOW_CONTENT_CHANGED";
             case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:
-                return "TYPE_WINDOW_STATE_CHANGED";      	
-            
+                return "TYPE_WINDOW_STATE_CHANGED";
+
         }
         return "default";
     }
-      
+
 }
