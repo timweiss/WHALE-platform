@@ -80,7 +80,7 @@ public class ConversationSensor extends AbstractSensor {
     private void stopRecording() {
         runningTask.cancel(true);
         Log.d(TAG, "Enqueueing speech detection worker");
-        enqueueConversationDetectionWorker(this.context, currentRecordingFilename, System.currentTimeMillis() / 1000);
+        enqueueConversationDetectionWorker(this.context, currentRecordingFilename, System.currentTimeMillis());
     }
 
     private void startRecording(Context context) {

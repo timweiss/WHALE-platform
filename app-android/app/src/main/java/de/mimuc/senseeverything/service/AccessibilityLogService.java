@@ -99,10 +99,9 @@ public class AccessibilityLogService extends AccessibilityService {
     	if (AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED == event.getEventType())
     		return;
     	
-    	String s = String.format("%s,%s,%s,%s,%s,%s\n",
+    	String s = String.format("%s,%s,%s,%s,%s\n",
     			CONST.dateFormat.format(System.currentTimeMillis()), event.getEventTime(), getEventType(event),
-                event.getClassName(), event.getPackageName(),
-                 getEventText(event));
+                event.getClassName(), event.getPackageName());
 		
 		Intent message = new Intent(TAG);
 		message.putExtra(android.content.Intent.EXTRA_TEXT, s);
