@@ -61,15 +61,6 @@ public class AccessibilityLogService extends AccessibilityService {
         this.setServiceInfo(info);
     }
 
-
-    private String getEventText(AccessibilityEvent event) {
-        StringBuilder sb = new StringBuilder();
-        for (CharSequence s : event.getText()) {
-            sb.append(s);
-        }
-        return sb.toString();
-    }
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
@@ -146,7 +137,18 @@ public class AccessibilityLogService extends AccessibilityService {
                 return "TYPE_WINDOW_CONTENT_CHANGED";
             case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:
                 return "TYPE_WINDOW_STATE_CHANGED";
-
+            case AccessibilityEvent.TYPE_ASSIST_READING_CONTEXT:
+                return "TYPE_ASSIST_READING_CONTEXT";
+            case AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED:
+                return "TYPE_NOTIFICATION_STATE_CHANGED";
+            case AccessibilityEvent.TYPE_SPEECH_STATE_CHANGE:
+                return "TYPE_SPEECH_STATE_CHANGE";
+            case AccessibilityEvent.TYPE_VIEW_CONTEXT_CLICKED:
+                return "TYPE_VIEW_CONTEXT_CLICKED";
+            case AccessibilityEvent.TYPE_VIEW_TARGETED_BY_SCROLL:
+                return "TYPE_VIEW_TARGETED_BY_SCROLL";
+            case AccessibilityEvent.TYPE_WINDOWS_CHANGED:
+                return "TYPE_WINDOWS_CHANGED";
         }
         return "default";
     }
