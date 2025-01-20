@@ -88,6 +88,10 @@ class InteractionFloatingWidgetService : Service() {
             val studyConfiguration = dataStore.studyConfigurationFlow.first()
             val isInInteraction = dataStore.inInteractionFlow.first()
 
+            if (studyConfiguration == null) {
+                return@launch
+            }
+
             // set the question text depending on interaction state
             if (isInInteraction) {
                 questionText = resources.getString(R.string.still_interacting)

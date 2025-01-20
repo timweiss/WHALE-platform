@@ -32,21 +32,25 @@ class OnBootReceiver: BroadcastReceiver() {
             CoroutineScope(Dispatchers.Main).launch {
                 combine(
                     dataStoreManager.studyPausedFlow,
-                    dataStoreManager.studyPausedUntilFlow
-                ) { studyPaused, studyPausedUntil ->
-                    Pair(studyPaused, studyPausedUntil)
-                }.collect { (studyPaused, studyPausedUntil) ->
+                    dataStoreManager.studyPausedUntilFlow,
+                    dataStoreManager.studyEndedFlow
+                ) { studyPaused, studyPausedUntil, studyEnded ->
+                    Triple(studyPaused, studyPausedUntil, studyEnded)
+                }.collect { (studyPaused, studyPausedUntil, studyEnded) ->
                     val currentContext = context.applicationContext
                     Log.d("BootUpReceiver", "Study paused: $studyPaused, paused until: $studyPausedUntil")
 
-                    if (!studyPaused || studyPausedUntil < System.currentTimeMillis() || studyPausedUntil == -1L) {
+                    if (!studyEnded && (!studyPaused || studyPausedUntil < System.currentTimeMillis() || studyPausedUntil == -1L)) {
                         // study can start right away
                         Log.d("BootUpReceiver", "Study is not paused, starting sampling")
                         startSampling(currentContext)
-                    } else {
+                    } else if (!studyEnded) {
                         // study is paused, so we don't start sampling
                         Log.d("BootUpReceiver", "Study is paused until $studyPausedUntil, starting alarm manager to resume study")
                         scheduleResumeSamplingAlarm(currentContext, studyPausedUntil)
+                    } else {
+                        Log.d("BootUpReceiver", "Study has ended, not starting sampling")
+                        // todo: disable BootUpReceiver
                     }
                 }
             }
