@@ -21,6 +21,7 @@ class PeriodicNotificationReceiver: BroadcastReceiver() {
         val trigger = triggerJson?.let { makeTriggerFromJson(JSONObject(it)) as PeriodicQuestionnaireTrigger }
         val questionnaireName = intent.getStringExtra("questionnaireName")
         val remainingDays = intent.getIntExtra("remainingDays", 0)
+        val totalDays = intent.getIntExtra("totalDays", 0)
 
         // deliver notification to user
         if (id != 0) {
@@ -29,7 +30,7 @@ class PeriodicNotificationReceiver: BroadcastReceiver() {
 
         // schedule next notification
         if (trigger != null && context != null && questionnaireName != null) {
-            EsmHandler().scheduleNextPeriodicNotification(context, trigger, remainingDays, questionnaireName)
+            EsmHandler().scheduleNextPeriodicNotification(context, trigger, totalDays, remainingDays, questionnaireName)
         } else {
             Log.e("PeriodicNotificationReceiver", "Failed to schedule next notification, missing information c:${context} t:${trigger} n:${questionnaireName}")
         }

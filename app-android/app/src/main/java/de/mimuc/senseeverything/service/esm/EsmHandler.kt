@@ -129,6 +129,7 @@ class EsmHandler {
                     context,
                     periodicTrigger,
                     remainingStudyDays,
+                    remainingStudyDays,
                     questionnaires.find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire?.name
                         ?: "Unknown"
                 )
@@ -139,11 +140,12 @@ class EsmHandler {
     fun scheduleNextPeriodicNotification(
         context: Context,
         trigger: PeriodicQuestionnaireTrigger,
+        totalDays: Int,
         remainingDays: Int,
         title: String
     ) {
         val sendNextNotification = remainingDays > 0
-        var nextRemainingDays = remainingDays - 1
+        val nextRemainingDays = remainingDays - 1
 
         if (!sendNextNotification) {
             return
@@ -153,27 +155,8 @@ class EsmHandler {
         val scheduleMinute = trigger.time.split(":")[1].toInt()
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val calendar = Calendar.getInstance()
 
-        val selectedDate = calendar.apply {
-            timeInMillis = System.currentTimeMillis()
-            set(Calendar.HOUR_OF_DAY, scheduleHour)
-            set(Calendar.MINUTE, scheduleMinute)
-        }
-
-        // edge-case: registration after schedule time, if already past the time, schedule for next day
-        if (selectedDate.before(Calendar.getInstance())) {
-            selectedDate.add(Calendar.DATE, 1)
-            nextRemainingDays -= 1
-        }
-
-        val year = selectedDate.get(Calendar.YEAR)
-        val month = selectedDate.get(Calendar.MONTH)
-        val day = selectedDate.get(Calendar.DAY_OF_MONTH)
-        val hour = selectedDate.get(Calendar.HOUR_OF_DAY)
-        val minute = selectedDate.get(Calendar.MINUTE)
-
-        calendar.set(year, month, day, hour, minute)
+        val nextNotification = getNextNotification(Calendar.getInstance(), scheduleHour, scheduleMinute, totalDays, remainingDays)
 
         val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
         intent.apply {
@@ -182,7 +165,8 @@ class EsmHandler {
             putExtra("triggerJson", trigger.toJson().toString())
             putExtra("questionnaireId", trigger.questionnaireId)
             putExtra("questionnaireName", title)
-            putExtra("remainingDays", nextRemainingDays)
+            putExtra("remainingDays", nextNotification.remainingDays)
+            putExtra("totalDays", totalDays)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -194,7 +178,7 @@ class EsmHandler {
 
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
+            nextNotification.calendar.timeInMillis,
             pendingIntent
         )
 
@@ -202,6 +186,46 @@ class EsmHandler {
             "EsmHandler",
             "Scheduled periodic questionnaire for ${title}, remaining days: ${nextRemainingDays}"
         )
+    }
+
+    data class NextNotification(val calendar: Calendar, val remainingDays: Int)
+
+    fun getNextNotification(calendar: Calendar, scheduleHour: Int, scheduleMinute: Int, totalDays: Int, remainingDays: Int): NextNotification {
+        val newCalendar = if (totalDays == remainingDays && shouldScheduleOnSameDay(calendar, scheduleHour, scheduleMinute)) {
+            calculateNextNotificationTime(calendar.apply { add(Calendar.DATE, -1) }, scheduleHour, scheduleMinute)
+        } else {
+            calculateNextNotificationTime(calendar, scheduleHour, scheduleMinute)
+        }
+
+        return NextNotification(newCalendar, remainingDays - 1)
+    }
+
+    fun calculateNextNotificationTime(calendar: Calendar, scheduleHour: Int, scheduleMinute: Int): Calendar {
+        val selectedDate = (calendar.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, scheduleHour)
+            set(Calendar.MINUTE, scheduleMinute)
+            add(Calendar.DATE, 1)
+        }
+
+        val year = selectedDate.get(Calendar.YEAR)
+        val month = selectedDate.get(Calendar.MONTH)
+        val day = selectedDate.get(Calendar.DAY_OF_MONTH)
+        val hour = selectedDate.get(Calendar.HOUR_OF_DAY)
+        val minute = selectedDate.get(Calendar.MINUTE)
+
+        val newCalendar = Calendar.getInstance()
+        newCalendar.set(year, month, day, hour, minute)
+
+        return newCalendar
+    }
+
+    fun shouldScheduleOnSameDay(calendar: Calendar, scheduleHour: Int, scheduleMinute: Int): Boolean {
+        val selectedDate = (calendar.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, scheduleHour)
+            set(Calendar.MINUTE, scheduleMinute)
+        }
+
+        return selectedDate.timeInMillis > calendar.timeInMillis
     }
 }
 
