@@ -52,6 +52,8 @@ public class BluetoothSensor extends AbstractSensor {
 		return true;
 	}
 
+	private boolean isRegistered = false;
+
 	@Override
 	public void start(Context context) {
 		super.start(context);
@@ -62,13 +64,6 @@ public class BluetoothSensor extends AbstractSensor {
 			Log.e(TAG, "BLUETOOTH_SCAN permission not granted");
 			return;
 		}
-
-		/*
-		if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-			Log.e(TAG, "BLUETOOTH_CONNECT permission not granted");
-			return;
-		}
-		*/
 
 		this.context = context;
 
@@ -83,6 +78,7 @@ public class BluetoothSensor extends AbstractSensor {
 
             IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
             context.registerReceiver(mReceiver, filter);
+			isRegistered = true;
         });
 
 
@@ -115,7 +111,10 @@ public class BluetoothSensor extends AbstractSensor {
 			executor.shutdown();
 			BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 			mBluetoothAdapter.cancelDiscovery();
-			context.unregisterReceiver(mReceiver);
+			if (isRegistered) {
+				// unregister would fail if Bluetooth is off or permission is not granted
+				context.unregisterReceiver(mReceiver);
+			}
 			closeDataSource();
 		}
 	}
