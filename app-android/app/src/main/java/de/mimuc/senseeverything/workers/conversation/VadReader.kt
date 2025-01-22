@@ -33,6 +33,17 @@ abstract class VadReader {
 
             return totalBytes.toDouble() / byterate.toDouble()
         }
+
+        fun percentagePerLabel(segments: List<AudioSegment>): Map<String, Float> {
+            val labelToDuration = segments.groupBy { "${it.label}/${it.hasSpeech}" }.mapValues { (_, segments) ->
+                segments.fold(0) { acc, segment -> acc + segment.length }.toFloat()
+            }
+
+            val totalDuration = segments
+                .fold(0) { acc, segment -> acc + segment.length }.toFloat()
+
+            return labelToDuration.mapValues { (_, duration) -> duration / totalDuration }
+        }
     }
 
     data class AudioSegment(

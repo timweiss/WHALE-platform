@@ -6,6 +6,7 @@ import com.konovalov.vad.webrtc.VadWebRTC
 import com.konovalov.vad.webrtc.config.FrameSize
 import com.konovalov.vad.webrtc.config.Mode
 import com.konovalov.vad.webrtc.config.SampleRate
+import com.konovalov.vad.yamnet.SoundCategory
 import java.io.File
 
 class WebRTCReader : VadReader() {
@@ -28,39 +29,25 @@ class WebRTCReader : VadReader() {
 
             File(path).inputStream().use { input ->
                 val audioHeader = ByteArray(44).apply { input.read(this) }
-                var speechData = byteArrayOf()
-
-                var position = 0
-                var currentSectionLength = 0
-                var isSpeech = false
+                val reader = AudioSegmentReader()
 
                 while (input.available() > 0) {
                     val frameChunk = ByteArray(chunkSize).apply { input.read(this) }
-
-                    if (vad.isSpeech(frameChunk)) {
-                        if (!isSpeech) {
-                            frames.add(AudioSegment(position, currentSectionLength, false))
-                            // was no speech, new section arrives
-                            currentSectionLength = 0
-                        }
-
-                        currentSectionLength += frameChunk.size
-                        isSpeech = true
+                    val label = if (vad.isSpeech(frameChunk)) {
+                        "Speech"
                     } else {
-                        if (isSpeech) {
-                            frames.add(AudioSegment(position, currentSectionLength, true))
-                            currentSectionLength = 0
-                        }
-
-                        currentSectionLength += frameChunk.size
-                        isSpeech = false
+                        "Silence"
                     }
+                    val sc = SoundCategory(label)
 
-                    position += frameChunk.size
+                    val segment = reader.processFrameChunk(frameChunk, sc)
+                    if (segment != null) {
+                        frames.add(segment)
+                    }
                 }
 
                 // end of data
-                frames.add(AudioSegment(position, currentSectionLength, isSpeech))
+                frames.add(reader.getLastSection())
             }
         }
 

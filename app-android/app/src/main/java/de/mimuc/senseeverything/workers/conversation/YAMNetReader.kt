@@ -29,54 +29,20 @@ class YAMNetReader : VadReader() {
 
             File(path).inputStream().use { input ->
                 val audioHeader = ByteArray(44).apply { input.read(this) }
-                var speechData = byteArrayOf()
-
-                var position = 0
-                var currentSectionLength = 0
-                var isSpeech = false
+                val reader = AudioSegmentReader()
 
                 while (input.available() > 0) {
                     val frameChunk = ByteArray(chunkSize).apply { input.read(this) }
                     val sc = vad.classifyAudio(frameChunk)
 
-                    if (sc.label == "Speech") {
-                        if (!isSpeech) {
-                            frames.add(
-                                AudioSegment(
-                                    position,
-                                    currentSectionLength,
-                                    false,
-                                    label = sc.label
-                                )
-                            )
-                            // was no speech, new section arrives
-                            currentSectionLength = 0
-                        }
-
-                        currentSectionLength += frameChunk.size
-                        isSpeech = true
-                    } else {
-                        if (isSpeech) {
-                            frames.add(
-                                AudioSegment(
-                                    position,
-                                    currentSectionLength,
-                                    true,
-                                    label = sc.label
-                                )
-                            )
-                            currentSectionLength = 0
-                        }
-
-                        currentSectionLength += frameChunk.size
-                        isSpeech = false
+                    val segment = reader.processFrameChunk(frameChunk, sc)
+                    if (segment != null) {
+                        frames.add(segment)
                     }
-
-                    position += frameChunk.size
                 }
 
                 // end of data
-                frames.add(AudioSegment(position, currentSectionLength, isSpeech))
+                frames.add(reader.getLastSection())
             }
         }
 

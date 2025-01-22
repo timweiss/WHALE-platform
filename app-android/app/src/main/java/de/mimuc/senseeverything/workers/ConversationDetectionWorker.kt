@@ -18,6 +18,7 @@ import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import de.mimuc.senseeverything.workers.conversation.VadReader
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateLength
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateSpeechPercentage
+import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.percentagePerLabel
 import de.mimuc.senseeverything.workers.conversation.WebRTCReader
 import de.mimuc.senseeverything.workers.conversation.YAMNetReader
 import kotlinx.coroutines.Dispatchers
@@ -70,7 +71,8 @@ class ConversationDetectionWorker @AssistedInject constructor(
             "%.2f;%2f;labels:[%s]",
             lengthInSeconds,
             speechPercentage,
-            segments.map { it.label }.toSet().joinToString(",")
+            percentagePerLabel(segments).toList().sortedByDescending { it.second }
+                .joinToString(",") { "${it.first}: ${it.second}" }
         )
 
         val name = reader.TAG
