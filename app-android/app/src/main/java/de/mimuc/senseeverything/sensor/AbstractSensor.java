@@ -30,10 +30,15 @@ public abstract class AbstractSensor implements Serializable  {
 	protected AbstractSensor(Context applicationContext, AppDatabase database) {
 		db = database;
 	}
+
+	protected AbstractSensor(Context applicationContext, AppDatabase database, String salt) {
+		db = database;
+		sensitiveDataSalt = salt;
+	}
 	
 	protected boolean m_IsRunning = false;
 
-	private SensorReadingDiskDataSource dataSource;
+	protected String sensitiveDataSalt = "changemepleeease";
 	
 	public String getSensorName() {
 		return SENSOR_NAME;

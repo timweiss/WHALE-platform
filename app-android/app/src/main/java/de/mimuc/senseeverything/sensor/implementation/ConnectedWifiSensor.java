@@ -1,6 +1,8 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
 
+import static de.mimuc.senseeverything.helpers.SensitiveDataKt.getSensitiveDataHash;
+
 import android.content.Context;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -14,8 +16,8 @@ public class ConnectedWifiSensor extends AbstractSensor {
 	
 	private static final long serialVersionUID = 1L;
 
-	public ConnectedWifiSensor(Context applicationContext, AppDatabase database) {
-		super(applicationContext, database);
+	public ConnectedWifiSensor(Context applicationContext, AppDatabase database, String salt) {
+		super(applicationContext, database, salt + "wifi");
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Wi-Fi SSID";
@@ -46,8 +48,9 @@ public class ConnectedWifiSensor extends AbstractSensor {
 			return;		
 
 		WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-		WifiInfo wifiInfo = wifiManager.getConnectionInfo();		
-		String ssid = (wifiInfo.getSSID() == null) ? "NONE" : wifiInfo.getSSID();
+		WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+		String rawssid = wifiInfo.getSSID();
+		String ssid = (rawssid == null || rawssid.equals(WifiManager.UNKNOWN_SSID)) ? "NONE/UNKNOWN" : getSensitiveDataHash(wifiInfo.getSSID(), sensitiveDataSalt);
 		try {
 			onLogDataItem(t, ssid);
 		} catch (Exception e) {

@@ -23,6 +23,7 @@ import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SensorNotRunningException;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
+import kotlin.Unit;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.BuildersKt;
 
@@ -221,7 +222,7 @@ public class LogService extends AbstractService {
         try {
             Class<?> sensorClass = Class.forName(sensorName);
             AbstractSensor sensor = singletonSensorList.getSensorOfType(sensorClass);
-            Log.d(TAG, "sensors active: " + singletonSensorList.getList(this, database).stream().filter(s -> s.isRunning()).count());
+            Log.d(TAG, "sensors active: " + singletonSensorList.getList(this, database, "").stream().filter(s -> s.isRunning()).count());
             if (sensor != null) {
                 sensor.tryLogStringData(sensorData);
             }
@@ -283,25 +284,32 @@ public class LogService extends AbstractService {
     /* Section: Sensor Handling */
 
     private void initializeSensors() {
-        sensorList = singletonSensorList.getList(this, database);
+        dataStoreManager.getSensitiveDataSaltSync(salt -> {
+            sensorList = singletonSensorList.getList(this, database, salt);
+            return Unit.INSTANCE;
+        });
     }
 
     private void startSensors(boolean onlyPeriodic, boolean includeContinous) {
-        // use the singleton list because we want to keep our sensor's state inbetween activations
-        sensorList = singletonSensorList.getList(this, database);
+        dataStoreManager.getSensitiveDataSaltSync(salt -> {
+            // use the singleton list because we want to keep our sensor's state inbetween activations
+            sensorList = singletonSensorList.getList(this, database, salt);
 
-        Log.d(TAG, "size: " + sensorList.size());
-        for (AbstractSensor sensor : sensorList) {
-            if (sensor.isEnabled() && sensor.isAvailable(this) && (sensor.availableForPeriodicSampling() || !onlyPeriodic || (sensor.availableForContinuousSampling() && includeContinous))) {
-                sensor.start(this);
+            Log.d(TAG, "size: " + sensorList.size());
+            for (AbstractSensor sensor : sensorList) {
+                if (sensor.isEnabled() && sensor.isAvailable(this) && (sensor.availableForPeriodicSampling() || !onlyPeriodic || (sensor.availableForContinuousSampling() && includeContinous))) {
+                    sensor.start(this);
 
-                Log.d(TAG, sensor.getSensorName() + " turned on");
-            } else {
-                Log.w(TAG, sensor.getSensorName() + " turned off");
+                    Log.d(TAG, sensor.getSensorName() + " turned on");
+                } else {
+                    Log.w(TAG, sensor.getSensorName() + " turned off");
+                }
             }
-        }
 
-        isSampling = true;
+            isSampling = true;
+
+            return Unit.INSTANCE;
+        });
     }
 
     private void stopSensors(boolean includeContinuous) {

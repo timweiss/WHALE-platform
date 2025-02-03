@@ -67,6 +67,7 @@ import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.workers.enqueueClearInteractionWidgetTimeBucketsWorker
@@ -675,6 +676,7 @@ class StartStudyViewModel @Inject constructor(
                 dataStoreManager.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
+                dataStoreManager.saveSensitiveDataSalt(generateSensitiveDataSalt())
 
                 fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)
 

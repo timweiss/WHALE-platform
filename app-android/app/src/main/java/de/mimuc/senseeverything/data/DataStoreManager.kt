@@ -50,7 +50,8 @@ data class AppSettings(
     val study: Study?,
     val studyConfiguration: StudyConfiguration?,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>,
-    val studyEnded: Boolean
+    val studyEnded: Boolean,
+    val sensitiveDataSalt: String? = null
 )
 
 @Serializable
@@ -70,7 +71,8 @@ data class OptionalAppSettings(
     val study: Study? = null,
     val studyConfiguration: StudyConfiguration? = null,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null,
-    val studyEnded: Boolean? = null
+    val studyEnded: Boolean? = null,
+    val sensitiveDataSalt: String? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -89,7 +91,8 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     study = null,
     studyConfiguration = null,
     interactionWidgetTimeBucket = hashMapOf(),
-    studyEnded = false
+    studyEnded = false,
+
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -416,5 +419,24 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
 
     val studyEndedFlow = dataStore.data.map { preferences ->
         preferences.studyEnded
+    }
+
+    suspend fun saveSensitiveDataSalt(sensitiveDataSalt: String) {
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), sensitiveDataSalt = sensitiveDataSalt)
+        }
+    }
+
+    val sensitiveDataSaltFlow = dataStore.data.map { preferences ->
+        preferences.sensitiveDataSalt
+    }
+
+    fun getSensitiveDataSaltSync(callback: (String) -> Unit) {
+        runBlocking {
+            sensitiveDataSaltFlow.first { sensitiveDataSalt ->
+                callback(sensitiveDataSalt ?: "")
+                true
+            }
+        }
     }
 }

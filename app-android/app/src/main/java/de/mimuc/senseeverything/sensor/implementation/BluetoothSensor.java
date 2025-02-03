@@ -1,6 +1,8 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
 
+import static de.mimuc.senseeverything.helpers.SensitiveDataKt.getSensitiveDataHash;
+
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -28,8 +30,8 @@ public class BluetoothSensor extends AbstractSensor {
 
 	private ExecutorService executor;
 
-	public BluetoothSensor(Context applicationContext, AppDatabase database) {
-		super(applicationContext, database);
+	public BluetoothSensor(Context applicationContext, AppDatabase database, String salt) {
+		super(applicationContext, database, salt + "bt");
 		m_IsRunning = false;
 		TAG = getClass().getName();
 		SENSOR_NAME = "Nearby Bluetooth";
@@ -94,9 +96,10 @@ public class BluetoothSensor extends AbstractSensor {
 				Long t = System.currentTimeMillis();
 
 				try {
+					String address = getSensitiveDataHash(device.getAddress(), sensitiveDataSalt);
 					// getName() required BLUETOOTH_CONNECT permission
-					Log.i(TAG, device.getAddress());
-					onLogDataItem(t, device.getAddress());
+					Log.i(TAG, address);
+					onLogDataItem(t, address);
 				} catch (SecurityException e) {
 					Log.e(TAG, e.getMessage());
 				}
