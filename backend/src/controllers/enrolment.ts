@@ -10,12 +10,15 @@ import {
   StudyExperimentalGroup,
 } from '../data/studyRepository';
 import { InvalidStudyConfigurationError } from '../config/errors';
+import { Mutex } from 'async-mutex';
 
 export function createEnrolmentController(
   enrolmentRepository: IEnrolmentRepository,
   studyRepository: IStudyRepository,
   app: Express,
 ) {
+  const groupAssignmentMutex = new Mutex();
+
   // creates an enrolment and generates a token
   app.post('/v1/enrolment', async (req, res) => {
     if (!req.body.enrolmentKey) {
@@ -55,23 +58,31 @@ export function createEnrolmentController(
       });
     }
 
+    const participantId = (await ksuid.random()).string;
+
     try {
-      const experimentalGroup = await pickExperimentalGroup(
-        study,
-        availableExperimentalGroups,
-      );
+      // todo: this could make it really slow, but it needs to be an atomic operation
+      const [enrolment, experimentalGroup] =
+        await groupAssignmentMutex.runExclusive(async () => {
+          const experimentalGroup = await pickExperimentalGroup(
+            study,
+            availableExperimentalGroups,
+          );
 
-      const participantId = (await ksuid.random()).string;
-      const newEnrolment: Pick<
-        Enrolment,
-        'studyId' | 'participantId' | 'studyExperimentalGroupId'
-      > = {
-        studyId: study.id,
-        participantId: participantId,
-        studyExperimentalGroupId: experimentalGroup.id,
-      };
+          const newEnrolment: Pick<
+            Enrolment,
+            'studyId' | 'participantId' | 'studyExperimentalGroupId'
+          > = {
+            studyId: study.id,
+            participantId: participantId,
+            studyExperimentalGroupId: experimentalGroup.id,
+          };
 
-      const enrolment = await enrolmentRepository.createEnrolment(newEnrolment);
+          const enrolment =
+            await enrolmentRepository.createEnrolment(newEnrolment);
+
+          return [enrolment, experimentalGroup];
+        });
 
       const token = generateTokenForEnrolment(enrolment.id);
 
@@ -144,7 +155,6 @@ export function createEnrolmentController(
     const sortedGroups = experimentalGroups.sort((g) => g.allocationOrder);
 
     if (study.allocationStrategy === 'Sequential') {
-      // todo: this could lead to a race condition, but the impact is minimal
       const lastEnrolment = await enrolmentRepository.getLastEnrolmentByStudyId(
         study.id,
       );

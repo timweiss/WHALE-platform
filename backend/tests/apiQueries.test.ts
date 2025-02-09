@@ -218,7 +218,7 @@ test('should enrol in study with participant id', async () => {
 
 // enrolment failures
 
-test.concurrent.each(Array(30).fill(null))(
+test.each(Array(30).fill(null))(
   'should enrol sequentially in study',
   async () => {
     await initializeBetweenGroupsStudy();
