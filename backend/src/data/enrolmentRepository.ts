@@ -6,6 +6,15 @@ export interface Enrolment {
   studyId: number;
   participantId: string;
   studyExperimentalGroupId: number;
+  enrolledAt: Date;
+}
+
+interface EnrolmentRow {
+  id: number;
+  study_id: number;
+  participant_id: string;
+  study_experimental_group_id: number;
+  enrolled_at: Date;
 }
 
 export interface IEnrolmentRepository {
@@ -21,6 +30,8 @@ export interface IEnrolmentRepository {
   getEnrolmentByParticipantId(participantId: string): Promise<Enrolment | null>;
 
   getEnrolmentById(id: number): Promise<Enrolment | null>;
+
+  getLastEnrolmentByStudyId(studyId: number): Promise<Enrolment | null>;
 }
 
 export class EnrolmentRepository
@@ -36,12 +47,7 @@ export class EnrolmentRepository
       if (res.rows.length === 0) {
         return null;
       }
-      return {
-        id: res.rows[0].id,
-        studyId: res.rows[0].study_id,
-        participantId: res.rows[0].participant_id,
-        studyExperimentalGroupId: res.rows[0].study_experimental_group_id,
-      };
+      return this.enrolmentFromRow(res.rows[0]);
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }
@@ -74,12 +80,7 @@ export class EnrolmentRepository
           enrolment.studyExperimentalGroupId,
         ],
       );
-      return {
-        id: res.rows[0].id,
-        studyId: res.rows[0].study_id,
-        participantId: res.rows[0].participant_id,
-        studyExperimentalGroupId: res.rows[0].study_experimental_group_id,
-      };
+      return this.enrolmentFromRow(res.rows[0]);
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }
@@ -96,14 +97,34 @@ export class EnrolmentRepository
       if (res.rows.length === 0) {
         return null;
       }
-      return {
-        id: res.rows[0].id,
-        studyId: res.rows[0].study_id,
-        participantId: res.rows[0].participant_id,
-        studyExperimentalGroupId: res.rows[0].study_experimental_group_id,
-      };
+      return this.enrolmentFromRow(res.rows[0]);
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }
+  }
+
+  async getLastEnrolmentByStudyId(studyId: number): Promise<Enrolment | null> {
+    try {
+      const res = await this.pool.query(
+        'SELECT * FROM enrolments WHERE study_id = $1 ORDER BY enrolled_at DESC LIMIT 1',
+        [studyId],
+      );
+      if (res.rows.length === 0) {
+        return null;
+      }
+      return this.enrolmentFromRow(res.rows[0]);
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  private enrolmentFromRow(row: EnrolmentRow): Enrolment {
+    return {
+      id: row.id,
+      studyId: row.study_id,
+      participantId: row.participant_id,
+      studyExperimentalGroupId: row.study_experimental_group_id,
+      enrolledAt: row.enrolled_at,
+    };
   }
 }

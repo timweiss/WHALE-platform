@@ -6,15 +6,10 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Enrolment, IEnrolmentRepository } from '../data/enrolmentRepository';
 import {
   IStudyRepository,
-  PercentageGroupAllocation,
+  Study,
   StudyExperimentalGroup,
 } from '../data/studyRepository';
 import { InvalidStudyConfigurationError } from '../config/errors';
-import {
-  listGroupNames,
-  rollDiceOverProbabilities,
-  validateProbabilities,
-} from '../experiment/groups';
 
 export function createEnrolmentController(
   enrolmentRepository: IEnrolmentRepository,
@@ -50,10 +45,10 @@ export function createEnrolmentController(
       return res.status(400).send({ error: 'Study is full', code: 'full' });
     }
 
-    const experimentalGroups =
+    const availableExperimentalGroups =
       await studyRepository.getExperimentalGroupsByStudyId(study.id);
 
-    if (experimentalGroups.length === 0) {
+    if (availableExperimentalGroups.length === 0) {
       return res.status(400).send({
         error: 'Invalid Study Configuration: Study has no experimental groups',
         code: 'invalid_study_configuration',
@@ -61,7 +56,10 @@ export function createEnrolmentController(
     }
 
     try {
-      const experimentalGroup = await pickExperimentalGroup(experimentalGroups);
+      const experimentalGroup = await pickExperimentalGroup(
+        study,
+        availableExperimentalGroups,
+      );
 
       const participantId = (await ksuid.random()).string;
       const newEnrolment: Pick<
@@ -77,10 +75,15 @@ export function createEnrolmentController(
 
       const token = generateTokenForEnrolment(enrolment.id);
 
+      const phases =
+        await studyRepository.getExperimentalGroupPhasesByExperimentalGroupId(
+          experimentalGroup.id,
+        );
+
       res.json({
         participantId,
         studyId: enrolment.studyId,
-        configuration: configurationFromExperimentalGroup(experimentalGroup),
+        phases,
         token,
       });
     } catch (e) {
@@ -112,49 +115,56 @@ export function createEnrolmentController(
       return res.status(404).send({ error: 'Experimental Group not found' });
     }
 
+    const phases =
+      await studyRepository.getExperimentalGroupPhasesByExperimentalGroupId(
+        experimentalGroup.id,
+      );
+
+    if (phases.length === 0) {
+      return res.status(400).send({
+        error: 'Invalid Study Configuration: Experimental Group has no phases',
+        code: 'invalid_study_configuration',
+      });
+    }
+
     const token = generateTokenForEnrolment(enrolment.id);
 
     res.json({
       participantId: enrolment.participantId,
       studyId: enrolment.studyId,
-      configuration: configurationFromExperimentalGroup(experimentalGroup),
+      phases,
       token,
     });
   });
 
-  const configurationFromExperimentalGroup = (
-    group: StudyExperimentalGroup,
-  ) => ({
-    interactionWidgetStrategy: group.interactionWidgetStrategy,
-  });
-
   const pickExperimentalGroup = async (
+    study: Study,
     experimentalGroups: StudyExperimentalGroup[],
   ): Promise<StudyExperimentalGroup> => {
-    if (experimentalGroups.find((g) => g.allocation.type === 'Manual')) {
-      return experimentalGroups[0];
-    }
-    if (experimentalGroups.every((g) => g.allocation.type === 'Percentage')) {
-      const probabilities = experimentalGroups.map(
-        (g) => (g.allocation as PercentageGroupAllocation).percentage,
+    const sortedGroups = experimentalGroups.sort((g) => g.allocationOrder);
+
+    if (study.allocationStrategy === 'Sequential') {
+      // todo: this could lead to a race condition, but the impact is minimal
+      const lastEnrolment = await enrolmentRepository.getLastEnrolmentByStudyId(
+        study.id,
       );
-
-      validateProbabilities(probabilities);
-
-      const index = await rollDiceOverProbabilities(probabilities);
-
-      if (index === -1) {
-        throw new InvalidStudyConfigurationError(
-          'Forbidden dice roll over percentages',
-        );
+      if (!lastEnrolment) {
+        return sortedGroups[0];
       }
 
-      return experimentalGroups[index];
+      const lastGroupIndex = sortedGroups.findIndex(
+        (g) => g.id === lastEnrolment.studyExperimentalGroupId,
+      );
+
+      if (lastGroupIndex === -1) {
+        return sortedGroups[0];
+      }
+
+      const nextGroupIndex = (lastGroupIndex + 1) % sortedGroups.length;
+      return sortedGroups[nextGroupIndex];
     }
 
-    throw new InvalidStudyConfigurationError(
-      `Experimental groups are not uniform. Got ${listGroupNames(experimentalGroups)}`,
-    );
+    return sortedGroups[0];
   };
 
   console.log('loaded enrolment controller');

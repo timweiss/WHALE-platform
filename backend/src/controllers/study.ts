@@ -1,6 +1,9 @@
 import { Express } from 'express';
 import { authenticate, requireAdmin } from '../middleware/authenticate';
-import { IStudyRepository } from '../data/studyRepository';
+import {
+  IStudyRepository,
+  StudyExperimentalGroupPhase,
+} from '../data/studyRepository';
 
 export function createStudyController(
   studyRepository: IStudyRepository,
@@ -74,13 +77,38 @@ export function createStudyController(
         return res.status(404).send({ error: 'Study not found' });
       }
 
-      const configuration = await studyRepository.createExperimentalGroup({
+      const experimentalGroup = await studyRepository.createExperimentalGroup({
         studyId: id,
-        allocation: req.body.allocation,
         internalName: req.body.internalName,
-        interactionWidgetStrategy: req.body.interactionWidgetStrategy,
+        allocationOrder: req.body.allocationOrder,
       });
-      res.json(configuration);
+
+      const phases: StudyExperimentalGroupPhase[] = [];
+
+      for (const phase of req.body.phases) {
+        if (!phase.internalName || !phase.fromDay || !phase.durationDays) {
+          return res
+            .status(400)
+            .send({ error: 'Missing required fields in phase' });
+        }
+
+        const createdPhase = await studyRepository.createExperimentalGroupPhase(
+          {
+            experimentalGroupId: experimentalGroup.id,
+            internalName: phase.internalName,
+            fromDay: parseInt(phase.fromDay),
+            durationDays: parseInt(phase.durationDays),
+            interactionWidgetStrategy: phase.interactionWidgetStrategy,
+          },
+        );
+
+        phases.push(createdPhase);
+      }
+
+      res.json({
+        ...experimentalGroup,
+        phases,
+      });
     },
   );
 
