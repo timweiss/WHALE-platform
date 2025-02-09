@@ -32,6 +32,7 @@ const dummyStudy = {
   name: 'name',
   maxEnrolments: -1,
   durationDays: 10,
+  allocationStrategy: 'Sequential',
 };
 
 async function initializeBetweenGroupsStudy() {
@@ -47,11 +48,21 @@ async function initializeBetweenGroupsStudy() {
     .set({ Authorization: 'Bearer ' + token })
     .send({
       internalName: 'group1',
-      allocation: {
-        type: 'Percentage',
-        percentage: 0.5,
-      },
-      interactionWidgetStrategy: 'Bucketed',
+      allocationOrder: 0,
+      phases: [
+        {
+          internalName: 'baseline',
+          fromDay: 0,
+          durationDays: 3,
+          interactionWidgetStrategy: 'Disabled',
+        },
+        {
+          internalName: 'treatment',
+          fromDay: 3,
+          durationDays: 4,
+          interactionWidgetStrategy: 'Bucketed',
+        },
+      ],
     });
 
   const group2 = await request(app)
@@ -59,11 +70,21 @@ async function initializeBetweenGroupsStudy() {
     .set({ Authorization: 'Bearer ' + token })
     .send({
       internalName: 'group2',
-      allocation: {
-        type: 'Percentage',
-        percentage: 0.5,
-      },
-      interactionWidgetStrategy: 'Default',
+      allocationOrder: 1,
+      phases: [
+        {
+          internalName: 'treatment',
+          fromDay: 0,
+          durationDays: 4,
+          interactionWidgetStrategy: 'Bucketed',
+        },
+        {
+          internalName: 'baseline',
+          fromDay: 4,
+          durationDays: 3,
+          interactionWidgetStrategy: 'Disabled',
+        },
+      ],
     });
 }
 
@@ -131,6 +152,40 @@ test('should fail creating a study with duplicate enrolment key', async () => {
 
 // enrolment tests
 
+test('study experimental group should have phases', async () => {
+  const token = generateAdminToken();
+  const study = await request(app)
+    .post('/v1/study')
+    .set({ Authorization: 'Bearer ' + token })
+    .send(dummyStudy);
+
+  const group = await request(app)
+    .post(`/v1/study/${study.body.id}/group`)
+    .set({ Authorization: 'Bearer ' + token })
+    .send({
+      internalName: 'group1',
+      allocationOrder: 0,
+      phases: [
+        {
+          internalName: 'baseline',
+          fromDay: 0,
+          durationDays: 3,
+          interactionWidgetStrategy: 'Disabled',
+        },
+        {
+          internalName: 'treatment',
+          fromDay: 3,
+          durationDays: 4,
+          interactionWidgetStrategy: 'Bucketed',
+        },
+      ],
+    });
+
+  expect(group.statusCode).toBe(200);
+  expect(group.body.phases).toBeInstanceOf(Array);
+  expect(group.body.phases).toHaveLength(2);
+});
+
 test('should enrol in study', async () => {
   await initializeBetweenGroupsStudy();
 
@@ -141,7 +196,7 @@ test('should enrol in study', async () => {
   expect(res.statusCode).toBe(200);
   expect(res.body).toHaveProperty('participantId');
   expect(res.body).toHaveProperty('token');
-  expect(res.body.configuration).toHaveProperty('interactionWidgetStrategy');
+  expect(res.body).toHaveProperty('phases');
 });
 
 test('should enrol in study with participant id', async () => {
@@ -158,100 +213,36 @@ test('should enrol in study with participant id', async () => {
   expect(res.statusCode).toBe(200);
   expect(res.body).toHaveProperty('participantId');
   expect(res.body).toHaveProperty('token');
-  expect(res.body.configuration).toHaveProperty('interactionWidgetStrategy');
+  expect(res.body).toHaveProperty('phases');
 });
 
 // enrolment failures
 
-test('should fail because of percentage misconfiguration (higher)', async () => {
-  const token = generateAdminToken();
+test.concurrent.each(Array(30).fill(null))(
+  'should enrol sequentially in study',
+  async () => {
+    await initializeBetweenGroupsStudy();
 
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(dummyStudy);
+    // should start with baseline phase
+    const participant1 = await request(app)
+      .post('/v1/enrolment')
+      .send({ enrolmentKey: 'key' });
 
-  const group1 = await request(app)
-    .post(`/v1/study/${study.body.id}/group`)
-    .set({ Authorization: 'Bearer ' + token })
-    .send({
-      internalName: 'group1',
-      allocation: {
-        type: 'Percentage',
-        percentage: 0.5,
-      },
-      interactionWidgetStrategy: 'Bucketed',
-    });
+    // should start with treatment phase
+    const participant2 = await request(app)
+      .post('/v1/enrolment')
+      .send({ enrolmentKey: 'key' });
 
-  const group2 = await request(app)
-    .post(`/v1/study/${study.body.id}/group`)
-    .set({ Authorization: 'Bearer ' + token })
-    .send({
-      internalName: 'group2',
-      allocation: {
-        type: 'Percentage',
-        percentage: 0.6,
-      },
-      interactionWidgetStrategy: 'Default',
-    });
-
-  const res = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'key' });
-
-  expect(res.statusCode).toBe(400);
-  expect(res.body.code).toBe('invalid_study_configuration');
-  expect(
-    res.body.error.startsWith(
-      'Invalid Study Configuration: Experimental groups have total probability greater',
-    ),
-  ).toBe(true);
-});
-
-test('should fail because of percentage misconfiguration (lower)', async () => {
-  const token = generateAdminToken();
-
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(dummyStudy);
-
-  const group1 = await request(app)
-    .post(`/v1/study/${study.body.id}/group`)
-    .set({ Authorization: 'Bearer ' + token })
-    .send({
-      internalName: 'group1',
-      allocation: {
-        type: 'Percentage',
-        percentage: 0.5,
-      },
-      interactionWidgetStrategy: 'Bucketed',
-    });
-
-  const group2 = await request(app)
-    .post(`/v1/study/${study.body.id}/group`)
-    .set({ Authorization: 'Bearer ' + token })
-    .send({
-      internalName: 'group2',
-      allocation: {
-        type: 'Percentage',
-        percentage: 0.4,
-      },
-      interactionWidgetStrategy: 'Default',
-    });
-
-  const res = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'key' });
-
-  expect(res.statusCode).toBe(400);
-  expect(res.body.code).toBe('invalid_study_configuration');
-  expect(
-    res.body.error.startsWith(
-      'Invalid Study Configuration: Experimental groups have total probability less',
-    ),
-  ).toBe(true);
-});
+    expect(participant1.statusCode).toBe(200);
+    expect(participant2.statusCode).toBe(200);
+    expect(participant1.body.phases[0].interactionWidgetStrategy).toBe(
+      'Disabled',
+    );
+    expect(participant2.body.phases[0].interactionWidgetStrategy).toBe(
+      'Bucketed',
+    );
+  },
+);
 
 test('should fail because of missing experimental groups', async () => {
   const token = generateAdminToken();

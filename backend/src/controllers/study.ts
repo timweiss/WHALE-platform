@@ -86,7 +86,7 @@ export function createStudyController(
       const phases: StudyExperimentalGroupPhase[] = [];
 
       for (const phase of req.body.phases) {
-        if (!phase.internalName || !phase.fromDay || !phase.durationDays) {
+        if (!phase.internalName || phase.fromDay == null || !phase.durationDays) {
           return res
             .status(400)
             .send({ error: 'Missing required fields in phase' });

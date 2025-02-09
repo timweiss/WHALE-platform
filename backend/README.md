@@ -12,7 +12,7 @@ npm i
 
 ## Deployment
 
-For PM2-deployments, we can utilize peer-authentication to connect to the database. An example PM2 environment is
+For PM2-deployments, we can use peer-authentication to connect to the database. An example PM2 environment is
 provided:
 
 ```js
