@@ -180,7 +180,7 @@ class EnrolmentViewModel @Inject constructor(
                     enrolmentResponse.token,
                     participantId,
                     studyId,
-                    enrolmentResponse.configuration
+                    enrolmentResponse.phases
                 )
                 finishedEnrolment()
             }

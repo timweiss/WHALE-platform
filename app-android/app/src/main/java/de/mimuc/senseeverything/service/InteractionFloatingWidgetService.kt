@@ -23,6 +23,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.getCurrentStudyPhase
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.helpers.shouldDisplayFromRandomDiceThrow
@@ -85,10 +86,10 @@ class InteractionFloatingWidgetService : Service() {
         questionText = resources.getString(R.string.are_you_interacting)
 
         scope.launch {
-            val studyConfiguration = dataStore.studyConfigurationFlow.first()
+            val studyPhase = dataStore.getCurrentStudyPhase()
             val isInInteraction = dataStore.inInteractionFlow.first()
 
-            if (studyConfiguration == null) {
+            if (studyPhase == null) {
                 return@launch
             }
 
@@ -104,7 +105,7 @@ class InteractionFloatingWidgetService : Service() {
                 questionText = resources.getString(R.string.are_you_interacting)
             }
 
-            val displayStrategy = studyConfiguration?.interactionWidgetStrategy
+            val displayStrategy = studyPhase?.interactionWidgetStrategy
                 ?: InteractionWidgetDisplayStrategy.DEFAULT
             when (displayStrategy) {
                 InteractionWidgetDisplayStrategy.DEFAULT -> {

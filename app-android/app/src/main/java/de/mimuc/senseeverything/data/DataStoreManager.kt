@@ -9,9 +9,10 @@ import androidx.datastore.core.Serializer
 import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.OnboardingStep
+import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.Study
-import de.mimuc.senseeverything.api.model.StudyConfiguration
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -48,7 +49,7 @@ data class AppSettings(
     val studyPausedUntil: Long,
     val onboardingStep: OnboardingStep,
     val study: Study?,
-    val studyConfiguration: StudyConfiguration?,
+    val phases: List<ExperimentalGroupPhase>? = null,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>,
     val studyEnded: Boolean,
     val sensitiveDataSalt: String? = null
@@ -69,7 +70,7 @@ data class OptionalAppSettings(
     val studyPausedUntil: Long? = null,
     val onboardingStep: OnboardingStep? = null,
     val study: Study? = null,
-    val studyConfiguration: StudyConfiguration? = null,
+    val phases: List<ExperimentalGroupPhase>? = null,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null,
     val studyEnded: Boolean? = null,
     val sensitiveDataSalt: String? = null
@@ -89,10 +90,9 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     studyPausedUntil = -1,
     onboardingStep = OnboardingStep.WELCOME,
     study = null,
-    studyConfiguration = null,
+    phases = null,
     interactionWidgetTimeBucket = hashMapOf(),
     studyEnded = false,
-
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -115,8 +115,7 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
             ?: defaultAppSettings.studyPausedUntil,
         onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep,
         study = optionalAppSettings.study ?: defaultAppSettings.study,
-        studyConfiguration = optionalAppSettings.studyConfiguration
-            ?: defaultAppSettings.studyConfiguration,
+        phases = optionalAppSettings.phases ?: defaultAppSettings.phases,
         interactionWidgetTimeBucket = optionalAppSettings.interactionWidgetTimeBucket
             ?: defaultAppSettings.interactionWidgetTimeBucket,
         studyEnded = optionalAppSettings.studyEnded ?: defaultAppSettings.studyEnded
@@ -220,7 +219,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         token: String,
         participantId: String,
         studyId: Int,
-        studyConfiguration: StudyConfiguration
+        phases: List<ExperimentalGroupPhase>
     ) {
         dataStore.updateData { preferences ->
             preferences.copy(
@@ -228,7 +227,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
                 token = token,
                 participantId = participantId,
                 studyId = studyId,
-                studyConfiguration = studyConfiguration
+                phases = phases
             )
         }
     }
@@ -367,25 +366,22 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         }
     }
 
-    val studyConfigurationFlow = dataStore.data.map { preferences ->
-        preferences.studyConfiguration
+    val studyPhasesFlow = dataStore.data.map { preferences ->
+        preferences.phases
     }
 
-    fun getStudyConfigurationSync(callback: (StudyConfiguration?) -> Unit) {
+    fun getStudyPhasesSync(callback: (List<ExperimentalGroupPhase>?) -> Unit) {
         runBlocking {
-            studyConfigurationFlow.first { studyConfiguration ->
-                callback(studyConfiguration)
+            studyPhasesFlow.first { phases ->
+                callback(phases)
                 true
             }
         }
     }
 
-    suspend fun saveStudyConfiguration(studyConfiguration: StudyConfiguration) {
+    suspend fun saveStudyPhases(phases: List<ExperimentalGroupPhase>) {
         dataStore.updateData {
-            it.copy(
-                lastUpdate = System.currentTimeMillis(),
-                studyConfiguration = studyConfiguration
-            )
+            it.copy(lastUpdate = System.currentTimeMillis(), phases = phases)
         }
     }
 
@@ -437,6 +433,26 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
                 callback(sensitiveDataSalt ?: "")
                 true
             }
+        }
+    }
+}
+
+suspend fun DataStoreManager.getCurrentStudyPhase(): ExperimentalGroupPhase? {
+    return studyPhasesFlow.first()
+        ?.firstOrNull { phase ->
+            phase.fromDay <= studyDaysFlow.first() && phase.fromDay + phase.durationDays > studyDaysFlow.first()
+        }
+}
+
+fun DataStoreManager.getCurrentInteractionWidgetDisplayStrategySync(callback: (InteractionWidgetDisplayStrategy?) -> Unit) {
+    runBlocking {
+        val currentPhase = getCurrentStudyPhase()
+        if (currentPhase != null) {
+            callback(currentPhase.interactionWidgetStrategy)
+            true
+        } else {
+            callback(null)
+            true
         }
     }
 }

@@ -7,29 +7,19 @@ data class EnrolmentResponse(
     val studyId: Int,
     val token: String,
     val participantId: String,
-    val configuration: StudyConfiguration
+    val phases: List<ExperimentalGroupPhase>,
 ) {
     companion object {
         fun fromJson(json: JSONObject): EnrolmentResponse {
             val studyId = json.getInt("studyId")
             val token = json.getString("token")
             val participantId = json.getString("participantId")
-            val configuration = StudyConfiguration.fromJson(json.getJSONObject("configuration"))
-            return EnrolmentResponse(studyId, token, participantId, configuration)
-        }
-    }
-}
-
-@Serializable
-data class StudyConfiguration(
-    val interactionWidgetStrategy: InteractionWidgetDisplayStrategy
-) {
-    companion object {
-        fun fromJson(json: JSONObject): StudyConfiguration {
-            val interactionWidgetStrategy = InteractionWidgetDisplayStrategy.valueOf(
-                json.getString("interactionWidgetStrategy").uppercase()
-            )
-            return StudyConfiguration(interactionWidgetStrategy)
+            val phases = json.getJSONArray("phases").let { phasesJson ->
+                (0 until phasesJson.length()).map { index ->
+                    ExperimentalGroupPhase.fromJson(phasesJson.getJSONObject(index))
+                }
+            }
+            return EnrolmentResponse(studyId, token, participantId, phases)
         }
     }
 }
@@ -37,4 +27,22 @@ data class StudyConfiguration(
 enum class InteractionWidgetDisplayStrategy {
     DEFAULT,
     BUCKETED
+}
+
+@Serializable
+data class ExperimentalGroupPhase(
+    val fromDay: Int,
+    val durationDays: Int,
+    val interactionWidgetStrategy: InteractionWidgetDisplayStrategy
+) {
+    companion object {
+        fun fromJson(json: JSONObject): ExperimentalGroupPhase {
+            val fromDay = json.getInt("fromDay")
+            val durationDays = json.getInt("durationDays")
+            val interactionWidgetStrategy = InteractionWidgetDisplayStrategy.valueOf(
+                json.getString("interactionWidgetStrategy").uppercase()
+            )
+            return ExperimentalGroupPhase(fromDay, durationDays, interactionWidgetStrategy)
+        }
+    }
 }
