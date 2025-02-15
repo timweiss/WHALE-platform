@@ -130,7 +130,7 @@ class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
     override suspend fun readFrom(input: InputStream): AppSettings =
         try {
             recoverFromOptionalOrUseDefault(
-                Json.decodeFromStringJson<OptionalAppSettings>(
+                Json { ignoreUnknownKeys = true }.decodeFromStringJson<OptionalAppSettings>(
                     input.readBytes().decodeToString()
                 )
             )

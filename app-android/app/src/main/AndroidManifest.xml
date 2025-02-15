@@ -32,6 +32,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
         <activity
+            android:name=".activity.StudyDebugInfo"
+            android:exported="false"
+            android:label="@string/title_activity_study_debug_info"
+            android:theme="@style/Theme.MyApplication" />
+        <activity
             android:name=".activity.MainActivity"
             android:exported="true"
             android:label="@string/title_activity_main"
@@ -59,7 +64,9 @@
             android:label="@string/title_activity_study_enrolment"
             android:theme="@style/Theme.MyApplication" />
 
-        <receiver android:name=".service.sampling.OnBootReceiver" android:enabled="true"
+        <receiver
+            android:name=".service.sampling.OnBootReceiver"
+            android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -68,11 +75,9 @@
         <receiver
             android:name=".service.esm.PeriodicNotificationReceiver"
             android:enabled="true" />
-
         <receiver
             android:name=".service.esm.SamplingEventReceiver"
             android:enabled="true" />
-
         <receiver
             android:name=".service.sampling.ResumeSamplingReceiver"
             android:enabled="true" />
@@ -94,10 +99,10 @@
         </service>
         <service
             android:name=".service.LogService"
+            android:exported="false"
             android:foregroundServiceType="microphone"
             android:process=":remote"
-            android:stopWithTask="false"
-            android:exported="false">
+            android:stopWithTask="false">
             <intent-filter>
                 <action android:name="android.intent.action.CONFIGURATION_CHANGED" />
             </intent-filter>
@@ -107,7 +112,9 @@
             android:exported="false"
             android:label="@string/app_name" />
         <service android:name=".service.InteractionFloatingWidgetService" />
-        <service android:exported="false" android:name=".service.MyNotificationListenerService"
+        <service
+            android:name=".service.MyNotificationListenerService"
+            android:exported="true"
             android:label="Notification Listener Service"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>

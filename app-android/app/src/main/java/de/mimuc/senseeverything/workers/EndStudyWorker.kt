@@ -48,7 +48,7 @@ class EndStudyWorker @AssistedInject constructor(
         Log.i(TAG, "Cancelled all jobs")
 
         val token = dataStoreManager.tokenFlow.first()
-        enqueueFinalSensorReadingsUploadWorker(applicationContext, token)
+        enqueueSingleSensorReadingsUploadWorker(applicationContext, token, "finalReadingsUpload")
         Log.i(TAG, "Scheduled final sensor readings upload")
 
         return Result.success()

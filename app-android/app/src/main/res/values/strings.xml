@@ -71,4 +71,5 @@
     <string name="background_work_title">Doing some work in the background.</string>
     <string name="background_work_detail">Please do not close WHALE.</string>
     <string name="background_work_channel_name">Background Work</string>
+    <string name="title_activity_study_debug_info">StudyDebugInfo</string>
 </resources>

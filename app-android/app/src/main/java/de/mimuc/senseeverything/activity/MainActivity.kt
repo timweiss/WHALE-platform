@@ -156,7 +156,7 @@ class StudyHomeViewModel @Inject constructor(
     }
 
     fun openSettings(context: Context) {
-        val intent = Intent(getApplication(), StudyEnrolment::class.java)
+        val intent = Intent(getApplication(), StudyDebugInfo::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(intent)
     }

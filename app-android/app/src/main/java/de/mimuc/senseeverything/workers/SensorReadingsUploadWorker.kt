@@ -14,6 +14,8 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
+import com.google.firebase.crashlytics.ktx.crashlytics
+import com.google.firebase.ktx.Firebase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
@@ -59,9 +61,8 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
 
         return withContext(Dispatchers.IO) {
             try {
-                syncNextNActivities(db, applicationContext, token, 200)
-                Log.i(TAG, "Completed Sensor Reading Sync")
-                Result.success()
+                val total = db.logDataDao().getUnsyncedCount()
+                syncNextNActivities(db, applicationContext, token, total, 0, 200)
             } catch (e: Exception) {
                 Result.retry()
             }
@@ -72,12 +73,17 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         db: AppDatabase,
         context: Context,
         token: String,
+        remaining: Long,
+        totalSynced: Long,
         n: Int
     ): Result {
         val data = db.logDataDao().getNextNUnsynced(n)
         if (data.isEmpty()) {
+            Log.i(TAG, "Completed Sensor Reading Sync")
             return Result.success()
         }
+
+        setProgress(workDataOf("progress" to (totalSynced / remaining)))
 
         val jsonReadings = JSONArray()
         data.forEach {
@@ -108,13 +114,15 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
             Log.i(TAG, "batch synced successful, removed ${data.size} entries")
 
-            return syncNextNActivities(db, context, token, n)
+            return syncNextNActivities(db, context, token, remaining - data.size, totalSynced + data.size, n)
         } catch (e: Exception) {
             if (e is NetworkError || e is TimeoutError) {
                 return Result.retry()
             }
 
-            Log.e(TAG, "Error uploading sensor readings: $e, ${e.stackTraceToString()}")
+            Log.e(TAG, "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining")
+            Firebase.crashlytics.log("Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining")
+
             return Result.failure()
         }
     }
@@ -140,7 +148,7 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
     WorkManager.getInstance(context).enqueue(uploadWorkRequest)
 }
 
-fun enqueueFinalSensorReadingsUploadWorker(context: Context, token: String) {
+fun enqueueSingleSensorReadingsUploadWorker(context: Context, token: String, tag: String) {
     val data = workDataOf("token" to token)
 
     val constraints = Constraints.Builder()
@@ -149,7 +157,7 @@ fun enqueueFinalSensorReadingsUploadWorker(context: Context, token: String) {
         .build()
 
     val uploadWorkRequest = OneTimeWorkRequestBuilder<SensorReadingsUploadWorker>()
-        .addTag("finalReadingsUpload")
+        .addTag(tag)
         .setInputData(data)
         .setConstraints(constraints)
         .build()

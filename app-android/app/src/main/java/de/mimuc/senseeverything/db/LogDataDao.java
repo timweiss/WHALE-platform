@@ -20,6 +20,12 @@ public interface LogDataDao {
     @Query("SELECT * FROM logdata WHERE synced = FALSE ORDER BY timestamp ASC LIMIT :n")
     List<LogData> getNextNUnsynced(int n);
 
+    @Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE")
+    long getUnsyncedCount();
+
+    @Query("SELECT * FROM logdata ORDER BY timestamp DESC LIMIT 1")
+    LogData getLastItem();
+
     @Update
     public void updateLogData(LogData... logData);
 
