@@ -3,6 +3,7 @@ package de.mimuc.senseeverything.activity
 import android.Manifest
 import android.app.AlarmManager
 import android.app.Application
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -65,19 +66,25 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.loadStudy
+import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.study.ChangePhaseReceiver
+import de.mimuc.senseeverything.study.schedulePhaseChanges
+import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
 import de.mimuc.senseeverything.workers.enqueueClearInteractionWidgetTimeBucketsWorker
-import de.mimuc.senseeverything.workers.enqueueEndStudyWorker
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
 import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -690,9 +697,11 @@ class StartStudyViewModel @Inject constructor(
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
                 enqueueClearInteractionWidgetTimeBucketsWorker(context)
-                enqueueEndStudyWorker(context, study.durationDays)
+                scheduleStudyEndAlarm(context, study.durationDays)
 
-                dataStoreManager.saveTimestampStudyStarted(System.currentTimeMillis())
+                val startedTimestamp = System.currentTimeMillis()
+                dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
+                schedulePhaseChanges(context, startedTimestamp, dataStoreManager.studyPhasesFlow.first())
             } else {
                 Log.e("StartStudyViewModel", "Could not load study")
             }

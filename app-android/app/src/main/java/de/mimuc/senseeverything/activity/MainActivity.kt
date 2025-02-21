@@ -118,6 +118,9 @@ class StudyHomeViewModel @Inject constructor(
     private val _onboardingStep = MutableStateFlow(OnboardingStep.WELCOME)
     val onboardingStep: StateFlow<OnboardingStep> get() = _onboardingStep
 
+    private val _hasStudyEnded = MutableStateFlow(false)
+    val hasStudyEnded: StateFlow<Boolean> get() = _hasStudyEnded
+
     init {
         load()
     }
@@ -175,6 +178,8 @@ class StudyHomeViewModel @Inject constructor(
             val isRunning = isServiceRunning(LogService::class.java)
             _isStudyRunning.value = isRunning
 
+            _hasStudyEnded.value = dataStoreManager.studyEndedFlow.first()
+
             dataStoreManager.studyPausedFlow.collect { paused ->
                 _isStudyPaused.value = paused
             }
@@ -227,6 +232,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val isEnrolled = viewModel.isEnrolled.collectAsState()
     val isStudyRunning = viewModel.isStudyRunning.collectAsState()
     val isStudyPaused = viewModel.isStudyPaused.collectAsState()
+    val hasStudyEnded = viewModel.hasStudyEnded.collectAsState()
     val currentDay = viewModel.currentDay.collectAsState()
     val study = viewModel.study.collectAsState()
     val onboardingStep = viewModel.onboardingStep.collectAsState()
@@ -281,18 +287,21 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (isEnrolled.value) {
-                    Text(
-                        stringResource(
-                            R.string.day_of,
-                            currentDay.value,
-                            study.value.durationDays,
-                            study.value.name
+                    if (!hasStudyEnded.value) {
+                        Text(
+                            stringResource(
+                                R.string.day_of,
+                                currentDay.value,
+                                study.value.durationDays,
+                                study.value.name
+                            )
                         )
-                    )
+                    }
 
                     StudyActivity(
                         isRunning = isStudyRunning.value,
                         isPaused = isStudyPaused.value,
+                        ended = hasStudyEnded.value,
                         resumeStudy = { viewModel.resumeStudy(context) },
                         pauseStudy = { viewModel.pauseStudy(context) })
                     SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
@@ -329,9 +338,20 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     }
 }
 
+val green = Color.hsl(80f, 1f, 0.33f, 1f)
+val orange = Color.hsl(37f, 1f, 0.50f, 1f)
+val red = Color.hsl(0f, 1f, 0.41f, 1f)
+val grey = Color.LightGray
+
 @Composable
-fun StudyActivity(isRunning: Boolean, isPaused: Boolean, resumeStudy: () -> Unit, pauseStudy: () -> Unit) {
-    if (isRunning) {
+fun StudyActivity(isRunning: Boolean, isPaused: Boolean, ended: Boolean, resumeStudy: () -> Unit, pauseStudy: () -> Unit) {
+    if (ended) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            StatusIndicator(color = grey)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.study_has_ended))
+        }
+    } else if (isRunning) {
         Column {
             if (!isPaused) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

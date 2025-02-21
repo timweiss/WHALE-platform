@@ -31,18 +31,20 @@ enum class InteractionWidgetDisplayStrategy {
 
 @Serializable
 data class ExperimentalGroupPhase(
+    val name: String,
     val fromDay: Int,
     val durationDays: Int,
     val interactionWidgetStrategy: InteractionWidgetDisplayStrategy
 ) {
     companion object {
         fun fromJson(json: JSONObject): ExperimentalGroupPhase {
+            val name = json.getString("name")
             val fromDay = json.getInt("fromDay")
             val durationDays = json.getInt("durationDays")
             val interactionWidgetStrategy = InteractionWidgetDisplayStrategy.valueOf(
                 json.getString("interactionWidgetStrategy").uppercase()
             )
-            return ExperimentalGroupPhase(fromDay, durationDays, interactionWidgetStrategy)
+            return ExperimentalGroupPhase(name, fromDay, durationDays, interactionWidgetStrategy)
         }
     }
 }

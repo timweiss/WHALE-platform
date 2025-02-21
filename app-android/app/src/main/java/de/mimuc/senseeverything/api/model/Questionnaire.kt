@@ -73,6 +73,16 @@ class PeriodicQuestionnaireTrigger(
     val interval: PeriodicQuestionnaireTriggerInterval,
     val time: String): QuestionnaireTrigger(id, questionnaireId, "periodic", configuration)
 
+class RandomEMAQuestionnaireTrigger(
+    id: Int,
+    questionnaireId: Int,
+    configuration: Any,
+    val distanceMinutes: Int,
+    val randomToleranceMinutes: Int,
+    val delayMinutes: Int,
+    val phaseName: String
+): QuestionnaireTrigger(id, questionnaireId, "random_ema", configuration)
+
 fun emptyQuestionnaire(): FullQuestionnaire {
     return FullQuestionnaire(
         Questionnaire("", 0, 0, 0, false),
@@ -114,6 +124,18 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
                 configuration,
                 PeriodicQuestionnaireTriggerInterval.valueOf(configuration.getString("interval").uppercase()),
                 configuration.getString("time")
+            )
+        }
+
+        "random_ema" -> {
+            return RandomEMAQuestionnaireTrigger(
+                id,
+                questionnaireId,
+                configuration,
+                configuration.getInt("distanceMinutes"),
+                configuration.getInt("randomToleranceMinutes"),
+                configuration.getInt("delayMinutes"),
+                configuration.getString("phaseName")
             )
         }
 

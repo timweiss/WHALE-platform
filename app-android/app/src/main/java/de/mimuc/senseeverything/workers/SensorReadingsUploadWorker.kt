@@ -8,6 +8,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -114,13 +115,23 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
             Log.i(TAG, "batch synced successful, removed ${data.size} entries")
 
-            return syncNextNActivities(db, context, token, remaining - data.size, totalSynced + data.size, n)
+            return syncNextNActivities(
+                db,
+                context,
+                token,
+                remaining - data.size,
+                totalSynced + data.size,
+                n
+            )
         } catch (e: Exception) {
             if (e is NetworkError || e is TimeoutError) {
                 return Result.retry()
             }
 
-            Log.e(TAG, "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining")
+            Log.e(
+                TAG,
+                "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining"
+            )
             Firebase.crashlytics.log("Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining")
 
             return Result.failure()
@@ -148,19 +159,28 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
     WorkManager.getInstance(context).enqueue(uploadWorkRequest)
 }
 
-fun enqueueSingleSensorReadingsUploadWorker(context: Context, token: String, tag: String) {
+fun enqueueSingleSensorReadingsUploadWorker(
+    context: Context,
+    token: String,
+    tag: String,
+    expedited: Boolean
+) {
     val data = workDataOf("token" to token)
 
-    val constraints = Constraints.Builder()
+    val constraintsBuilder = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
-        .setRequiresCharging(true)
-        .build()
 
-    val uploadWorkRequest = OneTimeWorkRequestBuilder<SensorReadingsUploadWorker>()
+    if (!expedited) constraintsBuilder.setRequiresCharging(true)
+
+    val uploadWorkRequestBuilder = OneTimeWorkRequestBuilder<SensorReadingsUploadWorker>()
         .addTag(tag)
         .setInputData(data)
-        .setConstraints(constraints)
-        .build()
+        .setConstraints(constraintsBuilder.build())
 
-    WorkManager.getInstance(context).enqueue(uploadWorkRequest)
+    if (expedited) {
+        uploadWorkRequestBuilder
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+    }
+
+    WorkManager.getInstance(context).enqueue(uploadWorkRequestBuilder.build())
 }

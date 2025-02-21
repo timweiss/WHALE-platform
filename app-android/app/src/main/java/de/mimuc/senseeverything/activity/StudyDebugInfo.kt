@@ -86,7 +86,7 @@ class StudyDebugInfoViewModel @Inject constructor(
     private val dataStoreManager: DataStoreManager,
     private val database: AppDatabase
 ) : AndroidViewModel(application) {
-    private val _currentStudyPhase = MutableStateFlow<ExperimentalGroupPhase?>(ExperimentalGroupPhase(0,0,InteractionWidgetDisplayStrategy.DEFAULT))
+    private val _currentStudyPhase = MutableStateFlow<ExperimentalGroupPhase?>(ExperimentalGroupPhase("", 0,0,InteractionWidgetDisplayStrategy.DEFAULT))
     val currentStudyPhase: StateFlow<ExperimentalGroupPhase?> get() = _currentStudyPhase
 
     private val _unsyncedLogDataCount = MutableStateFlow(0L)
@@ -107,6 +107,9 @@ class StudyDebugInfoViewModel @Inject constructor(
     private val _studyStartedAt = MutableStateFlow(0L)
     val studyStartedAt: StateFlow<Long> get() = _studyStartedAt
 
+    private val _studyEnded = MutableStateFlow(false)
+    val studyEnded: StateFlow<Boolean> get() = _studyEnded
+
     init {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -114,6 +117,7 @@ class StudyDebugInfoViewModel @Inject constructor(
                 _enrolmentId.value = dataStoreManager.participantIdFlow.first()
                 _cachedQuestionnaires.value = dataStoreManager.questionnairesFlow.first()
                 _studyStartedAt.value = dataStoreManager.timestampStudyStartedFlow.first()
+                _studyEnded.value = dataStoreManager.studyEndedFlow.first()
                 _unsyncedLogDataCount.value = database.logDataDao().unsyncedCount
                 _lastLogDataItem.value = database.logDataDao().lastItem
             }
@@ -124,7 +128,7 @@ class StudyDebugInfoViewModel @Inject constructor(
     fun scheduleImmediateSync() {
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
-            enqueueSingleSensorReadingsUploadWorker(getApplication(), token, "immediateFromDebugSettings")
+            enqueueSingleSensorReadingsUploadWorker(getApplication(), token, "immediateFromDebugSettings", true)
         }
     }
 
@@ -146,11 +150,12 @@ fun StudyDebugInfoView(
     val questionnaires = viewModel.cachedQuestionnaires.collectAsState()
     val studyStarted = viewModel.studyStartedAt.collectAsState()
     val lastLogDataItem = viewModel.lastLogDataItem.collectAsState()
+    val studyEnded = viewModel.studyEnded.collectAsState()
     val context = LocalContext.current
 
     Column(modifier = modifier
         .padding(16.dp)) {
-        Text("Your Enrolment: ${enrolmentId.value} started on ${dateFromTimestamp(studyStarted.value)}")
+        Text("Your Enrolment: ${enrolmentId.value} started on ${dateFromTimestamp(studyStarted.value)} ended: ${studyEnded.value}")
         Text("Cached Questionnaires: ${questionnaires.value.map { it.questionnaire.name + " (" + it.questionnaire.id + ")" }}")
         Text("Items not yet synced: ${unsyncedLogDataCount.value}")
         if (lastLogDataItem.value != null) {
