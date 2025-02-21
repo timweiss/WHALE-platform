@@ -27,6 +27,13 @@ import kotlin.Unit;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.BuildersKt;
 
+enum LogServiceState {
+    IDLE,
+    SLEEP,
+    SAMPLING_AFTER_UNLOCK,
+    SAMPLING_PERIODIC
+}
+
 @AndroidEntryPoint
 public class LogService extends AbstractService {
     public static final int START_SENSORS = 0;
@@ -45,6 +52,8 @@ public class LogService extends AbstractService {
     private BroadcastReceiver lockUnlockReceiver;
     private boolean isSampling = false;
     private boolean isInSleepMode = false;
+
+    private LogServiceState state = LogServiceState.IDLE;
 
     @Inject
     public SingletonSensorList singletonSensorList;
@@ -140,11 +149,9 @@ public class LogService extends AbstractService {
     /* Section: Sampling */
 
     Handler lockUnlockStopHandler = new Handler();
-    Runnable lockUnlockStopRunnable = new Runnable() {
-        @Override
-        public void run() {
-            stopSensors(false);
-        }
+    Runnable lockUnlockStopRunnable = () -> {
+        Log.d(TAG, "lockUnlockStopRunnable: stop sampling");
+        setState(LogServiceState.IDLE);
     };
 
     private void listenForLockUnlock() {
@@ -156,16 +163,12 @@ public class LogService extends AbstractService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-                    Log.d(TAG, "device locked, stopping sampling");
-                    stopSensors(false);
+                    Log.d(TAG, "lockUnlockReceiver: device locked");
                     hideInteractionWidget();
-                    lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
                 } else {
-                    Log.d(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
-                    startSensors(false, false);
-                    lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
+                    Log.d(TAG, "lockUnlockReceiver: device unlocked, sensorlist" + singletonSensorList);
                     showInteractionWidget();
-                    lockUnlockStopHandler.postDelayed(lockUnlockStopRunnable, LOCK_UNLOCK_SAMPLE_DURATION);
+                    setState(LogServiceState.SAMPLING_AFTER_UNLOCK);
                 }
             }
         };
@@ -180,19 +183,13 @@ public class LogService extends AbstractService {
     }
 
     Handler periodicHandler = new Handler();
-    Runnable periodicRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (!isSampling) {
-                Log.d(TAG, "periodic sampling start");
-                startSensors(true, false);
-                lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable); // prevent lock/unlock from stopping the sensors
-                periodicHandler.postDelayed(this, PERIODIC_SAMPLING_SAMPLE_DURATION); // 1 minute
-            } else {
-                Log.d(TAG, "periodic sampling stop");
-                stopSensors(false);
-                periodicHandler.postDelayed(this, PERIODIC_SAMPLING_CYCLE_DURATION); // 5 minutes
-            }
+    Runnable periodicRunnable = () -> {
+        if (!isSampling) {
+            Log.d(TAG, "periodicRunnable: start sampling");
+            setState(LogServiceState.SAMPLING_PERIODIC);
+        } else {
+            Log.d(TAG, "periodicRunnable: stop sampling");
+            setState(LogServiceState.IDLE);
         }
     };
 
@@ -212,6 +209,50 @@ public class LogService extends AbstractService {
         stopSensors(true);
         stopPeriodicSampling();
         stopListeningForLockUnlock();
+    }
+
+    /* Section: State Handling */
+    private void setState(LogServiceState newState) {
+        processNewState(state, newState);
+    }
+
+    private void processNewState(LogServiceState previousState, LogServiceState newState) {
+        Log.d(TAG, "state transition: " + previousState + " -> " + newState);
+        if (previousState == LogServiceState.IDLE) {
+            if (newState == LogServiceState.SAMPLING_AFTER_UNLOCK) {
+                Log.d(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
+                startSensors(false, false);
+                lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
+                lockUnlockStopHandler.postDelayed(lockUnlockStopRunnable, LOCK_UNLOCK_SAMPLE_DURATION);
+                state = LogServiceState.SAMPLING_AFTER_UNLOCK;
+            } else if (newState == LogServiceState.SAMPLING_PERIODIC) {
+                startSensors(true, false);
+                periodicHandler.postDelayed(periodicRunnable, PERIODIC_SAMPLING_SAMPLE_DURATION); // 1 minute
+                state = LogServiceState.SAMPLING_PERIODIC;
+            }
+        } else if (previousState == LogServiceState.SAMPLING_PERIODIC) {
+            if (newState == LogServiceState.IDLE) {
+                stopSensors(false);
+                periodicHandler.removeCallbacks(periodicRunnable);
+                periodicHandler.postDelayed(periodicRunnable, PERIODIC_SAMPLING_CYCLE_DURATION); // 5 minutes
+                state = LogServiceState.IDLE;
+            } else if (newState == LogServiceState.SAMPLING_AFTER_UNLOCK) {
+                // if running periodic sampling and device gets unlocked, start full sampling instead
+                stopSensors(false);
+                startSensors(false, false);
+                periodicHandler.removeCallbacks(periodicRunnable);
+                lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
+                lockUnlockStopHandler.postDelayed(lockUnlockStopRunnable, LOCK_UNLOCK_SAMPLE_DURATION);
+                state = LogServiceState.SAMPLING_AFTER_UNLOCK;
+            }
+        } else if (previousState == LogServiceState.SAMPLING_AFTER_UNLOCK) {
+            if (newState == LogServiceState.IDLE) {
+                stopSensors(false);
+                state = LogServiceState.IDLE;
+            } else {
+                throw new IllegalStateException("Cannot transition from SAMPLING_AFTER_UNLOCK to SAMPLING_PERIODIC");
+            }
+        }
     }
 
     /* Section: Receiving Sensor Log Data */

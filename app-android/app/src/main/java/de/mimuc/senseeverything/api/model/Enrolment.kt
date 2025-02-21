@@ -26,7 +26,8 @@ data class EnrolmentResponse(
 
 enum class InteractionWidgetDisplayStrategy {
     DEFAULT,
-    BUCKETED
+    BUCKETED,
+    HIDDEN
 }
 
 @Serializable

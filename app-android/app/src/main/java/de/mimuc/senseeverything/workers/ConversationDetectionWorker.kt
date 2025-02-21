@@ -64,7 +64,7 @@ class ConversationDetectionWorker @AssistedInject constructor(
     private suspend fun runDetection(filename: String, timestamp: Long, reader: VadReader) {
         val segments = reader.detect(filename, applicationContext)
         val speechPercentage = calculateSpeechPercentage(segments)
-        val lengthInSeconds = calculateLength(segments, 44100, 16)
+        val lengthInSeconds = calculateLength(segments, 16000, 16)
 
         val log = String.format(
             Locale.GERMAN,

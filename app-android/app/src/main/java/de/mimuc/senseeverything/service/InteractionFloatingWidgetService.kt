@@ -131,6 +131,10 @@ class InteractionFloatingWidgetService : Service() {
                         Log.d("FloatingWidget", "already displayed in this time bucket")
                     }
                 }
+
+                InteractionWidgetDisplayStrategy.HIDDEN -> {
+                    Log.d("FloatingWidget", "hidden display strategy, not rendering widget")
+                }
             }
         }
 
