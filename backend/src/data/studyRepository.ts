@@ -39,7 +39,7 @@ export interface StudyExperimentalGroup {
 
 export interface StudyExperimentalGroupPhase {
   experimentalGroupId: number;
-  internalName: string;
+  name: string;
 
   fromDay: number;
   durationDays: number;
@@ -76,7 +76,7 @@ export interface IStudyRepository {
     phase: Pick<
       StudyExperimentalGroupPhase,
       | 'experimentalGroupId'
-      | 'internalName'
+      | 'name'
       | 'fromDay'
       | 'durationDays'
       | 'interactionWidgetStrategy'
@@ -256,7 +256,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
     phase: Pick<
       StudyExperimentalGroupPhase,
       | 'experimentalGroupId'
-      | 'internalName'
+      | 'name'
       | 'fromDay'
       | 'durationDays'
       | 'interactionWidgetStrategy'
@@ -267,7 +267,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
         'INSERT INTO study_experimental_group_phases (experimental_group_id, internal_name, from_day, duration_days, interaction_widget_strategy) VALUES ($1, $2, $3, $4, $5) RETURNING *',
         [
           phase.experimentalGroupId,
-          phase.internalName,
+          phase.name,
           phase.fromDay,
           phase.durationDays,
           phase.interactionWidgetStrategy,
@@ -276,7 +276,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
 
       return {
         experimentalGroupId: res.rows[0].experimental_group_id,
-        internalName: res.rows[0].internal_name,
+        name: res.rows[0].internal_name,
         fromDay: res.rows[0].from_day,
         durationDays: res.rows[0].duration_days,
         interactionWidgetStrategy: res.rows[0].interaction_widget_strategy,
@@ -297,7 +297,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
 
       return res.rows.map((row) => ({
         experimentalGroupId: row.experimental_group_id,
-        internalName: row.internal_name,
+        name: row.internal_name,
         fromDay: row.from_day,
         durationDays: row.duration_days,
         interactionWidgetStrategy: row.interaction_widget_strategy,
