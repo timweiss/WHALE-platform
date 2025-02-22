@@ -100,6 +100,20 @@ erDiagram
 
 After updating any element of the questionnaire, its version needs to be updated. The app will only update the questionnaire if the version is higher than the one currently cached.
 
+### When it samples
+- after unlocking: for one minute
+- in the background: ever five minutes for one minute
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Sample_Unlock: After Unlock
+    Idle --> Sample_Periodic: After 5 minutes since last periodic
+    Sample_Unlock --> Idle: After 1 minute
+    Sample_Periodic --> Sample_Unlock: After unlock while sampling
+    Sample_Periodic --> Idle: After 1 minute
+```
+
 ## Acknowledgements & References
 Based on the [SenseEverything](https://github.com/mimuc/SenseEverything) app.
 

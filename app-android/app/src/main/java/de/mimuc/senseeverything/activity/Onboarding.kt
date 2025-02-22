@@ -72,7 +72,6 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
-import de.mimuc.senseeverything.study.ChangePhaseReceiver
 import de.mimuc.senseeverything.study.schedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
 import de.mimuc.senseeverything.workers.enqueueClearInteractionWidgetTimeBucketsWorker
@@ -82,9 +81,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint

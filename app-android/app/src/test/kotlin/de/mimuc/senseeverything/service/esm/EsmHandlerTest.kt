@@ -1,6 +1,8 @@
 package de.mimuc.senseeverything.service.esm
 
+import de.mimuc.senseeverything.api.model.RandomEMAQuestionnaireTrigger
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import java.util.Calendar
 
@@ -191,6 +193,105 @@ class EsmHandlerTest {
 
         assertEquals(7, scheduledDays)
         assertEquals(0, remainingStudyDays)
+    }
+
+    // Random Notifications
+
+    @Test
+    fun testInsideTimeBucket() {
+        val timeBucket = "08:00-23:00"
+        val handler = EsmHandler()
+
+        val time1 = Calendar.getInstance()
+        time1.apply {
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 0)
+        }
+
+        val time2 = Calendar.getInstance()
+        time2.apply {
+            set(Calendar.HOUR_OF_DAY, 22)
+            set(Calendar.MINUTE, 0)
+        }
+
+        assertTrue(handler.isInTimeBucket(time1, timeBucket))
+        assertTrue(handler.isInTimeBucket(time2, timeBucket))
+    }
+
+    @Test
+    fun testOutsideTimeBucket() {
+        val timeBucket = "08:00-23:00"
+        val handler = EsmHandler()
+
+        val time1 = Calendar.getInstance()
+        time1.apply {
+            set(Calendar.HOUR_OF_DAY, 7)
+            set(Calendar.MINUTE, 59)
+        }
+
+        val time2 = Calendar.getInstance()
+        time2.apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 1)
+        }
+
+        assertFalse(handler.isInTimeBucket(time1, timeBucket))
+        assertFalse(handler.isInTimeBucket(time2, timeBucket))
+    }
+
+    @Test
+    fun testNextRandomNotificationOnSameDayNoRandomTolerance() {
+        val trigger = RandomEMAQuestionnaireTrigger(0,0, "", 60, 0, 0, "08:00-23:00", "Phase 1")
+
+        val startCalendar = Calendar.getInstance()
+        startCalendar.apply {
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 0)
+        }
+
+        val handler = EsmHandler()
+        val nextNotification = handler.getCalendarForNextRandomNotification(trigger, startCalendar)
+
+        assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextNotification.get(Calendar.DAY_OF_MONTH))
+        assertEquals(11, nextNotification.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, nextNotification.get(Calendar.MINUTE))
+    }
+
+    @Test
+    fun testNextRandomNotificationOnNextDayNoRandomTolerance() {
+        val trigger = RandomEMAQuestionnaireTrigger(0,0, "", 60, 0, 0, "08:00-23:00", "Phase 1")
+
+        val startCalendar = Calendar.getInstance()
+        startCalendar.apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 0)
+        }
+
+        val handler = EsmHandler()
+        val nextNotification = handler.getCalendarForNextRandomNotification(trigger, startCalendar)
+
+        assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + 1, nextNotification.get(Calendar.DAY_OF_MONTH))
+        assertEquals(9, nextNotification.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, nextNotification.get(Calendar.MINUTE))
+    }
+
+    @RepeatedTest(10)
+    fun testNextRandomNotificationOnSameDayWithRandomTolerance() {
+        val trigger = RandomEMAQuestionnaireTrigger(0,0, "", 60, 10, 0, "08:00-23:00", "Phase 1")
+
+        val startCalendar = Calendar.getInstance()
+        startCalendar.apply {
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 0)
+        }
+
+        val handler = EsmHandler()
+        val nextNotification = handler.getCalendarForNextRandomNotification(trigger, startCalendar)
+
+        assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextNotification.get(Calendar.DAY_OF_MONTH))
+        val minimumTimeInMilis = startCalendar.timeInMillis + (trigger.distanceMinutes * 60 * 1000 - (trigger.randomToleranceMinutes/2) * 60 * 1000)
+        val maximumTimeInMilis = startCalendar.timeInMillis + (trigger.distanceMinutes * 60 * 1000 + (trigger.randomToleranceMinutes/2) * 60 * 1000)
+        assertTrue(nextNotification.timeInMillis in minimumTimeInMilis..maximumTimeInMilis)
     }
 }
 

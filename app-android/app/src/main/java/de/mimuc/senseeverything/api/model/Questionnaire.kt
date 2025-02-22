@@ -80,6 +80,7 @@ class RandomEMAQuestionnaireTrigger(
     val distanceMinutes: Int,
     val randomToleranceMinutes: Int,
     val delayMinutes: Int,
+    val timeBucket: String,
     val phaseName: String
 ): QuestionnaireTrigger(id, questionnaireId, "random_ema", configuration)
 
@@ -135,6 +136,7 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
                 configuration.getInt("distanceMinutes"),
                 configuration.getInt("randomToleranceMinutes"),
                 configuration.getInt("delayMinutes"),
+                configuration.getString("timeBucket"),
                 configuration.getString("phaseName")
             )
         }

@@ -12,9 +12,11 @@ import androidx.core.app.NotificationCompat
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.EventQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.RandomEMAQuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.PendingQuestionnaire
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.invoke
 import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 class EsmHandler {
     private var triggers: List<QuestionnaireTrigger> = emptyList()
@@ -102,6 +105,96 @@ class EsmHandler {
         context.startActivity(intent)
     }
 
+    suspend fun scheduleRandomEMANotificationsForPhase(
+        phase: ExperimentalGroupPhase,
+        fromTime: Calendar,
+        context: Context,
+        dataStoreManager: DataStoreManager
+    ) {
+        val triggers = triggers.filter { it.type == "random_ema" } as List<RandomEMAQuestionnaireTrigger>
+        val phaseTriggers = triggers.filter { it.phaseName == phase.name }
+
+        for (trigger in phaseTriggers) {
+            val initialCalendar = Calendar.getInstance()
+            initialCalendar.add(Calendar.MINUTE, trigger.delayMinutes)
+
+            val questionnaire = dataStoreManager.questionnairesFlow.first().find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire
+            if (questionnaire == null) {
+                Log.e("EsmHandler", "Questionnaire not found for trigger ${trigger.id}")
+                return
+            }
+
+            val untilTimestamp = fromTime.timeInMillis + TimeUnit.DAYS.toMillis(phase.durationDays.toLong())
+
+            scheduleRandomEMANotificationForTrigger(trigger, initialCalendar, questionnaire.name, untilTimestamp, context)
+        }
+    }
+
+    fun scheduleRandomEMANotificationForTrigger(trigger: RandomEMAQuestionnaireTrigger, calendar: Calendar, questionnaireName: String, untilTimestamp: Long, context: Context) {
+        val intent = Intent(context, RandomNotificationReceiver::class.java)
+        intent.apply {
+            putExtra("title", "Es ist Zeit für $questionnaireName")
+            putExtra("id", trigger.id)
+            putExtra("triggerJson", trigger.toJson().toString())
+            putExtra("questionnaireId", trigger.questionnaireId)
+            putExtra("questionnaireName", questionnaireName)
+            putExtra("untilTimestamp", untilTimestamp)
+        }
+
+        val nextNotificationTime = getCalendarForNextRandomNotification(trigger, calendar)
+
+        // if the next notification time is after the end of the phase, don't schedule it
+        if (nextNotificationTime.timeInMillis > untilTimestamp) {
+            return
+        }
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context.applicationContext,
+            trigger.id,
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
+        )
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            nextNotificationTime.timeInMillis,
+            pendingIntent
+        )
+    }
+
+    fun getCalendarForNextRandomNotification(trigger: RandomEMAQuestionnaireTrigger, currentTime: Calendar): Calendar {
+        val randomMinutes = (-(trigger.randomToleranceMinutes/2)..(trigger.randomToleranceMinutes/2)).random()
+        val distanceMinutes = trigger.distanceMinutes
+
+        val timeToAdd = distanceMinutes + randomMinutes
+
+        // calculate next notification time
+        val nextNotificationTime = currentTime.clone() as Calendar
+        nextNotificationTime.add(Calendar.MINUTE, timeToAdd)
+
+        // check if the notification is in the correct time bucket
+        if (!isInTimeBucket(nextNotificationTime, trigger.timeBucket)) {
+            // remove the minutes and try again
+            nextNotificationTime.add(Calendar.MINUTE, -(timeToAdd))
+            // calculate the next notification time starting from the next day
+            nextNotificationTime.add(Calendar.DATE, 1)
+            nextNotificationTime.set(Calendar.HOUR_OF_DAY, trigger.timeBucket.split(":")[0].toInt())
+            nextNotificationTime.set(Calendar.MINUTE, trigger.timeBucket.split(":")[1].split("-")[0].toInt())
+            return getCalendarForNextRandomNotification(trigger, nextNotificationTime)
+        }
+
+        return nextNotificationTime
+    }
+
+    fun isInTimeBucket(currentTime: Calendar, timeBucket: String): Boolean {
+        val start = timeBucket.split("-")[0].split(":")[0].toInt()
+        val end = timeBucket.split("-")[1].split(":")[0].toInt()
+        val hour = currentTime.get(Calendar.HOUR_OF_DAY)
+        return hour in start until end
+    }
+
     suspend fun schedulePeriodicQuestionnaires(
         context: Context,
         dataStoreManager: DataStoreManager,
@@ -156,7 +249,13 @@ class EsmHandler {
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        val nextNotification = getNextNotification(Calendar.getInstance(), scheduleHour, scheduleMinute, totalDays, remainingDays)
+        val nextNotification = getNextNotification(
+            Calendar.getInstance(),
+            scheduleHour,
+            scheduleMinute,
+            totalDays,
+            remainingDays
+        )
 
         val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
         intent.apply {
@@ -190,9 +289,24 @@ class EsmHandler {
 
     data class NextNotification(val calendar: Calendar, val remainingDays: Int)
 
-    fun getNextNotification(calendar: Calendar, scheduleHour: Int, scheduleMinute: Int, totalDays: Int, remainingDays: Int): NextNotification {
-        val newCalendar = if (totalDays == remainingDays && shouldScheduleOnSameDay(calendar, scheduleHour, scheduleMinute)) {
-            calculateNextNotificationTime(calendar.apply { add(Calendar.DATE, -1) }, scheduleHour, scheduleMinute)
+    fun getNextNotification(
+        calendar: Calendar,
+        scheduleHour: Int,
+        scheduleMinute: Int,
+        totalDays: Int,
+        remainingDays: Int
+    ): NextNotification {
+        val newCalendar = if (totalDays == remainingDays && shouldScheduleOnSameDay(
+                calendar,
+                scheduleHour,
+                scheduleMinute
+            )
+        ) {
+            calculateNextNotificationTime(
+                calendar.apply { add(Calendar.DATE, -1) },
+                scheduleHour,
+                scheduleMinute
+            )
         } else {
             calculateNextNotificationTime(calendar, scheduleHour, scheduleMinute)
         }
@@ -200,7 +314,11 @@ class EsmHandler {
         return NextNotification(newCalendar, remainingDays - 1)
     }
 
-    fun calculateNextNotificationTime(calendar: Calendar, scheduleHour: Int, scheduleMinute: Int): Calendar {
+    fun calculateNextNotificationTime(
+        calendar: Calendar,
+        scheduleHour: Int,
+        scheduleMinute: Int
+    ): Calendar {
         val selectedDate = (calendar.clone() as Calendar).apply {
             set(Calendar.HOUR_OF_DAY, scheduleHour)
             set(Calendar.MINUTE, scheduleMinute)
@@ -219,7 +337,11 @@ class EsmHandler {
         return newCalendar
     }
 
-    fun shouldScheduleOnSameDay(calendar: Calendar, scheduleHour: Int, scheduleMinute: Int): Boolean {
+    fun shouldScheduleOnSameDay(
+        calendar: Calendar,
+        scheduleHour: Int,
+        scheduleMinute: Int
+    ): Boolean {
         val selectedDate = (calendar.clone() as Calendar).apply {
             set(Calendar.HOUR_OF_DAY, scheduleHour)
             set(Calendar.MINUTE, scheduleMinute)
