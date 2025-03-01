@@ -1,22 +1,6 @@
 # WHALE
 Social Sensing environment with Experience Sampling capabilities.
 
-## Tasks
-- [ ] Import Experience Sampling elements from Excel tables
-- [x] Allow to sample on lock/unlock and continuously in a set interval (maybe we can define some sensors to run in a periodic interval and others to sample on interaction)
-- [x] Implement API in app (pushing data, showing study name)
-- [x] Add notification sensor
-- [x] Add interaction tracking bubble
-- [x] Add onboarding interface (permissions, enrolment) and basic main activity for the app
-- [x] Use WorkManager to schedule backend pushes
-- [x] Add radio frequency (Bluetooth and WiFi) sensor
-- [x] Detect if a conversation happens (see openSMILE)
-- [x] Revamp AppSensor so it actually retrieves the currently open app (probably with AccessibilityService)
-- [x] Sample whenever the device gets unlocked
-- [x] Create simple backend that receives pushed data (audio and other sample readings)
-- [x] Add (crude) study enrolment interface
-- [x] Integrate AudioSampleService to use default content pipeline
-
 ## Components
 * [Android App](app-android): The app that records sensor data. Needs to be installed on participant's devices
 * [Backend](backend): The backend that allows for data storage. Deployed on a server.
@@ -56,7 +40,9 @@ stateDiagram-v2
 ### Experience Sampling
 We want to trigger an experience sampling form when specific events happen:
 - important: **user marks an interaction ended**
-- possibly in a specific interval
+- in a specific interval
+  - every day at the same time (triggered by `periodic` trigger)
+  - EMA: across the day, with a minimum time between samples (triggered by `random_ema` trigger)
 
 A sampling could include the following:
 - content separated in steps (title, position)
@@ -106,12 +92,71 @@ After updating any element of the questionnaire, its version needs to be updated
 
 ```mermaid
 stateDiagram-v2
+    state "Sample after Unlock" as Sample_Unlock
+    state "Sample Periodically" as Sample_Periodic
+    
     [*] --> Idle
     Idle --> Sample_Unlock: After Unlock
     Idle --> Sample_Periodic: After 5 minutes since last periodic
     Sample_Unlock --> Idle: After 1 minute
     Sample_Periodic --> Sample_Unlock: After unlock while sampling
     Sample_Periodic --> Idle: After 1 minute
+```
+
+### Study Configuration
+The platform's backend allows multiple studies to be configured and run in parallel, while each participant can only take part in one study at a time.
+Configuration can be done via the [backend's API](backend/api.yaml) or directly on the database.
+
+A study's configuration consists of:
+- Name
+- Enrolment key (which participants need to enter to join the study, unique across all studies)
+- Maximum number of participants `maxEnrolments`, -1 for unlimited participants
+- Duration in days `durationDays`
+- Experimental Group allocation strategy `allocationStrategy`, only `sequential` is supported for now
+- **Experimental Groups**
+  - Name
+  - Order
+  - **Phases**
+    - Starting day
+    - Duration in days
+    - Configuration parameters
+      - Interaction widget display mode (in time buckets, every time, disabled)
+
+```mermaid
+---
+title: Study Configuration Model
+---
+erDiagram
+    Study {
+        string name
+        string enrolmentKey
+        int maxEnrolments
+        int durationDays
+        string allocationStrategy
+    }
+    Enrolment {
+        int id
+        int studyId
+        string participantId
+        int studyExperimentalGroupId
+        timestamp enrolledAt
+    }
+    ExperimentalGroup {
+        int id
+        int studyId
+        string internalName
+        int order
+    }
+    ExperimentalGroupPhase {
+        int experimentalGroupId
+        int fromDay
+        int durationDays
+        string interactionWidgetDisplayMode
+    }
+    Study ||--|{ ExperimentalGroup : "has"
+    ExperimentalGroup ||--|{ ExperimentalGroupPhase : "has"
+    Study ||--|{ Enrolment : "is enrolled in"
+    ExperimentalGroup ||--|{ Enrolment : "belongs to"
 ```
 
 ## Acknowledgements & References
