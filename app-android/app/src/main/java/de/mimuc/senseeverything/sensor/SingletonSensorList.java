@@ -41,8 +41,8 @@ public class SingletonSensorList {
 		this.list.add(new ScreenOrientationSensor(aContext, database));
 		this.list.add(new MyProximitySensor(aContext, database));
 		this.list.add(new ScreenOnOffSensor(aContext, database));
-		this.list.add(new MyAccelerometerSensor(aContext, database));
-		this.list.add(new MyGyroscopeSensor(aContext, database));
+		// this.list.add(new MyAccelerometerSensor(aContext, database));
+		// this.list.add(new MyGyroscopeSensor(aContext, database));
 		this.list.add(new AccessibilitySensor(aContext, database));
 		this.list.add(new MyLightSensor(aContext, database));
 		this.list.add(new InteractionLogSensor(aContext, database));

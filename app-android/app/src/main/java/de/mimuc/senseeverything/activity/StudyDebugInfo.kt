@@ -40,6 +40,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.getCurrentStudyPhase
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.LogData
+import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +111,11 @@ class StudyDebugInfoViewModel @Inject constructor(
     private val _studyEnded = MutableStateFlow(false)
     val studyEnded: StateFlow<Boolean> get() = _studyEnded
 
+    private val _sensorRunning = MutableStateFlow(false)
+    val sensorRunning: StateFlow<Boolean> get() = _sensorRunning
+
+    private var conversationSensor: ConversationSensor? = null
+
     init {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -137,6 +143,17 @@ class StudyDebugInfoViewModel @Inject constructor(
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(intent)
     }
+
+    fun startConversationRecording(context: Context) {
+        conversationSensor = ConversationSensor(context, database)
+        conversationSensor!!.start(context)
+        _sensorRunning.value = true
+    }
+
+    fun stopConversationRecording(context: Context) {
+        conversationSensor?.stop()
+        _sensorRunning.value = false
+    }
 }
 
 @Composable
@@ -151,6 +168,7 @@ fun StudyDebugInfoView(
     val studyStarted = viewModel.studyStartedAt.collectAsState()
     val lastLogDataItem = viewModel.lastLogDataItem.collectAsState()
     val studyEnded = viewModel.studyEnded.collectAsState()
+    val sensorRunning = viewModel.sensorRunning.collectAsState()
     val context = LocalContext.current
 
     Column(modifier = modifier
@@ -177,6 +195,29 @@ fun StudyDebugInfoView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sync all data now")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (!sensorRunning.value) {
+            Button(
+                onClick = {
+                    viewModel.startConversationRecording(context)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Start Conversation Sensor")
+            }
+        } else {
+            Text("Conversation Sensor is running, needs to be manually stopped")
+            Button(
+                onClick = {
+                    viewModel.stopConversationRecording(context)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Stop Conversation Sensor")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

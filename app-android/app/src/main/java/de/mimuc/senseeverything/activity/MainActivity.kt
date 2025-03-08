@@ -359,6 +359,7 @@ fun StudyActivity(isRunning: Boolean, isPaused: Boolean, ended: Boolean, resumeS
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.study_is_running))
                 }
+                /*
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(onClick = { pauseStudy() }) {
                     Text(
@@ -367,6 +368,7 @@ fun StudyActivity(isRunning: Boolean, isPaused: Boolean, ended: Boolean, resumeS
                         textAlign = TextAlign.Center
                     )
                 }
+                */
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusIndicator(color = Color.hsl(37f, 1f, 0.50f, 1f))
