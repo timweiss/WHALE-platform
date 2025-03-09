@@ -23,6 +23,7 @@ import de.mimuc.senseeverything.sensor.implementation.NotificationSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOnOffSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOrientationSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConnectedWifiSensor;
+import de.mimuc.senseeverything.sensor.implementation.UsageStatsSensor;
 
 @Singleton
 public class SingletonSensorList {
@@ -49,6 +50,7 @@ public class SingletonSensorList {
 		this.list.add(new NotificationSensor(aContext, database));
 		this.list.add(new BluetoothSensor(aContext, database, sensitiveDataSalt));
 		this.list.add(new ConnectedWifiSensor(aContext, database, sensitiveDataSalt));
+		this.list.add(new UsageStatsSensor(aContext, database));
 
 		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
 

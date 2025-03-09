@@ -59,9 +59,7 @@ public abstract class AbstractSensor implements Serializable  {
 	public String getSettings() {
 		return m_Settings;
 	}
-	
-	abstract public View getSettingsView(Context context);
-	
+
 	abstract public boolean isAvailable(Context context);
 
 	abstract public boolean availableForPeriodicSampling();
@@ -77,7 +75,7 @@ public abstract class AbstractSensor implements Serializable  {
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){
-		// Log.d(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
+		Log.d(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
 
 		AsyncTask.execute(() -> {
 			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));

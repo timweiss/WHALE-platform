@@ -29,11 +29,6 @@ public class TouchSensor extends AbstractSensor implements HandlerListener {
 		FILE_NAME = "touch.csv";
 		m_FileHeader = "TimeUnix,Finger,Event,X,Y,Prs,Q";
 	}
-	
-	@Override
-	public View getSettingsView(Context context) {
-		return null;
-	}
 
 	@Override
 	public boolean isAvailable(Context context) {

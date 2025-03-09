@@ -1,18 +1,14 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import java.io.IOException;
-
-import de.mimuc.senseeverything.db.AppDatabase;
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.provider.Settings.Secure;
-import android.util.Log;
-import android.view.View;
-import android.widget.TextView;
 
+import java.io.IOException;
+
+import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.sensor.AbstractSensor;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -21,72 +17,59 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-
 public class StillAliveSensor extends AbstractSensor {
-	
-	private static final long serialVersionUID = 1L;
-		
-	private long count = -1;
+
+    private static final long serialVersionUID = 1L;
+
+    private long count = -1;
 
     private final OkHttpClient client = new OkHttpClient();
 
-	public StillAliveSensor(Context applicationContext, AppDatabase database) {
-		super(applicationContext, database);
-		TAG = getClass().getName();
-		SENSOR_NAME = "Still Alive";
-		FILE_NAME = "stillalive.csv";
+    public StillAliveSensor(Context applicationContext, AppDatabase database) {
+        super(applicationContext, database);
+        TAG = getClass().getName();
+        SENSOR_NAME = "Still Alive";
+        FILE_NAME = "stillalive.csv";
         m_FileHeader = "";
-	}
+    }
 
-	@Override
-	public View getSettingsView(Context context) {
-		String deviceId = Secure.getString(context.getContentResolver(), Secure.ANDROID_ID);
-		if(deviceId == null) {
-			deviceId = "NULL";
-		}
 
-		TextView text = new TextView(context);
-		text.setText("Device Id: " + deviceId);
-		text.setPadding(20, 20, 20, 20);
-		return text;
-	}
+    @Override
+    public boolean isAvailable(Context context) {
+        return true;
+    }
 
-	@Override
-	public boolean isAvailable(Context context) {
-		return true;
-	}
+    @Override
+    public boolean availableForPeriodicSampling() {
+        return false;
+    }
 
-	@Override
-	public boolean availableForPeriodicSampling() {
-		return false;
-	}
-
-	@Override
-	public void start(Context context) {
-		super.start(context);
+    @Override
+    public void start(Context context) {
+        super.start(context);
         Long t = System.currentTimeMillis();
-		if (!m_isSensorAvailable)
-			return;
+        if (!m_isSensorAvailable)
+            return;
 
-		count++;
-		if(count % 15 != 0) {
-			return;
-		}
+        count++;
+        if (count % 15 != 0) {
+            return;
+        }
 
-		onLogDataItem(t, "");
-		
-		if(isNetworkAvailable(context)) {
-			//Log.d(TAG, "Network available");
+        onLogDataItem(t, "");
+
+        if (isNetworkAvailable(context)) {
+            //Log.d(TAG, "Network available");
             //TODO:
-		}
-	}
+        }
+    }
 
-	@Override
-	public void stop() {
-		closeDataSource();
-	}
+    @Override
+    public void stop() {
+        closeDataSource();
+    }
 
-	private boolean isNetworkAvailable(Context context) {
+    private boolean isNetworkAvailable(Context context) {
         ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
@@ -104,15 +87,15 @@ public class StillAliveSensor extends AbstractSensor {
                 .post(body).build();
 
         client.newCall(request).enqueue(new Callback() {
-			@Override
-			public void onFailure(Call call, IOException e) {
-				// TODO
-			}
+            @Override
+            public void onFailure(Call call, IOException e) {
+                // TODO
+            }
 
-			@Override
-			public void onResponse(Call call, Response response) throws IOException {
-				// TODO
-			}
-		});
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                // TODO
+            }
+        });
     }
 }

@@ -27,11 +27,7 @@ public class AudioSampleSensor extends AbstractSensor {
 		FILE_NAME = "audiosamples.csv";
 		m_FileHeader = "Timestamp,Filename";
 	}
-		
-	public View getSettingsView(Context context) {	
-		return null;
-	}
-	
+
 	public boolean isAvailable(Context context) {
 		return true;
 	}

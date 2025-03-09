@@ -29,10 +29,6 @@ public class ScreenOnOffSensor extends AbstractSensor {
 		m_FileHeader = "TimeUnix,Value";
 	}
 	
-	public View getSettingsView(Context context) {
-		return null;
-	}
-	
 	public boolean isAvailable(Context context) {
 		return true;
 	}

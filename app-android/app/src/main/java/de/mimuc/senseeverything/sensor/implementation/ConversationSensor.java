@@ -41,10 +41,6 @@ public class ConversationSensor extends AbstractSensor {
         m_FileHeader = "Timestamp,Filename";
     }
 
-    public View getSettingsView(Context context) {
-        return null;
-    }
-
     public boolean isAvailable(Context context) {
         return true;
     }

@@ -22,11 +22,6 @@ public class AirplaneModeSensor extends AbstractSensor {
 	}
 
 	@Override
-	public View getSettingsView(Context context) {
-		return null;
-	}
-
-	@Override
 	public boolean isAvailable(Context context) {
 		return true;
 	}

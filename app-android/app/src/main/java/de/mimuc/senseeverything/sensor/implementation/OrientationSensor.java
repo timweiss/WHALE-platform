@@ -32,30 +32,6 @@ public class OrientationSensor extends AbstractSensor implements SensorEventList
 	}
 	
 	@Override
-	public View getSettingsView(Context context) {
-		LinearLayout linearLayout = new LinearLayout(context);
-		linearLayout.setOrientation(LinearLayout.VERTICAL);
-		linearLayout.setPadding(20, 10, 20, 10);		
-		TextView textView = new TextView(context);		
-		textView.setText("Sensor delay");
-		textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);		
-		RadioGroup radioGroup = new RadioGroup(context);		
-		RadioButton r1 = new RadioButton(context);
-		r1.setText("Normal");
-		radioGroup.addView(r1);		
-		RadioButton r2 = new RadioButton(context);
-		r2.setText("Game");
-		radioGroup.addView(r2);	
-		RadioButton r3 = new RadioButton(context);
-		r3.setText("Fastest");
-		radioGroup.addView(r3);		
-		r3.setChecked(true);
-		linearLayout.addView(textView);
-		linearLayout.addView(radioGroup);		
-		return linearLayout;
-	}
-	
-	@Override
 	public boolean isAvailable(Context context) {
 		SensorManager sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
 		return !(sensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR) == null);

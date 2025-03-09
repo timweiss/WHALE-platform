@@ -28,11 +28,6 @@ public class AccessibilitySensor extends AbstractSensor {
 		FILE_NAME = "accessibility.csv";
 		m_FileHeader = "TimeUnix,Type,Class,Package,Text";
 	}
-	
-	@Override
-	public View getSettingsView(Context context) {
-		return null;
-	}
 
 	@Override
 	public boolean isAvailable(Context context) {

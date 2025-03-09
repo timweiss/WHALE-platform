@@ -20,11 +20,6 @@ public class RingtoneVolumeSensor extends AbstractSensor {
 		FILE_NAME = "ringtone_volume.csv";
 		m_FileHeader = "TimeUnix,Value";
 	}
-	
-	@Override
-	public View getSettingsView(Context context) {
-		return null;
-	}
 
 	@Override
 	public boolean isAvailable(Context context) {
