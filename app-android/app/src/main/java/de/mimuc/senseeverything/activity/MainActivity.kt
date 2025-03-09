@@ -71,6 +71,7 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import kotlinx.coroutines.delay
@@ -184,17 +185,6 @@ class StudyHomeViewModel @Inject constructor(
                 _isStudyPaused.value = paused
             }
         }
-    }
-
-    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
-        val manager = getApplication<Application>().getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        @Suppress("DEPRECATION")
-        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
-            if (serviceClass.name == service.service.className) {
-                return true
-            }
-        }
-        return false
     }
 
     private fun getStudyDetails() {
@@ -359,16 +349,6 @@ fun StudyActivity(isRunning: Boolean, isPaused: Boolean, ended: Boolean, resumeS
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.study_is_running))
                 }
-                /*
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(onClick = { pauseStudy() }) {
-                    Text(
-                        stringResource(R.string.pause_study_for_today),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                }
-                */
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     StatusIndicator(color = Color.hsl(37f, 1f, 0.50f, 1f))

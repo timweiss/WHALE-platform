@@ -2,6 +2,9 @@ package de.mimuc.senseeverything.activity
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.AppOpsManager
+import android.app.AppOpsManager.MODE_ALLOWED
+import android.app.AppOpsManager.OPSTR_GET_USAGE_STATS
 import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
@@ -70,7 +73,9 @@ import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
+import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.service.AccessibilityLogService
+import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.study.schedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
@@ -275,6 +280,8 @@ class AcceptPermissionsViewModel @Inject constructor(
         checkAndSetPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
         checkAndSetPermission(Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE)
 
+        setPermission(Manifest.permission.PACKAGE_USAGE_STATS, hasAccessToUsageStats())
+
         if (Settings.canDrawOverlays(getApplication())) {
             setPermission(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
         }
@@ -375,6 +382,13 @@ class AcceptPermissionsViewModel @Inject constructor(
         )
     }
 
+    fun requestUsageStatsPermission(context: Context) {
+        context.startActivity(
+            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+
     fun requestExactAlarmPermission(context: Context) {
         // permission is only not granted above API 31
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -435,6 +449,17 @@ class AcceptPermissionsViewModel @Inject constructor(
             }
         }
         return false
+    }
+
+    private fun hasAccessToUsageStats(): Boolean {
+        val application = getApplication<SEApplicationController>()
+        val appOps = application.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOps.checkOpNoThrow(OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), application.packageName);
+        if (mode == AppOpsManager.MODE_DEFAULT) {
+            return (application.checkCallingOrSelfPermission(Manifest.permission.PACKAGE_USAGE_STATS) == PackageManager.PERMISSION_GRANTED);
+        } else {
+            return (mode == MODE_ALLOWED);
+        }
     }
 }
 
@@ -632,6 +657,13 @@ fun AcceptPermissionsScreen(
                     Text("Request Permission")
                 }
             }
+            // Usage Statistics
+            Text("Usage Statistics: ${permissions.value[Manifest.permission.PACKAGE_USAGE_STATS] ?: false}")
+            if (permissions.value[Manifest.permission.PACKAGE_USAGE_STATS] == false) {
+                Button(onClick = { viewModel.requestUsageStatsPermission(context) }) {
+                    Text("Request Permission")
+                }
+            }
             // Power Exemptions
             Text("Power Management: ${permissions.value[Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS] ?: false}")
             if (permissions.value[Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS] == false) {
@@ -698,6 +730,12 @@ class StartStudyViewModel @Inject constructor(
                 val startedTimestamp = System.currentTimeMillis()
                 dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
                 schedulePhaseChanges(context, startedTimestamp, dataStoreManager.studyPhasesFlow.first())
+
+                // automatically start study
+                if (!isServiceRunning(LogService::class.java)) {
+                    // todo: uncomment when building for production
+                    // SEApplicationController.getInstance().samplingManager.startSampling(context.applicationContext)
+                }
             } else {
                 Log.e("StartStudyViewModel", "Could not load study")
             }

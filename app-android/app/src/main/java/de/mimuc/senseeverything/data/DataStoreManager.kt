@@ -247,6 +247,9 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
 
     val questionnairesFlow = dataStore.data.map { preferences ->
         val json = preferences.questionnaires ?: "[]"
+        if (json.length < 2) {
+            return@map emptyList<FullQuestionnaire>()
+        }
         val jsonArray = JSONArray(json)
         val fullQuestionnaires = mutableListOf<FullQuestionnaire>()
         for (i in 0 until jsonArray.length()) {
