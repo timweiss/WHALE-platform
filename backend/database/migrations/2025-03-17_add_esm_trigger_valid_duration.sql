@@ -1,0 +1,1 @@
+alter table esm_triggers add column valid_duration int not null default 0;

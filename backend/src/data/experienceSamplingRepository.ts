@@ -31,6 +31,7 @@ export interface ExperienceSamplingTrigger {
   id: number;
   questionnaireId: number;
   type: TriggerType;
+  validDuration: number;
   configuration: TriggerConfiguration;
   enabled: boolean;
 }
@@ -67,7 +68,7 @@ export interface IExperienceSamplingRepository {
   createESMQuestionnaireTrigger(
     trigger: Pick<
       ExperienceSamplingTrigger,
-      'questionnaireId' | 'type' | 'configuration' | 'enabled'
+      'questionnaireId' | 'type' | 'validDuration' | 'configuration' | 'enabled'
     >,
   ): Promise<ExperienceSamplingTrigger>;
 
@@ -213,6 +214,7 @@ export class ExperienceSamplingRepository
         id: row.id,
         questionnaireId: row.questionnaire_id,
         type: row.type,
+        validDuration: row.valid_duration,
         configuration: row.configuration,
         enabled: row.enabled,
       }));
@@ -224,15 +226,16 @@ export class ExperienceSamplingRepository
   async createESMQuestionnaireTrigger(
     trigger: Pick<
       ExperienceSamplingTrigger,
-      'enabled' | 'questionnaireId' | 'type' | 'configuration'
+      'enabled' | 'questionnaireId' | 'type' | 'validDuration' | 'configuration'
     >,
   ): Promise<ExperienceSamplingTrigger> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO esm_triggers (questionnaire_id, type, configuration, enabled) VALUES ($1, $2, $3, $4) RETURNING *',
+        'INSERT INTO esm_triggers (questionnaire_id, type, valid_duration, configuration, enabled) VALUES ($1, $2, $3, $4, $5) RETURNING *',
         [
           trigger.questionnaireId,
           trigger.type,
+          trigger.validDuration,
           trigger.configuration,
           trigger.enabled,
         ],
@@ -242,6 +245,7 @@ export class ExperienceSamplingRepository
         id: res.rows[0].id,
         questionnaireId: res.rows[0].questionnaire_id,
         type: res.rows[0].type,
+        validDuration: res.rows[0].valid_duration,
         configuration: res.rows[0].configuration,
         enabled: res.rows[0].enabled,
       };
@@ -255,14 +259,21 @@ export class ExperienceSamplingRepository
   ): Promise<ExperienceSamplingTrigger> {
     try {
       const updated = await this.pool.query(
-        'UPDATE esm_triggers SET type = $1, configuration = $2, enabled = $3 WHERE id = $4 RETURNING *',
-        [trigger.type, trigger.configuration, trigger.enabled, trigger.id],
+        'UPDATE esm_triggers SET type = $1, configuration = $2, enabled = $3, valid_duration=$4 WHERE id = $5 RETURNING *',
+        [
+          trigger.type,
+          trigger.configuration,
+          trigger.enabled,
+          trigger.validDuration,
+          trigger.id,
+        ],
       );
 
       return {
         id: updated.rows[0].id,
         questionnaireId: updated.rows[0].questionnaire_id,
         type: updated.rows[0].type,
+        validDuration: updated.rows[0].valid_duration,
         configuration: updated.rows[0].configuration,
         enabled: updated.rows[0].enabled,
       };
