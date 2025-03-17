@@ -27,6 +27,8 @@ import org.json.JSONArray
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.time.Instant
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.decodeFromString as decodeFromStringJson
@@ -440,11 +442,21 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 }
 
+suspend fun DataStoreManager.currentStudyDay(): Long {
+    val unixStarted = timestampStudyStartedFlow.first()
+    val date = Instant.ofEpochMilli(unixStarted).atZone(ZoneId.systemDefault()).toLocalDate()
+    val today = Instant.now().atZone(ZoneId.systemDefault()).toLocalDate()
+    val days = today.toEpochDay() - date.toEpochDay() + 1
+    return days
+}
+
 suspend fun DataStoreManager.getCurrentStudyPhase(): ExperimentalGroupPhase? {
-    return studyPhasesFlow.first()
-        ?.firstOrNull { phase ->
-            phase.fromDay <= studyDaysFlow.first() && phase.fromDay + phase.durationDays > studyDaysFlow.first()
-        }
+    val phases = studyPhasesFlow.first()
+    val currentDay = currentStudyDay()
+
+    return phases?.firstOrNull { phase ->
+        phase.fromDay <= currentDay && phase.fromDay + phase.durationDays > currentDay
+    }
 }
 
 fun DataStoreManager.getCurrentInteractionWidgetDisplayStrategySync(callback: (InteractionWidgetDisplayStrategy?) -> Unit) {
