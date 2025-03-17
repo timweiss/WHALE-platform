@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "710bcac63bca64525ec67113f8d1ec39",
+    "identityHash": "e2043f8a3a09a094c813b77e56aef0a3",
     "entities": [
       {
         "tableName": "LogData",
@@ -62,7 +62,7 @@
       },
       {
         "tableName": "pending_questionnaire",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `added_at` INTEGER NOT NULL, `valid_until` INTEGER NOT NULL, `questionnaire_json` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `added_at` INTEGER NOT NULL, `valid_until` INTEGER NOT NULL, `questionnaire_json` TEXT NOT NULL, `trigger_json` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "uid",
@@ -87,6 +87,12 @@
             "columnName": "questionnaire_json",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "triggerJson",
+            "columnName": "trigger_json",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -102,7 +108,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '710bcac63bca64525ec67113f8d1ec39')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e2043f8a3a09a094c813b77e56aef0a3')"
     ]
   }
 }

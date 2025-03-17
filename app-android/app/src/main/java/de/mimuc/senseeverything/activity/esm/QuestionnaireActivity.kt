@@ -92,7 +92,7 @@ class QuestionnaireViewModel  @Inject constructor(
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
     val elementValues: StateFlow<Map<Int, ElementValue>> = _elementValues
 
-    private var pendingId = -1
+    private var pendingQuestionnaireId = -1
 
     init {
         _isLoading.value = true
@@ -141,7 +141,7 @@ class QuestionnaireViewModel  @Inject constructor(
             }
         }
 
-        pendingId = intent.getIntExtra("pendingId", -1)
+        pendingQuestionnaireId = intent.getIntExtra("pendingQuestionnaireId", -1)
     }
 
     fun setElementValue(elementId: Int, value: ElementValue) {
@@ -171,8 +171,8 @@ class QuestionnaireViewModel  @Inject constructor(
                 enqueueQuestionnaireUploadWorker(context, makeAnswerJsonArray(), questionnaire.value.questionnaire.id, studyId, token)
 
                 // remove pending questionnaire
-                if (pendingId != -1) {
-                    database.pendingQuestionnaireDao()?.deleteById(pendingId)
+                if (pendingQuestionnaireId != -1) {
+                    database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId)
                 }
 
                 // pop activity

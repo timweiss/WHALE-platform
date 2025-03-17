@@ -250,7 +250,7 @@ public class LogService extends AbstractService {
                 stopSensors(false);
                 state = LogServiceState.IDLE;
             } else {
-                throw new IllegalStateException("Cannot transition from SAMPLING_AFTER_UNLOCK to SAMPLING_PERIODIC");
+                // throw new IllegalStateException("Cannot transition from SAMPLING_AFTER_UNLOCK to SAMPLING_PERIODIC");
             }
         }
     }

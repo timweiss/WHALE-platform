@@ -71,14 +71,18 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -99,7 +103,8 @@ class MainActivity : ComponentActivity() {
 @HiltViewModel
 class StudyHomeViewModel @Inject constructor(
     application: Application,
-    private val dataStoreManager: DataStoreManager
+    private val dataStoreManager: DataStoreManager,
+    private val database: AppDatabase
 ) : AndroidViewModel(application) {
     private val _isEnrolled = MutableStateFlow(false)
     val isEnrolled: StateFlow<Boolean> get() = _isEnrolled
@@ -121,6 +126,9 @@ class StudyHomeViewModel @Inject constructor(
 
     private val _hasStudyEnded = MutableStateFlow(false)
     val hasStudyEnded: StateFlow<Boolean> get() = _hasStudyEnded
+
+    private val _pendingQuestionnaires = MutableStateFlow<List<PendingQuestionnaire>>(emptyList())
+    val pendingQuestionnaires: StateFlow<List<PendingQuestionnaire>> get() = _pendingQuestionnaires
 
     init {
         load()
@@ -204,6 +212,11 @@ class StudyHomeViewModel @Inject constructor(
                     dataStoreManager.saveStudy(study)
                 }
             }
+
+            withContext(Dispatchers.IO) {
+                val pendingQuestionnaires = database.pendingQuestionnaireDao().getAllNotExpired(System.currentTimeMillis())
+                _pendingQuestionnaires.value = pendingQuestionnaires
+            }
         }
     }
 
@@ -226,6 +239,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val currentDay = viewModel.currentDay.collectAsState()
     val study = viewModel.study.collectAsState()
     val onboardingStep = viewModel.onboardingStep.collectAsState()
+    val pendingQuestionnaires = viewModel.pendingQuestionnaires.collectAsState()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -294,6 +308,19 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         ended = hasStudyEnded.value,
                         resumeStudy = { viewModel.resumeStudy(context) },
                         pauseStudy = { viewModel.pauseStudy(context) })
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (pendingQuestionnaires.value.isNotEmpty()) {
+                        Text("Pending Questionnaires")
+                        pendingQuestionnaires.value.forEach { pq ->
+                            Row {
+                                Text(pq.uid.toString())
+                                Text(pq.validUntil.toString())
+                            }
+                        }
+                    }
+
                     SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
                     FilledTonalButton(
                         onClick = { viewModel.openSettings(context) },

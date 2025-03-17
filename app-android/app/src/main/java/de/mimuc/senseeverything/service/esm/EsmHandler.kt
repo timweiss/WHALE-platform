@@ -82,21 +82,14 @@ class EsmHandler {
 
         coroutineScope {
             withContext(Dispatchers.IO) {
-                pendingId = database.pendingQuestionnaireDao().insert(
-                    PendingQuestionnaire(
-                        0,
-                        System.currentTimeMillis(),
-                        System.currentTimeMillis() + 1000 * 60 * 15,
-                        questionnaire.toJson().toString()
-                    )
-                )
+                pendingId = PendingQuestionnaire.createEntry(database, dataStoreManager, questionnaire.questionnaire.id, trigger)
             }
         }
 
         // open questionnaire
         val intent = Intent(context, QuestionnaireActivity::class.java)
         intent.putExtra("questionnaire", questionnaire.toJson().toString())
-        intent.putExtra("pendingId", pendingId)
+        intent.putExtra("pendingQuestionnaireId", pendingId)
 
         // this will make it appear but not go back to the MainActivity afterwards
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -355,10 +348,11 @@ class ReminderNotification(private val context: Context) {
 
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    fun sendReminderNotification(triggerId: Int, title: String?) {
+    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: Long, title: String?) {
         val intent = Intent(context, QuestionnaireActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("triggerId", triggerId)
+            putExtra("pendingQuestionnaireId", pendingQuestionnaireId)
         }
 
         val notification = NotificationCompat.Builder(context, "SEChannel")

@@ -10,6 +10,9 @@ interface PendingQuestionnaireDao {
     @Query("SELECT * FROM pending_questionnaire")
     fun getAll(): List<PendingQuestionnaire>
 
+    @Query("SELECT * FROM pending_questionnaire WHERE valid_until > :now")
+    fun getAllNotExpired(now: Long): List<PendingQuestionnaire>
+
     @Insert
     fun insert(pendingQuestionnaire: PendingQuestionnaire): Long
 

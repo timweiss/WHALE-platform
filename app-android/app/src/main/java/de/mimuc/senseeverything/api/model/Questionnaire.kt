@@ -25,6 +25,7 @@ open class QuestionnaireTrigger(
     val id: Int,
     val questionnaireId: Int,
     val type: String,
+    val validDuration: Long,
     val configuration: Any
 ) {
     fun toJson(): JSONObject {
@@ -32,6 +33,7 @@ open class QuestionnaireTrigger(
         json.put("id", id)
         json.put("questionnaireId", questionnaireId)
         json.put("type", type)
+        json.put("validDuration", validDuration)
         json.put("configuration", configuration)
         return json
     }
@@ -40,9 +42,10 @@ open class QuestionnaireTrigger(
 class EventQuestionnaireTrigger(
     id: Int,
     questionnaireId: Int,
+    validUntil: Long,
     configuration: Any,
     val eventName: String,
-) : QuestionnaireTrigger(id, questionnaireId, "event", configuration)
+) : QuestionnaireTrigger(id, questionnaireId, "event", validUntil, configuration)
 
 data class FullQuestionnaire(
     val questionnaire: Questionnaire,
@@ -69,20 +72,22 @@ enum class PeriodicQuestionnaireTriggerInterval {
 class PeriodicQuestionnaireTrigger(
     id: Int,
     questionnaireId: Int,
+    validUntil: Long,
     configuration: Any,
     val interval: PeriodicQuestionnaireTriggerInterval,
-    val time: String): QuestionnaireTrigger(id, questionnaireId, "periodic", configuration)
+    val time: String): QuestionnaireTrigger(id, questionnaireId, "periodic", validUntil, configuration)
 
 class RandomEMAQuestionnaireTrigger(
     id: Int,
     questionnaireId: Int,
+    validUntil: Long,
     configuration: Any,
     val distanceMinutes: Int,
     val randomToleranceMinutes: Int,
     val delayMinutes: Int,
     val timeBucket: String,
     val phaseName: String
-): QuestionnaireTrigger(id, questionnaireId, "random_ema", configuration)
+): QuestionnaireTrigger(id, questionnaireId, "random_ema", validUntil, configuration)
 
 fun emptyQuestionnaire(): FullQuestionnaire {
     return FullQuestionnaire(
@@ -106,6 +111,7 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
     val id = json.getInt("id")
     val questionnaireId = json.getInt("questionnaireId")
     val type = json.getString("type")
+    val validDuration = json.getLong("validDuration")
     val configuration = json.getJSONObject("configuration")
 
     when (type) {
@@ -113,6 +119,7 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
             return EventQuestionnaireTrigger(
                 id,
                 questionnaireId,
+                validDuration,
                 configuration,
                 configuration.getString("eventName"),
             )
@@ -122,6 +129,7 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
             return PeriodicQuestionnaireTrigger(
                 id,
                 questionnaireId,
+                validDuration,
                 configuration,
                 PeriodicQuestionnaireTriggerInterval.valueOf(configuration.getString("interval").uppercase()),
                 configuration.getString("time")
@@ -132,6 +140,7 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
             return RandomEMAQuestionnaireTrigger(
                 id,
                 questionnaireId,
+                validDuration,
                 configuration,
                 configuration.getInt("distanceMinutes"),
                 configuration.getInt("randomToleranceMinutes"),
@@ -142,7 +151,7 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
         }
 
         else -> {
-            return QuestionnaireTrigger(id, questionnaireId, type, configuration)
+            return QuestionnaireTrigger(id, questionnaireId, type, validDuration, configuration)
         }
     }
 }
