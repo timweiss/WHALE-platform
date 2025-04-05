@@ -1,6 +1,5 @@
 package de.mimuc.senseeverything.activity
 
-import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -32,7 +31,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -70,6 +68,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
+import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.PendingQuestionnaire
@@ -83,6 +82,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -99,6 +99,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+data class QuestionnaireInboxItem(val title: String, val validUntil: Long, val pendingQuestionnaire: PendingQuestionnaire)
 
 @HiltViewModel
 class StudyHomeViewModel @Inject constructor(
@@ -127,8 +129,8 @@ class StudyHomeViewModel @Inject constructor(
     private val _hasStudyEnded = MutableStateFlow(false)
     val hasStudyEnded: StateFlow<Boolean> get() = _hasStudyEnded
 
-    private val _pendingQuestionnaires = MutableStateFlow<List<PendingQuestionnaire>>(emptyList())
-    val pendingQuestionnaires: StateFlow<List<PendingQuestionnaire>> get() = _pendingQuestionnaires
+    private val _pendingQuestionnaires = MutableStateFlow<List<QuestionnaireInboxItem>>(emptyList())
+    val pendingQuestionnaires: StateFlow<List<QuestionnaireInboxItem>> get() = _pendingQuestionnaires
 
     init {
         load()
@@ -216,6 +218,14 @@ class StudyHomeViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 val pendingQuestionnaires = database.pendingQuestionnaireDao().getAllNotExpired(System.currentTimeMillis())
                 _pendingQuestionnaires.value = pendingQuestionnaires
+                    .map { pq ->
+                        val fullQuestionnaire = makeFullQuestionnaireFromJson(JSONObject(pq.questionnaireJson))
+                        QuestionnaireInboxItem(
+                            fullQuestionnaire.questionnaire.name,
+                            pq.validUntil,
+                            pq
+                        )
+                    }
             }
         }
     }
@@ -312,12 +322,28 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (pendingQuestionnaires.value.isNotEmpty()) {
-                        Text("Pending Questionnaires")
+                        SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
+
+                        Row {
+                            // inbox mat icon
+                            Image(
+                                painter = painterResource(id = R.drawable.baseline_inbox_24),
+                                contentDescription = "",
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .padding(4.dp)
+                            )
+
+                            Text("Questionnaire Inbox")
+                        }
                         pendingQuestionnaires.value.forEach { pq ->
-                            Row {
-                                Text(pq.uid.toString())
-                                Text(pq.validUntil.toString())
+                            Column {
+                                Text(pq.title)
+                                Row {
+                                    Text(pq.validUntil.toString())
+                                }
                             }
+
                         }
                     }
 

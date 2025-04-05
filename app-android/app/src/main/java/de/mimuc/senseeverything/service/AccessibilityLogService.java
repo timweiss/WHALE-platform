@@ -7,6 +7,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 
 import de.mimuc.senseeverything.activity.CONST;
 
@@ -88,9 +89,32 @@ public class AccessibilityLogService extends AccessibilityService {
                 CONST.dateFormat.format(System.currentTimeMillis()), event.getEventTime(), getEventType(event),
                 event.getClassName(), event.getPackageName());
 
+        if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED || event.getEventType() == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
+            AccessibilityNodeInfo node = event.getSource();
+            if (node != null) {
+                Log.d("AccessibilityLogService", String.format("type: %s, content: %s, text: %s, clickable: %s, editable: %s, resourceId: %s, children: %s", event.getClassName(), node.getContentDescription(), event.getText(), node.isClickable(), node.isEditable(), node.getViewIdResourceName(), node.getChildCount()));
+                logForEachChild(node, event.getClassName().toString());
+            } else {
+                Log.d("AccessibilityLogService", String.format("no node content: %s, text: %s", event.getContentDescription(), event.getText()));
+            }
+        }
+
         Intent message = new Intent(TAG);
         message.putExtra(android.content.Intent.EXTRA_TEXT, s);
         sendBroadcast(message);
+    }
+
+    public void logForEachChild(AccessibilityNodeInfo node, String parent) {
+        if (node == null) {
+            return;
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child != null) {
+                Log.d("AccessibilityLogService", String.format("parent: %s, type: %s, content: %s, text: %s, clickable: %s, editable: %s, resourceId: %s, children: %s", parent, child.getClassName(), child.getContentDescription(), child.getText(), child.isClickable(), child.isEditable(), child.getViewIdResourceName(), child.getChildCount()));
+                // logForEachChild(child);
+            }
+        }
     }
 
     private String getEventType(AccessibilityEvent event) {
@@ -112,7 +136,7 @@ public class AccessibilityLogService extends AccessibilityService {
             case AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED:
                 return "TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED";
             case AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED:
-                return "TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED";
+                return "TYPE_VIEW_ACCESSIBILITY_FOCUSED";
             case AccessibilityEvent.TYPE_VIEW_CLICKED:
                 return "TYPE_VIEW_CLICKED";
             case AccessibilityEvent.TYPE_VIEW_FOCUSED:
