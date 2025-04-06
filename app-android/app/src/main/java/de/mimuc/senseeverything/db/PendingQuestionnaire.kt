@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
 import kotlinx.coroutines.flow.first
+import kotlin.time.Duration.Companion.milliseconds
 
 @Entity(tableName = "pending_questionnaire")
 data class PendingQuestionnaire(
@@ -27,7 +28,7 @@ data class PendingQuestionnaire(
                 .find { q -> q.questionnaire.id == questionnaireId }
             if (questionnaire == null) return -1
 
-            val validUntil = System.currentTimeMillis() + trigger.validDuration * 1000 + 60
+            val validUntil = System.currentTimeMillis() + trigger.validDuration * 1000 * 60
 
             val pendingQuestionnaire = PendingQuestionnaire(
                 0,
@@ -40,4 +41,16 @@ data class PendingQuestionnaire(
             return database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
         }
     }
+}
+
+data class QuestionnaireInboxItem(
+    val title: String,
+    val validUntil: Long,
+    val pendingQuestionnaire: PendingQuestionnaire
+)
+
+fun QuestionnaireInboxItem.distanceMillis(): kotlin.time.Duration {
+    val now = System.currentTimeMillis()
+    val diff = this.validUntil - now
+    return diff.milliseconds
 }

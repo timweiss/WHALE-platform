@@ -54,10 +54,12 @@ import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -171,8 +173,10 @@ class QuestionnaireViewModel  @Inject constructor(
                 enqueueQuestionnaireUploadWorker(context, makeAnswerJsonArray(), questionnaire.value.questionnaire.id, studyId, token)
 
                 // remove pending questionnaire
-                if (pendingQuestionnaireId != -1) {
-                    database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId)
+                withContext(Dispatchers.IO) {
+                    if (pendingQuestionnaireId != -1) {
+                        database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId)
+                    }
                 }
 
                 // pop activity

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +15,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +30,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +42,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,14 +70,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
+import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
+import de.mimuc.senseeverything.activity.esm.QuestionnaireView
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.PendingQuestionnaire
+import de.mimuc.senseeverything.db.QuestionnaireInboxItem
+import de.mimuc.senseeverything.db.distanceMillis
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
@@ -86,6 +97,7 @@ import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -99,8 +111,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-data class QuestionnaireInboxItem(val title: String, val validUntil: Long, val pendingQuestionnaire: PendingQuestionnaire)
 
 @HiltViewModel
 class StudyHomeViewModel @Inject constructor(
@@ -175,6 +185,18 @@ class StudyHomeViewModel @Inject constructor(
         context.startActivity(intent)
     }
 
+    fun openPendingQuestionnaire(context: Context, pending: QuestionnaireInboxItem) {
+        val trigger = makeTriggerFromJson(JSONObject(pending.pendingQuestionnaire.triggerJson))
+
+        val intent = Intent(context, QuestionnaireActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            putExtra("triggerId", trigger.id)
+            putExtra("pendingQuestionnaireId", pending.pendingQuestionnaire.uid)
+        }
+
+        context.startActivity(intent)
+    }
+
     private fun checkEnrolment() {
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
@@ -216,10 +238,12 @@ class StudyHomeViewModel @Inject constructor(
             }
 
             withContext(Dispatchers.IO) {
-                val pendingQuestionnaires = database.pendingQuestionnaireDao().getAllNotExpired(System.currentTimeMillis())
+                val pendingQuestionnaires =
+                    database.pendingQuestionnaireDao().getAllNotExpired(System.currentTimeMillis())
                 _pendingQuestionnaires.value = pendingQuestionnaires
                     .map { pq ->
-                        val fullQuestionnaire = makeFullQuestionnaireFromJson(JSONObject(pq.questionnaireJson))
+                        val fullQuestionnaire =
+                            makeFullQuestionnaireFromJson(JSONObject(pq.questionnaireJson))
                         QuestionnaireInboxItem(
                             fullQuestionnaire.questionnaire.name,
                             pq.validUntil,
@@ -260,12 +284,13 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
     Scaffold(topBar = {
         TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            titleContentColor = MaterialTheme.colorScheme.primary,
-        ),
-        title = { Text("WHALE") }
-    )}, modifier = Modifier.fillMaxSize()) { innerPadding ->
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                titleContentColor = MaterialTheme.colorScheme.primary,
+            ),
+            title = { Text("WHALE") }
+        )
+    }, modifier = Modifier.fillMaxSize()) { innerPadding ->
         AnimatedVisibility(
             visible = visible,
             enter = slideInVertically {
@@ -294,8 +319,17 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, fontSize = 36.sp)
-                    Image(painter = painterResource(id = R.drawable.whale), contentDescription = "", Modifier.width(96.dp))
+                    Text(
+                        stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 36.sp
+                    )
+                    Image(
+                        painter = painterResource(id = R.drawable.whale),
+                        contentDescription = "",
+                        Modifier.width(96.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -322,29 +356,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (pendingQuestionnaires.value.isNotEmpty()) {
-                        SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
-
-                        Row {
-                            // inbox mat icon
-                            Image(
-                                painter = painterResource(id = R.drawable.baseline_inbox_24),
-                                contentDescription = "",
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .padding(4.dp)
-                            )
-
-                            Text("Questionnaire Inbox")
-                        }
-                        pendingQuestionnaires.value.forEach { pq ->
-                            Column {
-                                Text(pq.title)
-                                Row {
-                                    Text(pq.validUntil.toString())
-                                }
-                            }
-
-                        }
+                        QuestionnaireInbox(pendingQuestionnaires, viewModel)
                     }
 
                     SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
@@ -370,12 +382,62 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
         }
 
         LaunchedEffect(lifecycleState) {
-            when(lifecycleState) {
+            when (lifecycleState) {
                 androidx.lifecycle.Lifecycle.State.RESUMED -> {
                     viewModel.load()
                     visible = true
                 }
+
                 else -> {}
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuestionnaireInbox(
+    pendingQuestionnaires: State<List<QuestionnaireInboxItem>>,
+    viewModel: StudyHomeViewModel
+) {
+    val context = LocalContext.current
+
+    SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
+
+    Column {
+        Row(horizontalArrangement = Arrangement.Center) {
+            // inbox mat icon
+            Image(
+                painter = painterResource(id = R.drawable.baseline_inbox_24),
+                contentDescription = "",
+                modifier = Modifier
+                    .size(28.dp)
+                    .padding(end = 6.dp)
+            )
+            Text(
+                "Questionnaire Inbox", style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp
+            )
+        }
+
+        Text("Complete them as soon as possible")
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(vertical = 12.dp)
+    ) {
+        pendingQuestionnaires.value.forEach { pq ->
+            Card(
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier
+                    .fillMaxWidth(), onClick = {
+                        viewModel.openPendingQuestionnaire(context, pq)
+                    }) {
+                Column(modifier = Modifier.padding(6.dp)) {
+                    Text(pq.title, fontWeight = FontWeight.SemiBold)
+                    Text("Complete in the next ${pq.distanceMillis().inWholeMinutes} min")
+                }
             }
         }
     }
@@ -387,7 +449,13 @@ val red = Color.hsl(0f, 1f, 0.41f, 1f)
 val grey = Color.LightGray
 
 @Composable
-fun StudyActivity(isRunning: Boolean, isPaused: Boolean, ended: Boolean, resumeStudy: () -> Unit, pauseStudy: () -> Unit) {
+fun StudyActivity(
+    isRunning: Boolean,
+    isPaused: Boolean,
+    ended: Boolean,
+    resumeStudy: () -> Unit,
+    pauseStudy: () -> Unit
+) {
     if (ended) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             StatusIndicator(color = grey)
@@ -427,7 +495,11 @@ fun StudyActivity(isRunning: Boolean, isPaused: Boolean, ended: Boolean, resumeS
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = { resumeStudy() }) {
-                Text(stringResource(R.string.service_not_running_resume_study), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text(
+                    stringResource(R.string.service_not_running_resume_study),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -435,21 +507,27 @@ fun StudyActivity(isRunning: Boolean, isPaused: Boolean, ended: Boolean, resumeS
 
 @Composable
 fun StatusIndicator(color: Color) {
-    Box(modifier = Modifier
-        .size(16.dp)
-        .clip(CircleShape)
-        .background(color))
+    Box(
+        modifier = Modifier
+            .size(16.dp)
+            .clip(CircleShape)
+            .background(color)
+    )
 }
 
 @Composable
 fun SpacerLine(paddingValues: PaddingValues, width: Dp) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(paddingValues), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier
-            .width(width)
-            .height(1.dp)
-            .background(Color.LightGray))
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(paddingValues), horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .width(width)
+                .height(1.dp)
+                .background(Color.LightGray)
+        )
     }
 }
 
