@@ -30,16 +30,17 @@ class RandomNotificationReceiver: BroadcastReceiver() {
         }
 
         val title = intent.getStringExtra("title")
-        val id = intent.getIntExtra("id", 0)
+        val triggerId = intent.getIntExtra("id", 0)
         val triggerJson = intent.getStringExtra("triggerJson")
         val trigger = triggerJson?.let { makeTriggerFromJson(JSONObject(it)) as RandomEMAQuestionnaireTrigger }
         val questionnaireName = intent.getStringExtra("questionnaireName")
+        val questionnaireId = intent.getIntExtra("questionnaireId", 0)
         val untilTimestamp = intent.getLongExtra("untilTimestamp", 0)
 
         // deliver notification to user
-        if (id != 0 && trigger != null) {
-            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(database, dataStoreManager, id, trigger)
-            scheduleNotificationService?.sendReminderNotification(id, pendingQuestionnaireId, title)
+        if (triggerId != 0 && trigger != null) {
+            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(database, dataStoreManager, questionnaireId, trigger)
+            scheduleNotificationService?.sendReminderNotification(triggerId, pendingQuestionnaireId, title)
         }
 
         // schedule next notification
