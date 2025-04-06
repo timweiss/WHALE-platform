@@ -104,8 +104,9 @@ class EsmHandler {
         context: Context,
         dataStoreManager: DataStoreManager
     ) {
-        val triggers = triggers.filter { it.type == "random_ema" } as List<RandomEMAQuestionnaireTrigger>
-        val phaseTriggers = triggers.filter { it.phaseName == phase.name }
+        val triggers = dataStoreManager.questionnairesFlow.first().flatMap { it.triggers }
+        val emaTriggers = triggers.filter { it.type == "random_ema" } as List<RandomEMAQuestionnaireTrigger>
+        val phaseTriggers = emaTriggers.filter { it.phaseName == phase.name }
 
         for (trigger in phaseTriggers) {
             val initialCalendar = Calendar.getInstance()
@@ -149,6 +150,8 @@ class EsmHandler {
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
         )
+
+        Log.i("EsmHandler", "Scheduling random EMA notification for ${questionnaireName} at ${nextNotificationTime.timeInMillis}")
 
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,

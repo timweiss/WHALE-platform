@@ -29,6 +29,8 @@ class ChangePhaseReceiver  : BroadcastReceiver() {
         val phaseJson = intent?.getStringExtra("phaseJson") ?: return@goAsync
         val phase = Json.decodeFromString<ExperimentalGroupPhase>(phaseJson)
 
+        Log.d("ChangePhaseReceiver", "Changing phase to $phase")
+
         // todo: change the display mode of the widget
         val application = context.applicationContext as SEApplicationController
         application.esmHandler.scheduleRandomEMANotificationsForPhase(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager)
@@ -41,7 +43,7 @@ fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, phases: Li
     // schedule an alarm for each phase change so that it can be adapted
     for (phase in phases) {
         // nothing to do for the first day
-        if (phase.fromDay == 0) continue
+        // if (phase.fromDay == 0) continue
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 

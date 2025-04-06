@@ -77,10 +77,16 @@
             android:name=".service.esm.PeriodicNotificationReceiver"
             android:enabled="true" />
         <receiver
+            android:name=".service.esm.RandomNotificationReceiver"
+            android:enabled="true" />
+        <receiver
             android:name=".service.esm.SamplingEventReceiver"
             android:enabled="true" />
         <receiver
             android:name=".service.sampling.ResumeSamplingReceiver"
+            android:enabled="true" />
+        <receiver
+            android:name=".study.ChangePhaseReceiver"
             android:enabled="true" />
 
         <service
