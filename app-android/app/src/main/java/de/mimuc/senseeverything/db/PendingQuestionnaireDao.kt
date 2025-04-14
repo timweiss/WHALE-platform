@@ -20,8 +20,8 @@ interface PendingQuestionnaireDao {
     fun delete(pendingQuestionnaire: PendingQuestionnaire)
 
     @Query("DELETE FROM pending_questionnaire WHERE uid = :uid")
-    fun deleteById(uid: Int)
+    fun deleteById(uid: Long)
 
-    @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now")
+    @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now OR valid_until = -1")
     fun deleteExpired(now: Long)
 }

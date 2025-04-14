@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
+import de.mimuc.senseeverything.api.model.OneTimeQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -15,7 +16,7 @@ import org.json.JSONObject
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class PeriodicNotificationReceiver: BroadcastReceiver() {
+class OneTimeNotificationReceiver: BroadcastReceiver() {
     @Inject
     lateinit var dataStoreManager: DataStoreManager
 
@@ -31,22 +32,13 @@ class PeriodicNotificationReceiver: BroadcastReceiver() {
         val title = intent.getStringExtra("title")
         val id = intent.getIntExtra("id", 0)
         val triggerJson = intent.getStringExtra("triggerJson")
-        val trigger = triggerJson?.let { makeTriggerFromJson(JSONObject(it)) as PeriodicQuestionnaireTrigger }
+        val trigger = triggerJson?.let { makeTriggerFromJson(JSONObject(it)) as OneTimeQuestionnaireTrigger }
         val questionnaireName = intent.getStringExtra("questionnaireName")
-        val remainingDays = intent.getIntExtra("remainingDays", 0)
-        val totalDays = intent.getIntExtra("totalDays", 0)
 
         // deliver notification to user
         if (id != 0 && trigger != null) {
             val pendingQuestionnaireId = PendingQuestionnaire.createEntry(database, dataStoreManager, id, trigger)
             scheduleNotificationService?.sendReminderNotification(id, pendingQuestionnaireId, title)
-        }
-
-        // schedule next notification
-        if (trigger != null && context != null && questionnaireName != null) {
-            EsmHandler().scheduleNextPeriodicNotification(context, trigger, totalDays, remainingDays, questionnaireName)
-        } else {
-            Log.e("PeriodicNotificationReceiver", "Failed to schedule next notification, missing information c:${context} t:${trigger} n:${questionnaireName}")
         }
     }
 }

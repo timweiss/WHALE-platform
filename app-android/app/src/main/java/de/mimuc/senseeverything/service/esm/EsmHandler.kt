@@ -14,6 +14,7 @@ import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.EventQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.OneTimeQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.RandomEMAQuestionnaireTrigger
@@ -82,7 +83,12 @@ class EsmHandler {
 
         coroutineScope {
             withContext(Dispatchers.IO) {
-                pendingId = PendingQuestionnaire.createEntry(database, dataStoreManager, questionnaire.questionnaire.id, trigger)
+                pendingId = PendingQuestionnaire.createEntry(
+                    database,
+                    dataStoreManager,
+                    questionnaire.questionnaire.id,
+                    trigger
+                )
             }
         }
 
@@ -105,26 +111,41 @@ class EsmHandler {
         dataStoreManager: DataStoreManager
     ) {
         val triggers = dataStoreManager.questionnairesFlow.first().flatMap { it.triggers }
-        val emaTriggers = triggers.filter { it.type == "random_ema" } as List<RandomEMAQuestionnaireTrigger>
+        val emaTriggers =
+            triggers.filter { it.type == "random_ema" } as List<RandomEMAQuestionnaireTrigger>
         val phaseTriggers = emaTriggers.filter { it.phaseName == phase.name }
 
         for (trigger in phaseTriggers) {
             val initialCalendar = Calendar.getInstance()
             initialCalendar.add(Calendar.MINUTE, trigger.delayMinutes)
 
-            val questionnaire = dataStoreManager.questionnairesFlow.first().find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire
+            val questionnaire = dataStoreManager.questionnairesFlow.first()
+                .find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire
             if (questionnaire == null) {
                 Log.e("EsmHandler", "Questionnaire not found for trigger ${trigger.id}")
                 return
             }
 
-            val untilTimestamp = fromTime.timeInMillis + TimeUnit.DAYS.toMillis(phase.durationDays.toLong())
+            val untilTimestamp =
+                fromTime.timeInMillis + TimeUnit.DAYS.toMillis(phase.durationDays.toLong())
 
-            scheduleRandomEMANotificationForTrigger(trigger, initialCalendar, questionnaire.name, untilTimestamp, context)
+            scheduleRandomEMANotificationForTrigger(
+                trigger,
+                initialCalendar,
+                questionnaire.name,
+                untilTimestamp,
+                context
+            )
         }
     }
 
-    fun scheduleRandomEMANotificationForTrigger(trigger: RandomEMAQuestionnaireTrigger, calendar: Calendar, questionnaireName: String, untilTimestamp: Long, context: Context) {
+    fun scheduleRandomEMANotificationForTrigger(
+        trigger: RandomEMAQuestionnaireTrigger,
+        calendar: Calendar,
+        questionnaireName: String,
+        untilTimestamp: Long,
+        context: Context
+    ) {
         val intent = Intent(context, RandomNotificationReceiver::class.java)
         intent.apply {
             putExtra("title", "Es ist Zeit für $questionnaireName")
@@ -151,7 +172,10 @@ class EsmHandler {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
         )
 
-        Log.i("EsmHandler", "Scheduling random EMA notification for ${questionnaireName} at ${nextNotificationTime.timeInMillis}")
+        Log.i(
+            "EsmHandler",
+            "Scheduling random EMA notification for ${questionnaireName} at ${nextNotificationTime.timeInMillis}"
+        )
 
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
@@ -160,8 +184,12 @@ class EsmHandler {
         )
     }
 
-    fun getCalendarForNextRandomNotification(trigger: RandomEMAQuestionnaireTrigger, currentTime: Calendar): Calendar {
-        val randomMinutes = (-(trigger.randomToleranceMinutes/2)..(trigger.randomToleranceMinutes/2)).random()
+    fun getCalendarForNextRandomNotification(
+        trigger: RandomEMAQuestionnaireTrigger,
+        currentTime: Calendar
+    ): Calendar {
+        val randomMinutes =
+            (-(trigger.randomToleranceMinutes / 2)..(trigger.randomToleranceMinutes / 2)).random()
         val distanceMinutes = trigger.distanceMinutes
 
         val timeToAdd = distanceMinutes + randomMinutes
@@ -177,7 +205,10 @@ class EsmHandler {
             // calculate the next notification time starting from the next day
             nextNotificationTime.add(Calendar.DATE, 1)
             nextNotificationTime.set(Calendar.HOUR_OF_DAY, trigger.timeBucket.split(":")[0].toInt())
-            nextNotificationTime.set(Calendar.MINUTE, trigger.timeBucket.split(":")[1].split("-")[0].toInt())
+            nextNotificationTime.set(
+                Calendar.MINUTE,
+                trigger.timeBucket.split(":")[1].split("-")[0].toInt()
+            )
             return getCalendarForNextRandomNotification(trigger, nextNotificationTime)
         }
 
@@ -189,6 +220,74 @@ class EsmHandler {
         val end = timeBucket.split("-")[1].split(":")[0].toInt()
         val hour = currentTime.get(Calendar.HOUR_OF_DAY)
         return hour in start until end
+    }
+
+    suspend fun scheduleOneTimeQuestionnaires(
+        context: Context,
+        dataStoreManager: DataStoreManager,
+        database: AppDatabase
+    ) {
+        coroutineScope {
+            val questionnaires = (Dispatchers.IO) {
+                dataStoreManager.questionnairesFlow.first()
+            }
+            val oneTimeTriggers =
+                questionnaires.flatMap { it.triggers }.filter { it.type == "one_time" }
+
+            for (ot in oneTimeTriggers) {
+                val trigger = ot as OneTimeQuestionnaireTrigger
+                val questionnaire = dataStoreManager.questionnairesFlow.first()
+                    .find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire
+
+                if (questionnaire == null) return@coroutineScope
+
+                val scheduleHour = trigger.time.split(":")[0].toInt()
+                val scheduleMinute = trigger.time.split(":")[1].toInt()
+
+                val studyStart =
+                    (Dispatchers.IO) { dataStoreManager.timestampStudyStartedFlow.first() }
+
+                val calendar = Calendar.getInstance()
+                calendar.timeInMillis = studyStart
+                calendar.apply {
+                    // set(Calendar.HOUR_OF_DAY, scheduleHour)
+                    // set(Calendar.MINUTE, scheduleMinute)
+                    add(Calendar.MINUTE, 1)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                    add(Calendar.DATE, trigger.studyDay - 1)
+                }
+
+                val intent = Intent(context.applicationContext, OneTimeNotificationReceiver::class.java)
+                intent.apply {
+                    putExtra("title", "Es ist Zeit für ${questionnaire.name}")
+                    putExtra("id", trigger.id)
+                    putExtra("triggerJson", trigger.toJson().toString())
+                    putExtra("questionnaireId", trigger.questionnaireId)
+                    putExtra("questionnaireName", questionnaire.name)
+                }
+
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context.applicationContext,
+                    trigger.id,
+                    intent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
+                )
+
+                val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    pendingIntent
+                )
+
+                Log.d(
+                    "EsmHandler",
+                    "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.studyDay}"
+                )
+            }
+        }
     }
 
     suspend fun schedulePeriodicQuestionnaires(
@@ -393,5 +492,4 @@ class ReminderNotification(private val context: Context) {
         resources,
         resId
     )
-
 }

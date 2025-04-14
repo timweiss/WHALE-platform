@@ -713,9 +713,19 @@ class StartStudyViewModel @Inject constructor(
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
                 dataStoreManager.saveSensitiveDataSalt(generateSensitiveDataSalt())
 
-                fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)
+                try {
+                    fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)
+                } catch (exception: Exception) {
+                    Log.e("StartStudyViewModel", "Could not load questionnaires", exception)
+                }
 
                 getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(
+                    context,
+                    dataStoreManager,
+                    database
+                )
+
+                getApplication<SEApplicationController>().esmHandler.scheduleOneTimeQuestionnaires(
                     context,
                     dataStoreManager,
                     database

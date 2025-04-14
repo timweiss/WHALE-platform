@@ -28,7 +28,8 @@ data class PendingQuestionnaire(
                 .find { q -> q.questionnaire.id == questionnaireId }
             if (questionnaire == null) return -1
 
-            val validUntil = System.currentTimeMillis() + trigger.validDuration * 1000 * 60
+            val validUntil =
+                if (trigger.validDuration != -1L) System.currentTimeMillis() + trigger.validDuration * 1000L * 60L else -1L
 
             val pendingQuestionnaire = PendingQuestionnaire(
                 0,

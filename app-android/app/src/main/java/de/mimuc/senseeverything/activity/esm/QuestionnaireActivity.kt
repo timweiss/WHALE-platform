@@ -40,6 +40,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
 import de.mimuc.senseeverything.api.model.ElementValue
+import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.RadioGroupElement
 import de.mimuc.senseeverything.api.model.RadioGroupValue
@@ -94,7 +95,7 @@ class QuestionnaireViewModel  @Inject constructor(
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
     val elementValues: StateFlow<Map<Int, ElementValue>> = _elementValues
 
-    private var pendingQuestionnaireId = -1
+    private var pendingQuestionnaireId: Long = -1
 
     init {
         _isLoading.value = true
@@ -143,7 +144,7 @@ class QuestionnaireViewModel  @Inject constructor(
             }
         }
 
-        pendingQuestionnaireId = intent.getIntExtra("pendingQuestionnaireId", -1)
+        pendingQuestionnaireId = intent.getLongExtra("pendingQuestionnaireId", -1)
     }
 
     fun setElementValue(elementId: Int, value: ElementValue) {
@@ -174,7 +175,7 @@ class QuestionnaireViewModel  @Inject constructor(
 
                 // remove pending questionnaire
                 withContext(Dispatchers.IO) {
-                    if (pendingQuestionnaireId != -1) {
+                    if (pendingQuestionnaireId != -1L) {
                         database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId)
                     }
                 }
@@ -271,6 +272,9 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
                                     onValueChange = { newValue ->
                                         viewModel.setElementValue(element.id, TextEntryValue(element.id, element.name, newValue))
                                     })
+                            }
+                            "external_questionnaire_link" -> {
+                                ExternalQuestionnaireLinkElementComponent(element = element as ExternalQuestionnaireLinkElement)
                             }
                         }
                     }

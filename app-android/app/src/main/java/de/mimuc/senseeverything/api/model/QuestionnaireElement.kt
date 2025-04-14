@@ -121,6 +121,25 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 config.getString("hint")
             )
         }
+        "external_questionnaire_link" -> {
+            val urlParams = mutableMapOf<String, String>()
+            val urlParamsJson = config.getJSONArray("urlParams")
+            for (i in 0 until urlParamsJson.length()) {
+                val param = urlParamsJson.getJSONObject(i)
+                urlParams[param.getString("key")] = param.getString("value")
+            }
+            return ExternalQuestionnaireLinkElement(
+                id,
+                questionnaireId,
+                name,
+                step,
+                position,
+                configuration,
+                config.getString("externalUrl"),
+                config.getString("actionText"),
+                urlParams
+            )
+        }
     }
 
     return null
@@ -215,6 +234,33 @@ class TextEntryElement(
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("hint", hint)
+        return json
+    }
+}
+
+class ExternalQuestionnaireLinkElement(
+    id: Int,
+    questionnaireId: Int,
+    name: String,
+    step: Int,
+    position: Int,
+    configuration: Any,
+    val externalUrl: String,
+    val actionText: String,
+    val urlParams: Map<String, String>
+) : QuestionnaireElement(id, questionnaireId, name, "external_questionnaire_link", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("externalUrl", externalUrl)
+        json.getJSONObject("configuration").put("actionText", actionText)
+        val paramsJson = JSONArray()
+        for ((key, value) in urlParams) {
+            val param = JSONObject()
+            param.put("key", key)
+            param.put("value", value)
+            paramsJson.put(param)
+        }
+        json.getJSONObject("configuration").put("urlParams", paramsJson)
         return json
     }
 }

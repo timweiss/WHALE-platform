@@ -89,6 +89,16 @@ class RandomEMAQuestionnaireTrigger(
     val phaseName: String
 ): QuestionnaireTrigger(id, questionnaireId, "random_ema", validUntil, configuration)
 
+class OneTimeQuestionnaireTrigger(
+    id: Int,
+    questionnaireId: Int,
+    validUntil: Long,
+    configuration: Any,
+    val studyDay: Int,
+    val time: String,
+    val randomToleranceMinutes: Int
+): QuestionnaireTrigger(id, questionnaireId, "one_time", validUntil, configuration)
+
 fun emptyQuestionnaire(): FullQuestionnaire {
     return FullQuestionnaire(
         Questionnaire("", 0, 0, 0, false),
@@ -147,6 +157,18 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
                 configuration.getInt("delayMinutes"),
                 configuration.getString("timeBucket"),
                 configuration.getString("phaseName")
+            )
+        }
+
+        "one_time" -> {
+            return OneTimeQuestionnaireTrigger(
+                id,
+                questionnaireId,
+                validDuration,
+                configuration,
+                configuration.getInt("studyDay"),
+                configuration.getString("time"),
+                configuration.getInt("randomToleranceMinutes")
             )
         }
 
