@@ -39,10 +39,11 @@ stateDiagram-v2
 
 ### Experience Sampling
 We want to trigger an experience sampling form when specific events happen:
-- important: **user marks an interaction ended**
+- important: **user marks an interaction ended** (triggered by `event` trigger)
 - in a specific interval
   - every day at the same time (triggered by `periodic` trigger)
   - EMA: across the day, with a minimum time between samples (triggered by `random_ema` trigger)
+- once, for example for the takeout questionnaire at the end of a study (triggered by `one_time` trigger)
 
 A sampling could include the following:
 - content separated in steps (title, position)
@@ -56,6 +57,7 @@ A sampling could include the following:
     - slider
     - affect grid
     - time/duration
+  - link to external questionnaire (is embedded in questionnaire to instruct the participant)
 
 ```mermaid
 ---
