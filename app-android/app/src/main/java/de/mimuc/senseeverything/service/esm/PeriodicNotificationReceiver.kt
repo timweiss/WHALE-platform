@@ -28,18 +28,18 @@ class PeriodicNotificationReceiver: BroadcastReceiver() {
             return@goAsync
         }
 
-        val title = intent.getStringExtra("title")
-        val id = intent.getIntExtra("id", 0)
-        val triggerJson = intent.getStringExtra("triggerJson")
+        val title = intent.getStringExtra(EsmHandler.INTENT_TITLE)
+        val id = intent.getIntExtra(EsmHandler.INTENT_TRIGGER_ID, 0)
+        val triggerJson = intent.getStringExtra(EsmHandler.INTENT_TRIGGER_JSON)
         val trigger = triggerJson?.let { makeTriggerFromJson(JSONObject(it)) as PeriodicQuestionnaireTrigger }
-        val questionnaireName = intent.getStringExtra("questionnaireName")
-        val remainingDays = intent.getIntExtra("remainingDays", 0)
-        val totalDays = intent.getIntExtra("totalDays", 0)
+        val questionnaireName = intent.getStringExtra(EsmHandler.INTENT_QUESTIONNAIRE_NAME)
+        val remainingDays = intent.getIntExtra(EsmHandler.INTENT_REMAINING_STUDY_DAYS, 0)
+        val totalDays = intent.getIntExtra(EsmHandler.INTENT_TOTAL_STUDY_DAYS, 0)
 
         // deliver notification to user
         if (id != 0 && trigger != null) {
-            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(database, dataStoreManager, id, trigger)
-            scheduleNotificationService?.sendReminderNotification(id, pendingQuestionnaireId, title)
+            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(database, dataStoreManager, trigger)
+            scheduleNotificationService?.sendReminderNotification(id, pendingQuestionnaireId, title, questionnaireName)
         }
 
         // schedule next notification

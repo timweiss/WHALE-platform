@@ -30,6 +30,16 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 class EsmHandler {
+    companion object {
+        const val INTENT_TITLE = "title"
+        const val INTENT_TRIGGER_ID = "id"
+        const val INTENT_TRIGGER_JSON = "triggerJson"
+        const val INTENT_QUESTIONNAIRE_NAME = "questionnaireName"
+        const val INTENT_NOTIFY_PHASE_UNTIL_TIMESTAMP = "untilTimestamp"
+        const val INTENT_REMAINING_STUDY_DAYS = "remainingDays"
+        const val INTENT_TOTAL_STUDY_DAYS = "totalDays"
+    }
+
     private var triggers: List<QuestionnaireTrigger> = emptyList()
 
     fun initializeTriggers(dataStoreManager: DataStoreManager) {
@@ -86,7 +96,6 @@ class EsmHandler {
                 pendingId = PendingQuestionnaire.createEntry(
                     database,
                     dataStoreManager,
-                    questionnaire.questionnaire.id,
                     trigger
                 )
             }
@@ -148,12 +157,11 @@ class EsmHandler {
     ) {
         val intent = Intent(context, RandomNotificationReceiver::class.java)
         intent.apply {
-            putExtra("title", "Es ist Zeit für $questionnaireName")
-            putExtra("id", trigger.id)
-            putExtra("triggerJson", trigger.toJson().toString())
-            putExtra("questionnaireId", trigger.questionnaireId)
-            putExtra("questionnaireName", questionnaireName)
-            putExtra("untilTimestamp", untilTimestamp)
+            putExtra(INTENT_TITLE, "Es ist Zeit für $questionnaireName")
+            putExtra(INTENT_TRIGGER_ID, trigger.id)
+            putExtra(INTENT_TRIGGER_JSON, trigger.toJson().toString())
+            putExtra(INTENT_QUESTIONNAIRE_NAME, questionnaireName)
+            putExtra(INTENT_NOTIFY_PHASE_UNTIL_TIMESTAMP, untilTimestamp)
         }
 
         val nextNotificationTime = getCalendarForNextRandomNotification(trigger, calendar)
@@ -260,11 +268,10 @@ class EsmHandler {
 
                 val intent = Intent(context.applicationContext, OneTimeNotificationReceiver::class.java)
                 intent.apply {
-                    putExtra("title", "Es ist Zeit für ${questionnaire.name}")
-                    putExtra("id", trigger.id)
-                    putExtra("triggerJson", trigger.toJson().toString())
-                    putExtra("questionnaireId", trigger.questionnaireId)
-                    putExtra("questionnaireName", questionnaire.name)
+                    putExtra(INTENT_TITLE, "Es ist Zeit für ${questionnaire.name}")
+                    putExtra(INTENT_TRIGGER_ID, trigger.id)
+                    putExtra(INTENT_TRIGGER_JSON, trigger.toJson().toString())
+                    putExtra(INTENT_QUESTIONNAIRE_NAME, questionnaire.name)
                 }
 
                 val pendingIntent = PendingIntent.getBroadcast(
@@ -284,7 +291,7 @@ class EsmHandler {
 
                 Log.d(
                     "EsmHandler",
-                    "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.studyDay}"
+                    "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.studyDay} at ${calendar.timeInMillis}"
                 )
             }
         }
@@ -354,13 +361,12 @@ class EsmHandler {
 
         val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
         intent.apply {
-            putExtra("title", "Es ist Zeit für ${title}")
-            putExtra("id", trigger.id)
-            putExtra("triggerJson", trigger.toJson().toString())
-            putExtra("questionnaireId", trigger.questionnaireId)
-            putExtra("questionnaireName", title)
-            putExtra("remainingDays", nextNotification.remainingDays)
-            putExtra("totalDays", totalDays)
+            putExtra(INTENT_TITLE, "Es ist Zeit für ${title}")
+            putExtra(INTENT_TRIGGER_ID, trigger.id)
+            putExtra(INTENT_TRIGGER_JSON, trigger.toJson().toString())
+            putExtra(INTENT_QUESTIONNAIRE_NAME, title)
+            putExtra(INTENT_REMAINING_STUDY_DAYS, nextNotification.remainingDays)
+            putExtra(INTENT_TOTAL_STUDY_DAYS, totalDays)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -450,7 +456,7 @@ class ReminderNotification(private val context: Context) {
 
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: Long, title: String?) {
+    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: Long, title: String?, questionnaireName: String? = "") {
         val intent = Intent(context, QuestionnaireActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("triggerId", triggerId)
@@ -470,7 +476,7 @@ class ReminderNotification(private val context: Context) {
             .setPriority(NotificationManager.IMPORTANCE_HIGH)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("It's time for $title")
+                    .bigText("It's time for $questionnaireName")
             )
             .setAutoCancel(true)
             .setContentIntent(

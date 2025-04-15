@@ -21,11 +21,10 @@ data class PendingQuestionnaire(
         suspend fun createEntry(
             database: AppDatabase,
             dataStoreManager: DataStoreManager,
-            questionnaireId: Int,
             trigger: QuestionnaireTrigger
         ): Long {
             val questionnaire = dataStoreManager.questionnairesFlow.first()
-                .find { q -> q.questionnaire.id == questionnaireId }
+                .find { q -> q.questionnaire.id == trigger.questionnaireId }
             if (questionnaire == null) return -1
 
             val validUntil =

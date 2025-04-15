@@ -3,7 +3,6 @@ package de.mimuc.senseeverything.activity.esm
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,8 +41,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.core.net.toUri
-
-// todo: alignment of the elements
 
 @Composable
 fun TextViewElementComponent(element: TextViewElement) {
@@ -178,19 +175,16 @@ class ExternalQuestionnaireLinkElementComponentViewModel @Inject constructor(
 
             _isLoading.value = false
 
-            /*
-            if (context.packageManager.resolveActivity(intent, 0) == null) {
+            try {
+                context.startActivity(intent)
+            } catch (e: Exception) {
                 val toast = Toast.makeText(
                     context,
                     "Cannot open questionnaire. Please install a web browser.",
                     Toast.LENGTH_LONG
                 )
                 toast.show()
-                return@launch
             }
-            */
-
-            context.startActivity(intent)
         }
     }
 }
@@ -201,7 +195,6 @@ fun ExternalQuestionnaireLinkElementComponent(
     element: ExternalQuestionnaireLinkElement
 ) {
     val context = LocalContext.current
-    val isLoading = viewModel.isLoading.collectAsState()
 
     Text("Please fill out the following questionnaire", modifier = Modifier.fillMaxWidth())
     Button(onClick = { viewModel.openQuestionnaire(context, element) }) {
