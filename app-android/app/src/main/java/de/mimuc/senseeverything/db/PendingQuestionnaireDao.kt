@@ -10,7 +10,7 @@ interface PendingQuestionnaireDao {
     @Query("SELECT * FROM pending_questionnaire")
     fun getAll(): List<PendingQuestionnaire>
 
-    @Query("SELECT * FROM pending_questionnaire WHERE valid_until > :now")
+    @Query("SELECT * FROM pending_questionnaire WHERE valid_until > :now OR valid_until = -1")
     fun getAllNotExpired(now: Long): List<PendingQuestionnaire>
 
     @Insert
@@ -22,6 +22,6 @@ interface PendingQuestionnaireDao {
     @Query("DELETE FROM pending_questionnaire WHERE uid = :uid")
     fun deleteById(uid: Long)
 
-    @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now OR valid_until = -1")
+    @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now")
     fun deleteExpired(now: Long)
 }

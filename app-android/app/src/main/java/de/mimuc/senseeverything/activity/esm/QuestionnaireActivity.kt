@@ -145,6 +145,7 @@ class QuestionnaireViewModel  @Inject constructor(
         }
 
         pendingQuestionnaireId = intent.getLongExtra("pendingQuestionnaireId", -1)
+        Log.d("Questionnaire", "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId")
     }
 
     fun setElementValue(elementId: Int, value: ElementValue) {

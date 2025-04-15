@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Entity(tableName = "pending_questionnaire")
 data class PendingQuestionnaire(
-    @PrimaryKey(autoGenerate = true) var uid: Int,
+    @PrimaryKey(autoGenerate = true) var uid: Long,
     @ColumnInfo(name = "added_at") val addedAt: Long,
     @ColumnInfo(name = "valid_until") val validUntil: Long,
     @ColumnInfo(name = "questionnaire_json") val questionnaireJson: String,

@@ -434,7 +434,11 @@ private fun QuestionnaireInbox(
                     }) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     Text(pq.title, fontWeight = FontWeight.SemiBold)
-                    Text("Complete in the next ${pq.distanceMillis().inWholeMinutes} min")
+                    if (pq.validUntil != -1L) {
+                        Text("Complete in the next ${pq.distanceMillis().inWholeMinutes} min")
+                    } else {
+                        Text("Complete when you have time")
+                    }
                 }
             }
         }
