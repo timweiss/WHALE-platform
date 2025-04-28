@@ -12,7 +12,11 @@ suspend fun fetchExternalQuestionnaireParams(
 
     for ((key, value) in params) {
         if (value.startsWith("generatedKey")) {
-            // todo: implement
+            val name = value.split('.')[1]
+            val value = getOrCreateGeneratedKey(name, database)
+            if (value != null) {
+                results.put(key, value)
+            }
         } else if (value.startsWith("configuration")) {
             when (value) {
                 "configuration.enrolmentId" -> {
@@ -24,4 +28,18 @@ suspend fun fetchExternalQuestionnaireParams(
     }
 
     return results
+}
+
+fun getOrCreateGeneratedKey(name: String, database: AppDatabase): String? {
+    val existing = database.generatedKeyDao().getByName(name)
+    if (existing != null) {
+        return existing.key
+    } else {
+        val generatedKey = de.mimuc.senseeverything.db.GeneratedKey.createEntry(name)
+        val id = database.generatedKeyDao().insert(generatedKey)
+        if (id != -1L) {
+            return generatedKey.key
+        }
+    }
+    return null
 }

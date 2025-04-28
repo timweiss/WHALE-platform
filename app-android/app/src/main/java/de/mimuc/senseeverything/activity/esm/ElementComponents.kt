@@ -15,7 +15,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
@@ -23,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,11 +36,12 @@ import de.mimuc.senseeverything.api.model.TextViewElement
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.fetchExternalQuestionnaireParams
 import de.mimuc.senseeverything.db.AppDatabase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import androidx.core.net.toUri
 
 @Composable
 fun TextViewElementComponent(element: TextViewElement) {
@@ -165,10 +166,13 @@ class ExternalQuestionnaireLinkElementComponentViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
 
-            val urlParams = fetchExternalQuestionnaireParams(element.urlParams, dataStoreManager, database)
+            val urlParams = withContext(Dispatchers.IO) {
+                fetchExternalQuestionnaireParams(element.urlParams, dataStoreManager, database)
+            }
             if (!element.externalUrl.startsWith("https://")) return@launch
 
-            val url = element.externalUrl + "?" + urlParams.entries.joinToString("&") { "${it.key}=${it.value}" }
+            val url =
+                element.externalUrl + "?" + urlParams.entries.joinToString("&") { "${it.key}=${it.value}" }
 
             val intent = Intent(Intent.ACTION_VIEW, url.toUri())
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
