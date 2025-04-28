@@ -46,20 +46,25 @@ the socket connection.
 
 ### EMA/ESM
 
-Adding links to external questionnaires (such as Unipark, LimeSurvey, etc.):
+#### Adding links to external questionnaires (such as Unipark, LimeSurvey, etc.)
 
 1. Add a new questionnaire to `esm_questionnaires`.
 2. Add the desired trigger to `esm_triggers`.
 3. Add the element to `esm_elements`:
-   a. `type` is `external_questionnaire_link`, other element configuration (position, name) is at the discretion of the study
+   a. `type` is `external_questionnaire_link`, other element configuration (position, name) is at
+   the discretion of the study
    b. `configuration` is a JSON object with the following keys:
     - `externalUrl`: the URL of the external questionnaire
     - `urlParams`: a list of parameters to be added to the URL as query parameters, e.g.
       `[{"key": "enrolment", "value": "configuration.enrolmentId"}]`
+    - `actionName`: the text that will be shown on the button to open the external questionnaire
 
 The following parameters can be defined:
 
-| Parameter                   | Description                                                                                         |
-|-----------------------------|-----------------------------------------------------------------------------------------------------|
-| `configuration.enrolmentId` | The unique ID of the participant                                                                    |
-| `generatedKey.{YOUR_KEY}`   | A generated key that can be used to anonymously identify the same participant across questionnaires |
+| Parameter                   | Description                                                                                                                                                        |
+|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `configuration.enrolmentId` | The unique ID of the participant                                                                                                                                   |
+| `generatedKey.{YOUR_KEY}`   | A generated key that can be used to anonymously identify the same participant across questionnaires. Replace `{YOUR_KEY}` with your preferred key, is not exposed. |
+
+The link to the external questionnaire will be displayed within the default questionnaire interface. This allows the study author to show explanations and also utilize the questionnaire inbox.
+![Screenshot of questionnaire with external link](https://github.com/user-attachments/assets/0642bf46-0290-4d78-8a02-8cb60af71550)

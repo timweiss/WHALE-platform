@@ -199,8 +199,6 @@ fun ExternalQuestionnaireLinkElementComponent(
     element: ExternalQuestionnaireLinkElement
 ) {
     val context = LocalContext.current
-
-    Text("Please fill out the following questionnaire", modifier = Modifier.fillMaxWidth())
     Button(onClick = { viewModel.openQuestionnaire(context, element) }) {
         Text(
             element.actionText,
