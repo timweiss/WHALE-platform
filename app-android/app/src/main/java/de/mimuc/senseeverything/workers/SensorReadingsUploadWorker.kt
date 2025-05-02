@@ -21,7 +21,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.db.AppDatabase
-import de.mimuc.senseeverything.db.LogData
+import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

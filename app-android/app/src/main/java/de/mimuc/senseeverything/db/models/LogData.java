@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.db;
+package de.mimuc.senseeverything.db.models;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;

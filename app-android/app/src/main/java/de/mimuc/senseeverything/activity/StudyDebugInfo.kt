@@ -9,7 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,14 +34,12 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
-import de.mimuc.senseeverything.api.model.Questionnaire
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.getCurrentStudyPhase
 import de.mimuc.senseeverything.db.AppDatabase
-import de.mimuc.senseeverything.db.LogData
+import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

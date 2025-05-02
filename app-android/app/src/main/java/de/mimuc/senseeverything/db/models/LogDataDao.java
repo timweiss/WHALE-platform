@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.db;
+package de.mimuc.senseeverything.db.models;
 
 import androidx.room.Dao;
 import androidx.room.Delete;

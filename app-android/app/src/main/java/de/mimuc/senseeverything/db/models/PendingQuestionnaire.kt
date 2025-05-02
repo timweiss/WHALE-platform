@@ -1,11 +1,13 @@
-package de.mimuc.senseeverything.db
+package de.mimuc.senseeverything.db.models
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.flow.first
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 @Entity(tableName = "pending_questionnaire")
@@ -49,7 +51,7 @@ data class QuestionnaireInboxItem(
     val pendingQuestionnaire: PendingQuestionnaire
 )
 
-fun QuestionnaireInboxItem.distanceMillis(): kotlin.time.Duration {
+fun QuestionnaireInboxItem.distanceMillis(): Duration {
     val now = System.currentTimeMillis()
     val diff = this.validUntil - now
     return diff.milliseconds

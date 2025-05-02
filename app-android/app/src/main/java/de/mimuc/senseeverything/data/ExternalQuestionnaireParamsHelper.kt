@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.data
 
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.GeneratedKey
 import kotlinx.coroutines.flow.first
 
 suspend fun fetchExternalQuestionnaireParams(
@@ -35,7 +36,7 @@ fun getOrCreateGeneratedKey(name: String, database: AppDatabase): String? {
     if (existing != null) {
         return existing.key
     } else {
-        val generatedKey = de.mimuc.senseeverything.db.GeneratedKey.createEntry(name)
+        val generatedKey = GeneratedKey.createEntry(name)
         val id = database.generatedKeyDao().insert(generatedKey)
         if (id != -1L) {
             return generatedKey.key

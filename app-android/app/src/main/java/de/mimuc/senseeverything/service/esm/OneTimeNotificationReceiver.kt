@@ -8,7 +8,7 @@ import de.mimuc.senseeverything.api.model.OneTimeQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
-import de.mimuc.senseeverything.db.PendingQuestionnaire
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
 import org.json.JSONObject
 import javax.inject.Inject

@@ -4,13 +4,27 @@ import androidx.room.AutoMigration;
 import androidx.room.Database;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {LogData.class, PendingQuestionnaire.class, GeneratedKey.class}, version = 4, autoMigrations = {
-        @AutoMigration(from = 1, to = 4)
-}, exportSchema = true)
+import de.mimuc.senseeverything.db.models.GeneratedKey;
+import de.mimuc.senseeverything.db.models.GeneratedKeyDao;
+import de.mimuc.senseeverything.db.models.LogData;
+import de.mimuc.senseeverything.db.models.LogDataDao;
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire;
+import de.mimuc.senseeverything.db.models.PendingQuestionnaireDao;
+import de.mimuc.senseeverything.db.models.SocialNetworkContact;
+import de.mimuc.senseeverything.db.models.SocialNetworkContactDao;
+
+@Database(entities = {
+        LogData.class,
+        PendingQuestionnaire.class,
+        GeneratedKey.class,
+        SocialNetworkContact.class
+}, version = 5, autoMigrations = {@AutoMigration(from = 1, to = 5)}, exportSchema = true)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract LogDataDao logDataDao();
 
     public abstract PendingQuestionnaireDao pendingQuestionnaireDao();
 
     public abstract GeneratedKeyDao generatedKeyDao();
+
+    public abstract SocialNetworkContactDao socialNetworkContactDao();
 }

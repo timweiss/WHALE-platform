@@ -13,7 +13,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
-import de.mimuc.senseeverything.db.LogData
+import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import de.mimuc.senseeverything.workers.conversation.VadReader
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateLength

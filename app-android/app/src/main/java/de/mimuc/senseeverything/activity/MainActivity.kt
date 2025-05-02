@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -69,7 +68,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
-import de.mimuc.senseeverything.activity.esm.QuestionnaireView
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
@@ -78,9 +76,8 @@ import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.api.model.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
-import de.mimuc.senseeverything.db.PendingQuestionnaire
-import de.mimuc.senseeverything.db.QuestionnaireInboxItem
-import de.mimuc.senseeverything.db.distanceMillis
+import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
+import de.mimuc.senseeverything.db.models.distanceMillis
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
@@ -95,7 +92,6 @@ import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.milliseconds
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {

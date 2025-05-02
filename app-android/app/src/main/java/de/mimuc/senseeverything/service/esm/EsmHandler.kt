@@ -20,7 +20,7 @@ import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.RandomEMAQuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
-import de.mimuc.senseeverything.db.PendingQuestionnaire
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first

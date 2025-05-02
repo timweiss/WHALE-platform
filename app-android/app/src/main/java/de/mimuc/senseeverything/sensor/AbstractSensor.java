@@ -3,13 +3,11 @@ package de.mimuc.senseeverything.sensor;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
-import android.view.View;
 
 import java.io.Serializable;
 
-import de.mimuc.senseeverything.data.SensorReadingDiskDataSource;
 import de.mimuc.senseeverything.db.AppDatabase;
-import de.mimuc.senseeverything.db.LogData;
+import de.mimuc.senseeverything.db.models.LogData;
 
 public abstract class AbstractSensor implements Serializable  {
 

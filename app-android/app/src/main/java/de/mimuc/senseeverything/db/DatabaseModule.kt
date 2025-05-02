@@ -7,6 +7,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.mimuc.senseeverything.db.models.LogDataDao
+import de.mimuc.senseeverything.db.models.PendingQuestionnaireDao
 import javax.inject.Singleton
 
 @Module()
