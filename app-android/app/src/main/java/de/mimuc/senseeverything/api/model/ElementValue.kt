@@ -29,6 +29,12 @@ class CheckboxGroupValue(elementId: Int, elementName: String, var values: List<S
     }
 }
 
+class SocialNetworkValue(elementId: Int, elementName: String, var values: List<Long>) : ElementValue(elementId, elementName) {
+    override fun getSerializedValue(): String {
+        return values.joinToString(",")
+    }
+}
+
 class SliderValue(elementId: Int, elementName: String, var value: Double) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return value.toString()
@@ -47,6 +53,7 @@ fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
         "checkbox_group" -> CheckboxGroupValue(element.id, element.name, emptyList())
         "slider" -> SliderValue(element.id,element.name, 0.0)
         "text_entry" -> TextEntryValue(element.id, element.name, "")
+        "social_network_entry" -> SocialNetworkValue(element.id, element.name, emptyList())
         else -> ElementValue(element.id, element.name)
     }
 }

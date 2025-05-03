@@ -47,6 +47,7 @@ import de.mimuc.senseeverything.api.model.RadioGroupValue
 import de.mimuc.senseeverything.api.model.SliderElement
 import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryElement
+import de.mimuc.senseeverything.api.model.SocialNetworkValue
 import de.mimuc.senseeverything.api.model.TextEntryElement
 import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.TextViewElement
@@ -79,7 +80,7 @@ class QuestionnaireActivity : ComponentActivity() {
 }
 
 @HiltViewModel
-class QuestionnaireViewModel  @Inject constructor(
+class QuestionnaireViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
     private val database: AppDatabase
@@ -127,7 +128,8 @@ class QuestionnaireViewModel  @Inject constructor(
             if (triggerId != -1) {
                 viewModelScope.launch {
                     dataStoreManager.questionnairesFlow.collect { questionnaires ->
-                        val questionnaire = questionnaires.find { it.triggers.any { it.id == triggerId } }
+                        val questionnaire =
+                            questionnaires.find { it.triggers.any { it.id == triggerId } }
                         if (questionnaire == null) {
                             _isLoading.value = false
                         } else {
@@ -146,7 +148,10 @@ class QuestionnaireViewModel  @Inject constructor(
         }
 
         pendingQuestionnaireId = intent.getLongExtra("pendingQuestionnaireId", -1)
-        Log.d("Questionnaire", "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId")
+        Log.d(
+            "Questionnaire",
+            "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
+        )
     }
 
     fun setElementValue(elementId: Int, value: ElementValue) {
@@ -173,7 +178,13 @@ class QuestionnaireViewModel  @Inject constructor(
             ) { studyId, token ->
                 // schedule to upload answers
                 Log.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
-                enqueueQuestionnaireUploadWorker(context, makeAnswerJsonArray(), questionnaire.value.questionnaire.id, studyId, token)
+                enqueueQuestionnaireUploadWorker(
+                    context,
+                    makeAnswerJsonArray(),
+                    questionnaire.value.questionnaire.id,
+                    studyId,
+                    token
+                )
 
                 // remove pending questionnaire
                 withContext(Dispatchers.IO) {
@@ -206,7 +217,10 @@ class QuestionnaireViewModel  @Inject constructor(
 }
 
 @Composable
-fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), modifier: Modifier = Modifier) {
+fun QuestionnaireView(
+    viewModel: QuestionnaireViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    modifier: Modifier = Modifier
+) {
     val isLoading = viewModel.isLoading.collectAsState()
     val questionnaire = viewModel.questionnaire.collectAsState()
 
@@ -229,9 +243,11 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
             )
         }
     ) { innerPadding ->
-        Column(modifier = modifier
-            .padding(innerPadding)
-            .padding(16.dp)) {
+        Column(
+            modifier = modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+        ) {
             if (isLoading.value) {
                 Text("Loading...")
             } else if (questionnaire.value.elements.isEmpty()) {
@@ -239,7 +255,10 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
             } else {
                 val maxStep = questionnaire.value.elements.maxOf { it.step }
                 val currentStep by viewModel.activeStep.collectAsState()
-                val currentElements = remember(currentStep) { questionnaire.value.elements.filter { it.step == currentStep }.sortedBy { it.position } }
+                val currentElements = remember(currentStep) {
+                    questionnaire.value.elements.filter { it.step == currentStep }
+                        .sortedBy { it.position }
+                }
                 val answerValues = viewModel.elementValues.collectAsState()
 
                 LazyColumn {
@@ -250,37 +269,72 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
                             "text_view" -> {
                                 TextViewElementComponent(element = element as TextViewElement)
                             }
+
                             "radio_group" -> {
-                                RadioGroupElementComponent(element = element as RadioGroupElement, value = (elementValue as RadioGroupValue).value,
+                                RadioGroupElementComponent(
+                                    element = element as RadioGroupElement,
+                                    value = (elementValue as RadioGroupValue).value,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, RadioGroupValue(element.id, element.name, newValue))
+                                        viewModel.setElementValue(
+                                            element.id,
+                                            RadioGroupValue(element.id, element.name, newValue)
+                                        )
                                     }
                                 )
                             }
+
                             "checkbox_group" -> {
-                                CheckboxGroupElementComponent(element = element as CheckboxGroupElement, value = (elementValue as CheckboxGroupValue).values,
+                                CheckboxGroupElementComponent(
+                                    element = element as CheckboxGroupElement,
+                                    value = (elementValue as CheckboxGroupValue).values,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, CheckboxGroupValue(element.id, element.name, newValue))
+                                        viewModel.setElementValue(
+                                            element.id,
+                                            CheckboxGroupValue(element.id, element.name, newValue)
+                                        )
                                     })
                             }
+
                             "slider" -> {
-                                SliderElementComponent(element = element as SliderElement, value = (elementValue as SliderValue).value,
+                                SliderElementComponent(
+                                    element = element as SliderElement,
+                                    value = (elementValue as SliderValue).value,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, SliderValue(element.id, element.name, newValue))
+                                        viewModel.setElementValue(
+                                            element.id,
+                                            SliderValue(element.id, element.name, newValue)
+                                        )
                                     })
                             }
+
                             "text_entry" -> {
-                                TextEntryElementComponent(element = element as TextEntryElement, value = (elementValue as TextEntryValue).value,
+                                TextEntryElementComponent(
+                                    element = element as TextEntryElement,
+                                    value = (elementValue as TextEntryValue).value,
                                     onValueChange = { newValue ->
-                                        viewModel.setElementValue(element.id, TextEntryValue(element.id, element.name, newValue))
+                                        viewModel.setElementValue(
+                                            element.id,
+                                            TextEntryValue(element.id, element.name, newValue)
+                                        )
                                     })
                             }
+
                             "external_questionnaire_link" -> {
                                 ExternalQuestionnaireLinkElementComponent(element = element as ExternalQuestionnaireLinkElement)
                             }
+
                             "social_network_entry" -> {
-                                SocialNetworkEntryElementComponent(element = element as SocialNetworkEntryElement)
+                                SocialNetworkEntryElementComponent(
+                                    element = element as SocialNetworkEntryElement,
+                                    value = (elementValue as SocialNetworkValue).values,
+                                    onValueChange = { newValue ->
+                                        viewModel.setElementValue(
+                                            element.id,
+                                            SocialNetworkValue(element.id, element.name, newValue)
+                                        )
+                                    })
                             }
+
                             else -> {
                                 Text("Unknown element: ${element.type}")
                             }

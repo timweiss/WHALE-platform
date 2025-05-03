@@ -36,9 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryElement
@@ -50,13 +53,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
-@HiltViewModel
-class SocialNetworkEntryViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = SocialNetworkEntryViewModel.SocialNetworkEntryViewModelFactory::class)
+class SocialNetworkEntryViewModel @AssistedInject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    @Assisted val value: List<Long>,
+    @Assisted val onValueChange: (List<Long>) -> Unit
 ) : AndroidViewModel(application) {
     private val _availablePersons = MutableStateFlow<List<SocialNetworkContact>>(emptyList())
     val availablePersons: StateFlow<List<SocialNetworkContact>> = _availablePersons
@@ -64,12 +68,21 @@ class SocialNetworkEntryViewModel @Inject constructor(
     private val _selectedPersons = MutableStateFlow<List<SocialNetworkContact>>(emptyList())
     val selectedPersons: StateFlow<List<SocialNetworkContact>> = _selectedPersons
 
+    @AssistedFactory
+    interface SocialNetworkEntryViewModelFactory {
+        fun create(
+            value: List<Long>,
+            onValueChange: (List<Long>) -> Unit
+        ): SocialNetworkEntryViewModel
+    }
+
     init {
         viewModelScope.launch {
             val persons = withContext(Dispatchers.IO) {
                 database.socialNetworkContactDao().getAll()
             }
             _availablePersons.value = persons
+            _selectedPersons.value = persons.filter { value.contains(it.uid) }
         }
     }
 
@@ -81,23 +94,32 @@ class SocialNetworkEntryViewModel @Inject constructor(
             person.uid = id
             _availablePersons.value = _availablePersons.value + person
             _selectedPersons.value = _selectedPersons.value + person
+            onValueChange(_selectedPersons.value.map { it.uid })
         }
     }
 
     fun onSelectionChanged(selected: List<SocialNetworkContact>) {
         _selectedPersons.value = selected
+        onValueChange(_selectedPersons.value.map { it.uid })
     }
 
     fun onUnselected(person: SocialNetworkContact) {
         _selectedPersons.value = _selectedPersons.value.filter { it.uid != person.uid }
+        onValueChange(_selectedPersons.value.map { it.uid })
     }
 }
 
 @Composable
 fun SocialNetworkEntryElementComponent(
-    viewModel: SocialNetworkEntryViewModel = viewModel(),
-    element: SocialNetworkEntryElement
+    element: SocialNetworkEntryElement,
+    value: List<Long>,
+    onValueChange: (List<Long>) -> Unit,
 ) {
+    val viewModel =
+        hiltViewModel<SocialNetworkEntryViewModel, SocialNetworkEntryViewModel.SocialNetworkEntryViewModelFactory> { factory ->
+            factory.create(value, onValueChange)
+        }
+
     var availablePersons = viewModel.availablePersons.collectAsState()
     var selectedPersons = viewModel.selectedPersons.collectAsState()
 
