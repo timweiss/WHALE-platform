@@ -46,6 +46,7 @@ import de.mimuc.senseeverything.api.model.RadioGroupElement
 import de.mimuc.senseeverything.api.model.RadioGroupValue
 import de.mimuc.senseeverything.api.model.SliderElement
 import de.mimuc.senseeverything.api.model.SliderValue
+import de.mimuc.senseeverything.api.model.SocialNetworkEntryElement
 import de.mimuc.senseeverything.api.model.TextEntryElement
 import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.TextViewElement
@@ -276,6 +277,12 @@ fun QuestionnaireView(viewModel: QuestionnaireViewModel = androidx.lifecycle.vie
                             }
                             "external_questionnaire_link" -> {
                                 ExternalQuestionnaireLinkElementComponent(element = element as ExternalQuestionnaireLinkElement)
+                            }
+                            "social_network_entry" -> {
+                                SocialNetworkEntryElementComponent(element = element as SocialNetworkEntryElement)
+                            }
+                            else -> {
+                                Text("Unknown element: ${element.type}")
                             }
                         }
                     }

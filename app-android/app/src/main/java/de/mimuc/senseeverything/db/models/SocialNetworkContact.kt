@@ -8,7 +8,6 @@ import androidx.room.PrimaryKey
 data class SocialNetworkContact(
     @PrimaryKey(autoGenerate = true) var uid: Long,
     @ColumnInfo(name = "added_at") val addedAt: Long,
-    @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "key") val key: String
+    @ColumnInfo(name = "name") val name: String
 ) {
 }

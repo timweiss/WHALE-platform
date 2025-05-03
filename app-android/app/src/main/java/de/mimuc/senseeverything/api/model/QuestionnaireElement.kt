@@ -140,6 +140,16 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 urlParams
             )
         }
+        "social_network_entry" -> {
+            return SocialNetworkEntryElement(
+                id,
+                questionnaireId,
+                name,
+                step,
+                position,
+                configuration
+            )
+        }
     }
 
     return null
@@ -261,6 +271,20 @@ class ExternalQuestionnaireLinkElement(
             paramsJson.put(param)
         }
         json.getJSONObject("configuration").put("urlParams", paramsJson)
+        return json
+    }
+}
+
+class SocialNetworkEntryElement(
+    id: Int,
+    questionnaireId: Int,
+    name: String,
+    step: Int,
+    position: Int,
+    configuration: Any,
+) : QuestionnaireElement(id, questionnaireId, name, "social_network_entry", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
         return json
     }
 }

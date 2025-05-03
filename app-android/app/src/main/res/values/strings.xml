@@ -73,4 +73,14 @@
     <string name="background_work_channel_name">Background Work</string>
     <string name="title_activity_study_debug_info">StudyDebugInfo</string>
     <string name="study_has_ended">Study has ended. Thank you for participating!</string>
+    <string name="gen_cancel">Cancel</string>
+    <string name="gen_add">Add</string>
+    <string name="social_network_person_name">Name</string>
+    <string name="social_network_add_new_person">Add new person</string>
+    <string name="gen_confirm">Confirm</string>
+    <string name="social_network_choose_person">Choose person</string>
+    <string name="gen_remove">Remove</string>
+    <string name="social_network_selected_people">Selected people</string>
+    <string name="social_network_no_person_selected">No person selected</string>
+    <string name="social_network_add_person">Add person</string>
 </resources>
