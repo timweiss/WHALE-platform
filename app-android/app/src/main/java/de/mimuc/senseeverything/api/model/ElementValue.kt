@@ -29,7 +29,7 @@ class CheckboxGroupValue(elementId: Int, elementName: String, var values: List<S
     }
 }
 
-class SocialNetworkValue(elementId: Int, elementName: String, var values: List<Long>) : ElementValue(elementId, elementName) {
+class SocialNetworkEntryValue(elementId: Int, elementName: String, var values: List<Long>) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return values.joinToString(",")
     }
@@ -49,11 +49,11 @@ class TextEntryValue(elementId: Int, elementName: String, var value: String) : E
 
 fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
     return when (element.type) {
-        "radio_group" -> RadioGroupValue(element.id, element.name, "")
-        "checkbox_group" -> CheckboxGroupValue(element.id, element.name, emptyList())
-        "slider" -> SliderValue(element.id,element.name, 0.0)
-        "text_entry" -> TextEntryValue(element.id, element.name, "")
-        "social_network_entry" -> SocialNetworkValue(element.id, element.name, emptyList())
+        QuestionnaireElementType.RADIO_GROUP -> RadioGroupValue(element.id, element.name, "")
+        QuestionnaireElementType.CHECKBOX_GROUP -> CheckboxGroupValue(element.id, element.name, emptyList())
+        QuestionnaireElementType.SLIDER -> SliderValue(element.id,element.name, 0.0)
+        QuestionnaireElementType.TEXT_ENTRY -> TextEntryValue(element.id, element.name, "")
+        QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> SocialNetworkEntryValue(element.id, element.name, emptyList())
         else -> ElementValue(element.id, element.name)
     }
 }

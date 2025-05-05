@@ -4,11 +4,29 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 
+enum class QuestionnaireElementType(val apiName: String) {
+    TEXT_VIEW("text_view"),
+    RADIO_GROUP("radio_group"),
+    CHECKBOX_GROUP("checkbox_group"),
+    SLIDER("slider"),
+    TEXT_ENTRY("text_entry"),
+    EXTERNAL_QUESTIONNAIRE_LINK("external_questionnaire_link"),
+    SOCIAL_NETWORK_ENTRY("social_network_entry"),
+    SOCIAL_NETWORK_RATING("social_network_rating");
+
+    companion object {
+        fun fromApiName(apiName: String): QuestionnaireElementType? {
+            return QuestionnaireElementType.entries.find { it.apiName == apiName }
+                ?: throw IllegalArgumentException("Unknown QuestionnaireElementType: $apiName")
+        }
+    }
+}
+
 open class QuestionnaireElement(
     val id: Int,
     val questionnaireId: Int,
     val name: String,
-    val type: String,
+    val type: QuestionnaireElementType,
     val step: Int,
     val position: Int,
     private val configuration: Any
@@ -18,7 +36,7 @@ open class QuestionnaireElement(
         json.put("id", id)
         json.put("questionnaireId", questionnaireId)
         json.put("name", name)
-        json.put("type", type)
+        json.put("type", type.apiName)
         json.put("step", step)
         json.put("position", position)
         json.put("configuration", JSONObject())
@@ -41,14 +59,14 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
     val config = json.getJSONObject("configuration")
     val id = json.getInt("id")
     val questionnaireId = json.getInt("questionnaireId")
-    val type = json.getString("type")
+    val type = QuestionnaireElementType.fromApiName(json.getString("type"))
     val step = json.getInt("step")
     val position = json.getInt("position")
     val configuration = json.getJSONObject("configuration")
     val name = json.getString("name")
 
     when (type) {
-        "text_view" -> {
+        QuestionnaireElementType.TEXT_VIEW -> {
             return TextViewElement(
                 id,
                 questionnaireId,
@@ -59,7 +77,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 config.getString("text")
             )
         }
-        "radio_group" -> {
+
+        QuestionnaireElementType.RADIO_GROUP -> {
             val options = mutableListOf<String>()
             val optionsJson = config.getJSONArray("options")
             val alignment = getAlignmentValue(config.getString("alignment"))
@@ -78,7 +97,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 alignment = alignment
             )
         }
-        "checkbox_group" -> {
+
+        QuestionnaireElementType.CHECKBOX_GROUP -> {
             val options = mutableListOf<String>()
             val optionsJson = config.getJSONArray("options")
             val alignment = getAlignmentValue(config.getString("alignment"))
@@ -97,7 +117,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 alignment = alignment
             )
         }
-        "slider" -> {
+
+        QuestionnaireElementType.SLIDER -> {
             return SliderElement(
                 id,
                 questionnaireId,
@@ -110,7 +131,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 config.getDouble("stepSize")
             )
         }
-        "text_entry" -> {
+
+        QuestionnaireElementType.TEXT_ENTRY -> {
             return TextEntryElement(
                 id,
                 questionnaireId,
@@ -121,7 +143,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 config.getString("hint")
             )
         }
-        "external_questionnaire_link" -> {
+
+        QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK -> {
             val urlParams = mutableMapOf<String, String>()
             val urlParamsJson = config.getJSONArray("urlParams")
             for (i in 0 until urlParamsJson.length()) {
@@ -140,7 +163,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 urlParams
             )
         }
-        "social_network_entry" -> {
+
+        QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> {
             return SocialNetworkEntryElement(
                 id,
                 questionnaireId,
@@ -150,7 +174,8 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 configuration
             )
         }
-        "social_network_rating" -> {
+
+        QuestionnaireElementType.SOCIAL_NETWORK_RATING -> {
             return SocialNetworkRatingElement(
                 id,
                 questionnaireId,
@@ -160,6 +185,10 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 configuration,
                 config.getInt("ratingQuestionnaireId")
             )
+        }
+
+        null -> {
+            throw IllegalArgumentException("Unknown QuestionnaireElementType: ${json.getString("type")}")
         }
     }
 
@@ -174,7 +203,10 @@ class TextViewElement(
     position: Int,
     configuration: Any,
     val textContent: String
-) : QuestionnaireElement(id, questionnaireId, name, "text_view", step, position, configuration) {
+) : QuestionnaireElement(
+    id, questionnaireId, name,
+    QuestionnaireElementType.TEXT_VIEW, step, position, configuration
+) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("text", textContent)
@@ -196,7 +228,10 @@ class RadioGroupElement(
     configuration: Any,
     val options: List<String>,
     val alignment: GroupAlignment = GroupAlignment.Vertical
-) : QuestionnaireElement(id, questionnaireId, name, "radio_group", step, position, configuration) {
+) : QuestionnaireElement(
+    id, questionnaireId, name,
+    QuestionnaireElementType.RADIO_GROUP, step, position, configuration
+) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("options", JSONArray(options))
@@ -214,7 +249,10 @@ class CheckboxGroupElement(
     configuration: Any,
     val options: List<String>,
     val alignment: GroupAlignment = GroupAlignment.Vertical
-) : QuestionnaireElement(id, questionnaireId, name, "checkbox_group", step, position, configuration) {
+) : QuestionnaireElement(
+    id, questionnaireId, name,
+    QuestionnaireElementType.CHECKBOX_GROUP, step, position, configuration
+) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("options", JSONArray(options))
@@ -233,7 +271,8 @@ class SliderElement(
     val min: Int,
     val max: Int,
     val stepSize: Double
-) : QuestionnaireElement(id, questionnaireId, name, "slider", step, position, configuration) {
+) : QuestionnaireElement(id, questionnaireId, name,
+    QuestionnaireElementType.SLIDER, step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("min", min)
@@ -251,7 +290,8 @@ class TextEntryElement(
     position: Int,
     configuration: Any,
     val hint: String
-) : QuestionnaireElement(id, questionnaireId, name, "text_entry", step, position, configuration) {
+) : QuestionnaireElement(id, questionnaireId, name,
+    QuestionnaireElementType.TEXT_ENTRY, step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("hint", hint)
@@ -269,7 +309,15 @@ class ExternalQuestionnaireLinkElement(
     val externalUrl: String,
     val actionText: String,
     val urlParams: Map<String, String>
-) : QuestionnaireElement(id, questionnaireId, name, "external_questionnaire_link", step, position, configuration) {
+) : QuestionnaireElement(
+    id,
+    questionnaireId,
+    name,
+    QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK,
+    step,
+    position,
+    configuration
+) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("externalUrl", externalUrl)
@@ -293,7 +341,15 @@ class SocialNetworkEntryElement(
     step: Int,
     position: Int,
     configuration: Any,
-) : QuestionnaireElement(id, questionnaireId, name, "social_network_entry", step, position, configuration) {
+) : QuestionnaireElement(
+    id,
+    questionnaireId,
+    name,
+    QuestionnaireElementType.SOCIAL_NETWORK_ENTRY,
+    step,
+    position,
+    configuration
+) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         return json
@@ -308,7 +364,15 @@ class SocialNetworkRatingElement(
     position: Int,
     configuration: Any,
     val ratingQuestionnaireId: Int,
-) : QuestionnaireElement(id, questionnaireId, name, "social_network_rating", step, position, configuration) {
+) : QuestionnaireElement(
+    id,
+    questionnaireId,
+    name,
+    QuestionnaireElementType.SOCIAL_NETWORK_RATING,
+    step,
+    position,
+    configuration
+) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("ratingQuestionnaireId", ratingQuestionnaireId)

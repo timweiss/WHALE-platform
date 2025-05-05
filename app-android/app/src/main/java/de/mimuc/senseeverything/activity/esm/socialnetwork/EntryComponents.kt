@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.activity.esm
+package de.mimuc.senseeverything.activity.esm.socialnetwork
 
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement

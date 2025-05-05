@@ -20,18 +20,20 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkEntryElementComponent
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.QuestionnaireElement
+import de.mimuc.senseeverything.api.model.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.RadioGroupElement
 import de.mimuc.senseeverything.api.model.RadioGroupValue
 import de.mimuc.senseeverything.api.model.SliderElement
 import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryElement
-import de.mimuc.senseeverything.api.model.SocialNetworkValue
+import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
 import de.mimuc.senseeverything.api.model.TextEntryElement
 import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.TextViewElement
@@ -156,11 +158,11 @@ fun QuestionnaireElement(
     onValueChange: (Int, ElementValue) -> Unit
 ) {
     when (element.type) {
-        "text_view" -> {
+        QuestionnaireElementType.TEXT_VIEW -> {
             TextViewElementComponent(element = element as TextViewElement)
         }
 
-        "radio_group" -> {
+        QuestionnaireElementType.RADIO_GROUP -> {
             RadioGroupElementComponent(
                 element = element as RadioGroupElement,
                 value = (elementValue as RadioGroupValue).value,
@@ -173,7 +175,7 @@ fun QuestionnaireElement(
             )
         }
 
-        "checkbox_group" -> {
+        QuestionnaireElementType.CHECKBOX_GROUP -> {
             CheckboxGroupElementComponent(
                 element = element as CheckboxGroupElement,
                 value = (elementValue as CheckboxGroupValue).values,
@@ -185,7 +187,7 @@ fun QuestionnaireElement(
                 })
         }
 
-        "slider" -> {
+        QuestionnaireElementType.SLIDER -> {
             SliderElementComponent(
                 element = element as SliderElement,
                 value = (elementValue as SliderValue).value,
@@ -197,7 +199,7 @@ fun QuestionnaireElement(
                 })
         }
 
-        "text_entry" -> {
+        QuestionnaireElementType.TEXT_ENTRY -> {
             TextEntryElementComponent(
                 element = element as TextEntryElement,
                 value = (elementValue as TextEntryValue).value,
@@ -209,18 +211,18 @@ fun QuestionnaireElement(
                 })
         }
 
-        "external_questionnaire_link" -> {
+        QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK -> {
             ExternalQuestionnaireLinkElementComponent(element = element as ExternalQuestionnaireLinkElement)
         }
 
-        "social_network_entry" -> {
+        QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> {
             SocialNetworkEntryElementComponent(
                 element = element as SocialNetworkEntryElement,
-                value = (elementValue as SocialNetworkValue).values,
+                value = (elementValue as SocialNetworkEntryValue).values,
                 onValueChange = { newValue ->
                     onValueChange(
                         element.id,
-                        SocialNetworkValue(element.id, element.name, newValue)
+                        SocialNetworkEntryValue(element.id, element.name, newValue)
                     )
                 })
         }

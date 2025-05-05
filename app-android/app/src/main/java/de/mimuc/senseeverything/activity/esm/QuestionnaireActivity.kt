@@ -32,6 +32,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -158,7 +159,7 @@ class QuestionnaireViewModel @Inject constructor(
     private fun canHaveAnswer(elementId: Int): Boolean {
         val element = questionnaire.value.elements.find { it.id == elementId }
         if (element != null) {
-            return element.type != "text_view"
+            return element.type != QuestionnaireElementType.TEXT_VIEW
         }
         return false
     }
