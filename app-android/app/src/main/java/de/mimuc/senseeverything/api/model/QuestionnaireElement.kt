@@ -150,6 +150,17 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 configuration
             )
         }
+        "social_network_rating" -> {
+            return SocialNetworkRatingElement(
+                id,
+                questionnaireId,
+                name,
+                step,
+                position,
+                configuration,
+                config.getInt("ratingQuestionnaireId")
+            )
+        }
     }
 
     return null
@@ -285,6 +296,22 @@ class SocialNetworkEntryElement(
 ) : QuestionnaireElement(id, questionnaireId, name, "social_network_entry", step, position, configuration) {
     override fun toJson(): JSONObject {
         val json = super.toJson()
+        return json
+    }
+}
+
+class SocialNetworkRatingElement(
+    id: Int,
+    questionnaireId: Int,
+    name: String,
+    step: Int,
+    position: Int,
+    configuration: Any,
+    val ratingQuestionnaireId: Int,
+) : QuestionnaireElement(id, questionnaireId, name, "social_network_rating", step, position, configuration) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("ratingQuestionnaireId", ratingQuestionnaireId)
         return json
     }
 }
