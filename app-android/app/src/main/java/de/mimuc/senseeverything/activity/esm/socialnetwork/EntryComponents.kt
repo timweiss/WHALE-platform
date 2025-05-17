@@ -54,7 +54,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@HiltViewModel(assistedFactory = SocialNetworkEntryViewModel.SocialNetworkEntryViewModelFactory::class)
+@HiltViewModel(assistedFactory = SocialNetworkEntryViewModel.Factory::class)
 class SocialNetworkEntryViewModel @AssistedInject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
@@ -69,7 +69,7 @@ class SocialNetworkEntryViewModel @AssistedInject constructor(
     val selectedPersons: StateFlow<List<SocialNetworkContact>> = _selectedPersons
 
     @AssistedFactory
-    interface SocialNetworkEntryViewModelFactory {
+    interface Factory {
         fun create(
             value: List<Long>,
             onValueChange: (List<Long>) -> Unit
@@ -116,7 +116,7 @@ fun SocialNetworkEntryElementComponent(
     onValueChange: (List<Long>) -> Unit,
 ) {
     val viewModel =
-        hiltViewModel<SocialNetworkEntryViewModel, SocialNetworkEntryViewModel.SocialNetworkEntryViewModelFactory> { factory ->
+        hiltViewModel<SocialNetworkEntryViewModel, SocialNetworkEntryViewModel.Factory> { factory ->
             factory.create(value, onValueChange)
         }
 

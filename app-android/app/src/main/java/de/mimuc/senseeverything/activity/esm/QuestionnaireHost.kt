@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
@@ -21,6 +22,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkEntryElementComponent
+import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkRatingElementComponent
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
 import de.mimuc.senseeverything.api.model.ElementValue
@@ -34,6 +36,8 @@ import de.mimuc.senseeverything.api.model.SliderElement
 import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryElement
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
+import de.mimuc.senseeverything.api.model.SocialNetworkRatingElement
+import de.mimuc.senseeverything.api.model.SocialNetworkRatingValue
 import de.mimuc.senseeverything.api.model.TextEntryElement
 import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.TextViewElement
@@ -43,7 +47,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-@HiltViewModel(assistedFactory = QuestionnaireHostViewModel.QuestionnaireHostViewModelFactory::class)
+@HiltViewModel(assistedFactory = QuestionnaireHostViewModel.Factory::class)
 class QuestionnaireHostViewModel @AssistedInject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
@@ -58,7 +62,7 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     val elementValues: StateFlow<Map<Int, ElementValue>> = _elementValues
 
     @AssistedFactory
-    interface QuestionnaireHostViewModelFactory {
+    interface Factory {
         fun create(
             questionnaire: FullQuestionnaire,
             onSave: (Map<Int, ElementValue>) -> Unit
@@ -100,10 +104,12 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 @Composable
 fun QuestionnaireHost(
     questionnaire: FullQuestionnaire,
-    onSave: (Map<Int, ElementValue>) -> Unit
+    onSave: (Map<Int, ElementValue>) -> Unit,
+    embedded: Boolean = false,
+    hostKey: String = "default_host"
 ) {
     val viewModel =
-        hiltViewModel<QuestionnaireHostViewModel, QuestionnaireHostViewModel.QuestionnaireHostViewModelFactory> { factory ->
+        hiltViewModel<QuestionnaireHostViewModel, QuestionnaireHostViewModel.Factory>(key = hostKey) { factory ->
             factory.create(questionnaire, onSave)
         }
 
@@ -119,30 +125,46 @@ fun QuestionnaireHost(
             }
             val answerValues = viewModel.elementValues.collectAsState()
 
-            LazyColumn {
-                items(items = currentElements, key = { item -> item.id }) { element ->
-                    val elementValue = answerValues.value[element.id]
-                    Log.d("Questionnaire", "Element value: $elementValue")
-                    QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
-                        viewModel.setElementValue(id, value)
-                    })
+            if (!embedded) {
+                LazyColumn {
+                    items(items = currentElements, key = { item -> item.id }) { element ->
+                        val elementValue = answerValues.value[element.id]
+                        QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
+                            viewModel.setElementValue(id, value)
+                        })
+                    }
+                }
+            } else {
+                Column {
+                    for (element in currentElements) {
+                        val elementValue = answerValues.value[element.id]
+                        QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
+                            viewModel.setElementValue(id, value)
+                        })
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Row {
-                TextButton(onClick = { viewModel.previousStep() }, enabled = currentStep > 1) {
-                    Text("Previous")
+            if (embedded && maxStep == 1) {
+                TextButton(onClick = { viewModel.save() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Save")
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                if (currentStep < maxStep) {
-                    TextButton(onClick = { viewModel.nextStep() }) {
-                        Text("Next")
+            } else {
+                Row {
+                    TextButton(onClick = { viewModel.previousStep() }, enabled = currentStep > 1) {
+                        Text("Previous")
                     }
-                } else {
-                    TextButton(onClick = { viewModel.save() }) {
-                        Text("Save")
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (currentStep < maxStep) {
+                        TextButton(onClick = { viewModel.nextStep() }) {
+                            Text("Next")
+                        }
+                    } else {
+                        TextButton(onClick = { viewModel.save() }) {
+                            Text("Save")
+                        }
                     }
                 }
             }
@@ -227,8 +249,17 @@ fun QuestionnaireElement(
                 })
         }
 
-        else -> {
-            Text("Unknown element: ${element.type}")
+        QuestionnaireElementType.SOCIAL_NETWORK_RATING -> {
+            SocialNetworkRatingElementComponent(
+                element = element as SocialNetworkRatingElement,
+                value = (elementValue as SocialNetworkRatingValue).values,
+                onValueChange = { newValue ->
+                    onValueChange(
+                        element.id,
+                        SocialNetworkRatingValue(element.id, element.name, newValue)
+                    )
+                }
+            )
         }
     }
 }

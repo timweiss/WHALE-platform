@@ -35,6 +35,14 @@ class SocialNetworkEntryValue(elementId: Int, elementName: String, var values: L
     }
 }
 
+class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: Map<Int, Map<Int, ElementValue>>) : ElementValue(elementId, elementName) {
+    override fun getSerializedValue(): String {
+        return values.entries.joinToString(",") { (key, value) ->
+            "$key:${value.entries.joinToString(",") { (k, v) -> "${v.elementName}:${v.getSerializedValue()}" }}"
+        }
+    }
+}
+
 class SliderValue(elementId: Int, elementName: String, var value: Double) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return value.toString()
@@ -54,6 +62,7 @@ fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
         QuestionnaireElementType.SLIDER -> SliderValue(element.id,element.name, 0.0)
         QuestionnaireElementType.TEXT_ENTRY -> TextEntryValue(element.id, element.name, "")
         QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> SocialNetworkEntryValue(element.id, element.name, emptyList())
+        QuestionnaireElementType.SOCIAL_NETWORK_RATING -> SocialNetworkRatingValue(element.id, element.name, emptyMap())
         else -> ElementValue(element.id, element.name)
     }
 }

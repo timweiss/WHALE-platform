@@ -459,6 +459,13 @@ suspend fun DataStoreManager.getCurrentStudyPhase(): ExperimentalGroupPhase? {
     }
 }
 
+suspend fun DataStoreManager.getQuestionnaireById(id: Int): FullQuestionnaire? {
+    val questionnaires = questionnairesFlow.first()
+    return questionnaires.firstOrNull { questionnaire ->
+        questionnaire.questionnaire.id == id
+    }
+}
+
 fun DataStoreManager.getCurrentInteractionWidgetDisplayStrategySync(callback: (InteractionWidgetDisplayStrategy?) -> Unit) {
     runBlocking {
         val currentPhase = getCurrentStudyPhase()
