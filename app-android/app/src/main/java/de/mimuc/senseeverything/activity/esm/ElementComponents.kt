@@ -19,6 +19,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -222,76 +223,5 @@ fun ExternalQuestionnaireLinkElementComponent(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
-    }
-}
-
-@Composable
-fun CircumplexElementComponent(
-    element: CircumplexElement,
-    value: Pair<Double, Double>,
-    onValueChange: (Pair<Double, Double>) -> Unit
-) {
-    CachedCircumplexImage(element, onTap = {
-        onValueChange(it)
-    })
-}
-
-@Composable
-fun CachedCircumplexImage(element: CircumplexElement, onTap : (Pair<Double, Double>) -> Unit = {}) {
-    val context = LocalContext.current
-    var circumplexImage: ImageBitmap? by remember { mutableStateOf(null) }
-
-    var offsetX by remember { mutableStateOf(0f) }
-    var offsetY by remember { mutableStateOf(0f) }
-    var imageSize by remember { mutableStateOf(Size.Zero) }
-
-    val bitmapWidth = circumplexImage?.width
-    val bitmapHeight = circumplexImage?.height
-
-    var tapped by remember { mutableStateOf(false) }
-
-    fun handleTap(offset: Offset) {
-        tapped = true
-        // Touch coordinates on image
-        offsetX = offset.x
-        offsetY = offset.y
-
-        // Scale from Image touch coordinates to range in Bitmap
-        val scaledX = (bitmapWidth?.div(imageSize.width))?.times(offsetX)
-        val scaledY = (bitmapHeight?.div(imageSize.height))?.times(offsetY)
-
-        // Convert to range -1 to 1
-        val x = (scaledX?.div(bitmapWidth)?.times(2))?.minus(1)
-        val y = (scaledY?.div(bitmapHeight)?.times(2))?.minus(1)?.times(-1)
-
-        // Call onTap with the new coordinates
-        onTap(Pair(x!!.toDouble(), y!!.toDouble()))
-    }
-
-    LaunchedEffect(Unit) {
-        circumplexImage = getCircumplexImageBitmap(context, element)?.asImageBitmap()
-    }
-
-    if (circumplexImage != null) {
-        Column(modifier = Modifier.fillMaxWidth().drawWithContent {
-            drawContent()
-            if (tapped) {
-                drawCircle(Black, center = Offset(offsetX, offsetY), radius = 25f) // border
-                drawCircle(Purple80, center = Offset(offsetX, offsetY), radius = 20f)
-            }
-        }) {
-            Image(
-                bitmap = circumplexImage!!,
-                contentDescription = "Circumplex",
-                modifier = Modifier.fillMaxWidth().onSizeChanged({ size -> imageSize = size.toSize() }).pointerInput(Unit) {
-                    detectTapGestures { offset: Offset ->
-                        handleTap(offset)
-                    }
-                },
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop
-            )
-        }
-    } else {
-        Text("Loading element")
     }
 }

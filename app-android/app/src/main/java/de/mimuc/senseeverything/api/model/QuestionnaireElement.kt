@@ -189,6 +189,17 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
         }
 
         QuestionnaireElementType.CIRCUMPLEX -> {
+            var clipTop = 0
+            var clipBottom = 0
+            var clipLeft = 0
+            var clipRight = 0
+            if (config.has("clip")) {
+                clipTop = config.getJSONObject("clip").getInt("top")
+                clipBottom = config.getJSONObject("clip").getInt("bottom")
+                clipLeft = config.getJSONObject("clip").getInt("left")
+                clipRight = config.getJSONObject("clip").getInt("right")
+            }
+
             return CircumplexElement(
                 id,
                 questionnaireId,
@@ -196,7 +207,11 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 step,
                 position,
                 configuration,
-                config.getString("imageUrl")
+                config.getString("imageUrl"),
+                clipTop,
+                clipBottom,
+                clipLeft,
+                clipRight
             )
         }
 
@@ -400,7 +415,11 @@ class CircumplexElement(
     step: Int,
     position: Int,
     configuration: Any,
-    val imageUrl: String
+    val imageUrl: String,
+    val clipTop: Int = 0,
+    val clipBottom: Int = 0,
+    val clipLeft: Int = 0,
+    val clipRight: Int = 0
 ) : QuestionnaireElement(
     id,
     questionnaireId,
@@ -413,6 +432,12 @@ class CircumplexElement(
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("imageUrl", imageUrl)
+        val clipJson = JSONObject()
+        clipJson.put("top", clipTop)
+        clipJson.put("bottom", clipBottom)
+        clipJson.put("left", clipLeft)
+        clipJson.put("right", clipRight)
+        json.getJSONObject("configuration").put("clip", clipJson)
         return json
     }
 }
