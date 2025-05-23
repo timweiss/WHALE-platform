@@ -6,7 +6,6 @@ import android.app.AppOpsManager
 import android.app.AppOpsManager.MODE_ALLOWED
 import android.app.AppOpsManager.OPSTR_GET_USAGE_STATS
 import android.app.Application
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -69,8 +68,8 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.loadStudy
-import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
 import de.mimuc.senseeverything.helpers.isServiceRunning
@@ -714,7 +713,8 @@ class StartStudyViewModel @Inject constructor(
                 dataStoreManager.saveSensitiveDataSalt(generateSensitiveDataSalt())
 
                 try {
-                    fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)
+                    val questionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)
+                    persistQuestionnaireElementContent(context, questionnaires)
                 } catch (exception: Exception) {
                     Log.e("StartStudyViewModel", "Could not load questionnaires", exception)
                 }

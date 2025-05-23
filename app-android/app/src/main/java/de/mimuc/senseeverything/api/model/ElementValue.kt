@@ -49,6 +49,12 @@ class SliderValue(elementId: Int, elementName: String, var value: Double) : Elem
     }
 }
 
+class CircumplexValue(elementId: Int, elementName: String, var value: Pair<Double, Double>) : ElementValue(elementId, elementName) {
+    override fun getSerializedValue(): String {
+        return "x:${value.first}, y:${value.second}"
+    }
+}
+
 class TextEntryValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
         return value
@@ -63,6 +69,7 @@ fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
         QuestionnaireElementType.TEXT_ENTRY -> TextEntryValue(element.id, element.name, "")
         QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> SocialNetworkEntryValue(element.id, element.name, emptyList())
         QuestionnaireElementType.SOCIAL_NETWORK_RATING -> SocialNetworkRatingValue(element.id, element.name, emptyMap())
+        QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(element.id, element.name, (0.0 to 0.0))
         else -> ElementValue(element.id, element.name)
     }
 }

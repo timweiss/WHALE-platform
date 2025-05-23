@@ -25,6 +25,8 @@ import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkEntryEle
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkRatingElementComponent
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
+import de.mimuc.senseeverything.api.model.CircumplexElement
+import de.mimuc.senseeverything.api.model.CircumplexValue
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
@@ -257,6 +259,19 @@ fun QuestionnaireElement(
                     onValueChange(
                         element.id,
                         SocialNetworkRatingValue(element.id, element.name, newValue)
+                    )
+                }
+            )
+        }
+
+        QuestionnaireElementType.CIRCUMPLEX -> {
+            CircumplexElementComponent(
+                element = element as CircumplexElement,
+                value = (elementValue as CircumplexValue).value,
+                onValueChange = { newValue ->
+                    onValueChange(
+                        element.id,
+                        CircumplexValue(element.id, element.name, newValue)
                     )
                 }
             )

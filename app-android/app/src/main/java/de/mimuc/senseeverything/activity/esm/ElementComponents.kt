@@ -3,7 +3,9 @@ package de.mimuc.senseeverything.activity.esm
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,11 +17,15 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.net.toUri
@@ -27,6 +33,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
+import de.mimuc.senseeverything.api.model.CircumplexElement
 import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.GroupAlignment
 import de.mimuc.senseeverything.api.model.RadioGroupElement
@@ -35,6 +42,7 @@ import de.mimuc.senseeverything.api.model.TextEntryElement
 import de.mimuc.senseeverything.api.model.TextViewElement
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.fetchExternalQuestionnaireParams
+import de.mimuc.senseeverything.data.getCircumplexImageBitmap
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -205,5 +213,30 @@ fun ExternalQuestionnaireLinkElementComponent(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
+    }
+}
+
+@Composable
+fun CircumplexElementComponent(
+    element: CircumplexElement,
+    value: Pair<Double, Double>,
+    onValueChange: (Pair<Double, Double>) -> Unit
+) {
+    val context = LocalContext.current
+    var circumplexImage: Bitmap? by remember { mutableStateOf(null) }
+
+    LaunchedEffect(Unit) {
+        circumplexImage = getCircumplexImageBitmap(context, element)
+    }
+
+    if (circumplexImage != null) {
+        Image(
+            bitmap = circumplexImage!!.asImageBitmap(),
+            contentDescription = "Circumplex",
+            modifier = Modifier.fillMaxWidth(),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+        )
+    } else {
+        Text("Loading element")
     }
 }

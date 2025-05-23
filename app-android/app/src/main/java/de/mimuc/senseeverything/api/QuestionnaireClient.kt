@@ -1,6 +1,5 @@
 package de.mimuc.senseeverything.api
 
-import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Questionnaire
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson

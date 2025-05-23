@@ -12,7 +12,8 @@ enum class QuestionnaireElementType(val apiName: String) {
     TEXT_ENTRY("text_entry"),
     EXTERNAL_QUESTIONNAIRE_LINK("external_questionnaire_link"),
     SOCIAL_NETWORK_ENTRY("social_network_entry"),
-    SOCIAL_NETWORK_RATING("social_network_rating");
+    SOCIAL_NETWORK_RATING("social_network_rating"),
+    CIRCUMPLEX("circumplex");
 
     companion object {
         fun fromApiName(apiName: String): QuestionnaireElementType? {
@@ -184,6 +185,18 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 position,
                 configuration,
                 config.getInt("ratingQuestionnaireId")
+            )
+        }
+
+        QuestionnaireElementType.CIRCUMPLEX -> {
+            return CircumplexElement(
+                id,
+                questionnaireId,
+                name,
+                step,
+                position,
+                configuration,
+                config.getString("imageUrl")
             )
         }
 
@@ -376,6 +389,30 @@ class SocialNetworkRatingElement(
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("ratingQuestionnaireId", ratingQuestionnaireId)
+        return json
+    }
+}
+
+class CircumplexElement(
+    id: Int,
+    questionnaireId: Int,
+    name: String,
+    step: Int,
+    position: Int,
+    configuration: Any,
+    val imageUrl: String
+) : QuestionnaireElement(
+    id,
+    questionnaireId,
+    name,
+    QuestionnaireElementType.CIRCUMPLEX,
+    step,
+    position,
+    configuration
+) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("imageUrl", imageUrl)
         return json
     }
 }

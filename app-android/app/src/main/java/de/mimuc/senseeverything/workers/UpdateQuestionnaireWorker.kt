@@ -13,6 +13,7 @@ import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
@@ -26,6 +27,7 @@ class UpdateQuestionnaireWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val studyId = dataStoreManager.studyIdFlow.first()
         val fullQuestionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, ApiClient.getInstance(applicationContext))
+        persistQuestionnaireElementContent(applicationContext, fullQuestionnaires)
 
         return if (fullQuestionnaires.isNotEmpty()) {
             Result.success()

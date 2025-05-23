@@ -56,6 +56,7 @@ import de.mimuc.senseeverything.api.model.EnrolmentResponse
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -220,12 +221,13 @@ class EnrolmentViewModel @Inject constructor(
         }
     }
 
-    fun fetchQuestionnaires() {
+    fun fetchQuestionnaires(context: Context) {
         viewModelScope.launch {
             Log.d("Enrolment", "loading questionnaires")
             val studyId = dataStoreManager.studyIdFlow.first()
             val client = ApiClient.getInstance(getApplication())
             val questionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, client)
+            persistQuestionnaireElementContent(context, questionnaires)
 
             Log.d("Enrolment", questionnaires.toString())
 
@@ -350,7 +352,7 @@ fun EnrolmentScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    viewModel.fetchQuestionnaires()
+                    viewModel.fetchQuestionnaires(context)
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
