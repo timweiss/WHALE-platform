@@ -3,9 +3,9 @@ package de.mimuc.senseeverything.activity.esm
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,13 +25,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.toSize
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.activity.ui.theme.Black
+import de.mimuc.senseeverything.activity.ui.theme.Purple80
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.CircumplexElement
 import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
@@ -222,20 +231,66 @@ fun CircumplexElementComponent(
     value: Pair<Double, Double>,
     onValueChange: (Pair<Double, Double>) -> Unit
 ) {
+    CachedCircumplexImage(element, onTap = {
+        onValueChange(it)
+    })
+}
+
+@Composable
+fun CachedCircumplexImage(element: CircumplexElement, onTap : (Pair<Double, Double>) -> Unit = {}) {
     val context = LocalContext.current
-    var circumplexImage: Bitmap? by remember { mutableStateOf(null) }
+    var circumplexImage: ImageBitmap? by remember { mutableStateOf(null) }
+
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+    var imageSize by remember { mutableStateOf(Size.Zero) }
+
+    val bitmapWidth = circumplexImage?.width
+    val bitmapHeight = circumplexImage?.height
+
+    var tapped by remember { mutableStateOf(false) }
+
+    fun handleTap(offset: Offset) {
+        tapped = true
+        // Touch coordinates on image
+        offsetX = offset.x
+        offsetY = offset.y
+
+        // Scale from Image touch coordinates to range in Bitmap
+        val scaledX = (bitmapWidth?.div(imageSize.width))?.times(offsetX)
+        val scaledY = (bitmapHeight?.div(imageSize.height))?.times(offsetY)
+
+        // Convert to range -1 to 1
+        val x = (scaledX?.div(bitmapWidth)?.times(2))?.minus(1)
+        val y = (scaledY?.div(bitmapHeight)?.times(2))?.minus(1)?.times(-1)
+
+        // Call onTap with the new coordinates
+        onTap(Pair(x!!.toDouble(), y!!.toDouble()))
+    }
 
     LaunchedEffect(Unit) {
-        circumplexImage = getCircumplexImageBitmap(context, element)
+        circumplexImage = getCircumplexImageBitmap(context, element)?.asImageBitmap()
     }
 
     if (circumplexImage != null) {
-        Image(
-            bitmap = circumplexImage!!.asImageBitmap(),
-            contentDescription = "Circumplex",
-            modifier = Modifier.fillMaxWidth(),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-        )
+        Column(modifier = Modifier.fillMaxWidth().drawWithContent {
+            drawContent()
+            if (tapped) {
+                drawCircle(Black, center = Offset(offsetX, offsetY), radius = 25f) // border
+                drawCircle(Purple80, center = Offset(offsetX, offsetY), radius = 20f)
+            }
+        }) {
+            Image(
+                bitmap = circumplexImage!!,
+                contentDescription = "Circumplex",
+                modifier = Modifier.fillMaxWidth().onSizeChanged({ size -> imageSize = size.toSize() }).pointerInput(Unit) {
+                    detectTapGestures { offset: Offset ->
+                        handleTap(offset)
+                    }
+                },
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+        }
     } else {
         Text("Loading element")
     }
