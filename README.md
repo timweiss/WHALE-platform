@@ -57,7 +57,12 @@ A sampling could include the following:
     - slider
     - affect grid
     - time/duration
+    - circumplex (affect grid)
+    - social network
+      - entry: possibility to list people in sampling
+      - rating: possibility to answer questions about a person
   - link to external questionnaire (is embedded in questionnaire to instruct the participant)
+  - 
 
 ```mermaid
 ---
@@ -160,6 +165,10 @@ erDiagram
     Study ||--|{ Enrolment : "is enrolled in"
     ExperimentalGroup ||--|{ Enrolment : "belongs to"
 ```
+
+## License
+All changes starting with commit `cf73063b` are licensed under the [AGPL-3.0 (links gnu.org)](https://www.gnu.org/licenses/agpl-3.0.html) license.
+The original work remains under the MIT license. See the [LICENSE](LICENSE.md) file for details. Please adhere to the license to ensure **transparent and open research**.
 
 ## Acknowledgements & References
 Based on the [SenseEverything](https://github.com/mimuc/SenseEverything) app.

@@ -57,7 +57,7 @@ fun CachedCircumplexImage(element: CircumplexElement, initialValue: Pair<Double,
         return x < element.clipLeft || x > element.clipRight || y < element.clipTop || y > element.clipBottom
     }
 
-    fun handleTap(offset: Offset): Unit {
+    fun handleTap(offset: Offset) {
         // Touch coordinates on image
         offsetX = offset.x
         offsetY = offset.y
