@@ -278,6 +278,7 @@ class AcceptPermissionsViewModel @Inject constructor(
         checkAndSetPermission(Manifest.permission.POST_NOTIFICATIONS)
         checkAndSetPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
         checkAndSetPermission(Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE)
+        checkAndSetPermission(Manifest.permission.ACTIVITY_RECOGNITION)
 
         setPermission(Manifest.permission.PACKAGE_USAGE_STATS, hasAccessToUsageStats())
 
@@ -646,6 +647,16 @@ fun AcceptPermissionsScreen(
             Text("Notification Access: ${permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] ?: false}")
             if (permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] == false) {
                 Button(onClick = { viewModel.requestNotificationListenerPermission(context) }) {
+                    Text("Request Permission")
+                }
+            }
+            // Activity Recognition
+            Text("Activity Recognition: ${permissions.value[Manifest.permission.ACTIVITY_RECOGNITION] ?: false}")
+            if (permissions.value[Manifest.permission.ACTIVITY_RECOGNITION] == false) {
+                Button(onClick = { viewModel.requestPermission(
+                    Manifest.permission.ACTIVITY_RECOGNITION,
+                    context
+                ) }) {
                     Text("Request Permission")
                 }
             }

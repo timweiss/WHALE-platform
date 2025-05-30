@@ -60,6 +60,7 @@ public abstract class AbstractSensor implements Serializable  {
 
 	abstract public boolean isAvailable(Context context);
 
+	/** Indicates whether the sensor can be used for periodic sampling, where it will be called at regular intervals. */
 	abstract public boolean availableForPeriodicSampling();
 
 	public boolean availableForContinuousSampling() {
