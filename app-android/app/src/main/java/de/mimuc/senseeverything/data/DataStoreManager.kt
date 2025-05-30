@@ -36,6 +36,13 @@ import kotlinx.serialization.decodeFromString as decodeFromStringJson
 fun Context.appSettingsDataStoreFile(name: String): File =
     this.dataStoreFile("$name.appsettings.json")
 
+enum class StudyState {
+    NOT_ENROLLED,
+    RUNNING,
+    ENDED,
+    CANCELLED
+}
+
 @Serializable
 data class AppSettings(
     val lastUpdate: Long,
@@ -53,7 +60,7 @@ data class AppSettings(
     val study: Study?,
     val phases: List<ExperimentalGroupPhase>? = null,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>,
-    val studyEnded: Boolean,
+    val studyState: StudyState,
     val sensitiveDataSalt: String? = null
 )
 
@@ -74,7 +81,7 @@ data class OptionalAppSettings(
     val study: Study? = null,
     val phases: List<ExperimentalGroupPhase>? = null,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null,
-    val studyEnded: Boolean? = null,
+    val studyState: StudyState? = null,
     val sensitiveDataSalt: String? = null
 )
 
@@ -94,7 +101,7 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     study = null,
     phases = null,
     interactionWidgetTimeBucket = hashMapOf(),
-    studyEnded = false,
+    studyState = StudyState.NOT_ENROLLED
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -120,7 +127,7 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         phases = optionalAppSettings.phases ?: defaultAppSettings.phases,
         interactionWidgetTimeBucket = optionalAppSettings.interactionWidgetTimeBucket
             ?: defaultAppSettings.interactionWidgetTimeBucket,
-        studyEnded = optionalAppSettings.studyEnded ?: defaultAppSettings.studyEnded
+        studyState = optionalAppSettings.studyState ?: defaultAppSettings.studyState,
     )
 }
 
@@ -412,14 +419,14 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         }
     }
 
-    suspend fun saveStudyEnded(studyEnded: Boolean) {
+    suspend fun saveStudyState(studyState: StudyState) {
         dataStore.updateData {
-            it.copy(lastUpdate = System.currentTimeMillis(), studyEnded = studyEnded)
+            it.copy(lastUpdate = System.currentTimeMillis(), studyState = studyState)
         }
     }
 
-    val studyEndedFlow = dataStore.data.map { preferences ->
-        preferences.studyEnded
+    val studyStateFlow = dataStore.data.map { preferences ->
+        preferences.studyState
     }
 
     suspend fun saveSensitiveDataSalt(sensitiveDataSalt: String) {

@@ -6,9 +6,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
@@ -29,24 +29,10 @@ class EndStudyReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) = goAsync {
         val applicationContext = context?.applicationContext ?: return@goAsync
 
-        dataStoreManager.saveStudyEnded(true)
+        dataStoreManager.saveStudyState(StudyState.ENDED)
         Log.i(TAG, "Marked study as ended")
 
-        // stop LogService
-        try {
-            val logServiceIntent =
-                Intent(applicationContext, de.mimuc.senseeverything.service.LogService::class.java)
-            applicationContext.stopService(logServiceIntent)
-            Log.i(TAG, "Stopped LogService")
-        } catch (e: Exception) {
-            // already stopped, ignore
-            Log.w(TAG, "Error stopping LogService: $e")
-        }
-
-        // upload and clear all data and jobs
-        WorkManager.getInstance(applicationContext).cancelAllWorkByTag("readingsUpload")
-        WorkManager.getInstance(applicationContext).cancelAllWorkByTag("updateQuestionnaires")
-        Log.i(TAG, "Cancelled all jobs")
+        runStudyLifecycleCleanup(applicationContext)
 
         val token = dataStoreManager.tokenFlow.first()
         enqueueSingleSensorReadingsUploadWorker(applicationContext, token, "finalReadingsUpload", false)

@@ -35,6 +35,7 @@ import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.getCurrentStudyPhase
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
@@ -120,7 +121,7 @@ class StudyDebugInfoViewModel @Inject constructor(
                 _enrolmentId.value = dataStoreManager.participantIdFlow.first()
                 _cachedQuestionnaires.value = dataStoreManager.questionnairesFlow.first()
                 _studyStartedAt.value = dataStoreManager.timestampStudyStartedFlow.first()
-                _studyEnded.value = dataStoreManager.studyEndedFlow.first()
+                _studyEnded.value = dataStoreManager.studyStateFlow.first() == StudyState.ENDED
                 _unsyncedLogDataCount.value = database.logDataDao().unsyncedCount
                 _lastLogDataItem.value = database.logDataDao().lastItem
             }

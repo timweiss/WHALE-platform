@@ -6,6 +6,7 @@ import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
 import de.mimuc.senseeverything.service.SEApplicationController
@@ -33,18 +34,18 @@ class OnBootReceiver: BroadcastReceiver() {
                 combine(
                     dataStoreManager.studyPausedFlow,
                     dataStoreManager.studyPausedUntilFlow,
-                    dataStoreManager.studyEndedFlow
-                ) { studyPaused, studyPausedUntil, studyEnded ->
-                    Triple(studyPaused, studyPausedUntil, studyEnded)
-                }.collect { (studyPaused, studyPausedUntil, studyEnded) ->
+                    dataStoreManager.studyStateFlow
+                ) { studyPaused, studyPausedUntil, studyState ->
+                    Triple(studyPaused, studyPausedUntil, studyState)
+                }.collect { (studyPaused, studyPausedUntil, studyState) ->
                     val currentContext = context.applicationContext
                     Log.d("BootUpReceiver", "Study paused: $studyPaused, paused until: $studyPausedUntil")
 
-                    if (!studyEnded && (!studyPaused || studyPausedUntil < System.currentTimeMillis() || studyPausedUntil == -1L)) {
+                    if (studyState == StudyState.RUNNING && (!studyPaused || studyPausedUntil < System.currentTimeMillis() || studyPausedUntil == -1L)) {
                         // study can start right away
                         Log.d("BootUpReceiver", "Study is not paused, starting sampling")
                         startSampling(currentContext)
-                    } else if (!studyEnded) {
+                    } else if (studyState == StudyState.RUNNING) {
                         // study is paused, so we don't start sampling
                         Log.d("BootUpReceiver", "Study is paused until $studyPausedUntil, starting alarm manager to resume study")
                         scheduleResumeSamplingAlarm(currentContext, studyPausedUntil)

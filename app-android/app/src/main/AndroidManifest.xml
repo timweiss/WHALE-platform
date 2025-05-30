@@ -39,6 +39,11 @@
             android:label="@string/title_activity_study_debug_info"
             android:theme="@style/Theme.MyApplication" />
         <activity
+            android:name=".activity.settings.StudyInfo"
+            android:exported="false"
+            android:label="@string/title_activity_study_info"
+            android:theme="@style/Theme.MyApplication" />
+        <activity
             android:name=".activity.MainActivity"
             android:exported="true"
             android:label="@string/title_activity_main"

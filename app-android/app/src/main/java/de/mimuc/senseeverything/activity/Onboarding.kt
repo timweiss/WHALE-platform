@@ -69,6 +69,7 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
@@ -722,6 +723,7 @@ class StartStudyViewModel @Inject constructor(
                 dataStoreManager.saveStudyDays(study.durationDays)
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
                 dataStoreManager.saveSensitiveDataSalt(generateSensitiveDataSalt())
+                dataStoreManager.saveStudyState(StudyState.RUNNING)
 
                 try {
                     val questionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)

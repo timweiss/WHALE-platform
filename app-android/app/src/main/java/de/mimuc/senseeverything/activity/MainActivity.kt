@@ -68,6 +68,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
+import de.mimuc.senseeverything.activity.settings.StudyInfo
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
@@ -75,6 +76,7 @@ import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.api.model.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
 import de.mimuc.senseeverything.db.models.distanceMillis
@@ -133,6 +135,9 @@ class StudyHomeViewModel @Inject constructor(
     private val _hasStudyEnded = MutableStateFlow(false)
     val hasStudyEnded: StateFlow<Boolean> get() = _hasStudyEnded
 
+    private val _studyState = MutableStateFlow(StudyState.RUNNING)
+    val studyState: StateFlow<StudyState> get() = _studyState
+
     private val _pendingQuestionnaires = MutableStateFlow<List<QuestionnaireInboxItem>>(emptyList())
     val pendingQuestionnaires: StateFlow<List<QuestionnaireInboxItem>> get() = _pendingQuestionnaires
 
@@ -174,7 +179,7 @@ class StudyHomeViewModel @Inject constructor(
     }
 
     fun openSettings(context: Context) {
-        val intent = Intent(getApplication(), StudyDebugInfo::class.java)
+        val intent = Intent(getApplication(), StudyInfo::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(intent)
     }
@@ -205,7 +210,8 @@ class StudyHomeViewModel @Inject constructor(
             val isRunning = isServiceRunning(LogService::class.java)
             _isStudyRunning.value = isRunning
 
-            _hasStudyEnded.value = dataStoreManager.studyEndedFlow.first()
+            _studyState.value = dataStoreManager.studyStateFlow.first() ?: StudyState.NOT_ENROLLED
+            _hasStudyEnded.value = _studyState.value == StudyState.ENDED
 
             dataStoreManager.studyPausedFlow.collect { paused ->
                 _isStudyPaused.value = paused
@@ -268,6 +274,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val study = viewModel.study.collectAsState()
     val onboardingStep = viewModel.onboardingStep.collectAsState()
     val pendingQuestionnaires = viewModel.pendingQuestionnaires.collectAsState()
+    val studyState by viewModel.studyState.collectAsState()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -301,8 +308,6 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                     .padding(innerPadding)
                     .padding(16.dp)
             ) {
-
-
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
@@ -328,50 +333,82 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (isEnrolled.value) {
-                    if (!hasStudyEnded.value) {
-                        Text(
-                            stringResource(
-                                R.string.day_of,
-                                currentDay.value,
-                                study.value.durationDays,
-                                study.value.name
-                            )
-                        )
-                    }
+                when (studyState) {
+                    StudyState.RUNNING, StudyState.NOT_ENROLLED -> {
+                        if (isEnrolled.value) {
+                            if (!hasStudyEnded.value) {
+                                Text(
+                                    stringResource(
+                                        R.string.day_of,
+                                        currentDay.value,
+                                        study.value.durationDays,
+                                        study.value.name
+                                    )
+                                )
+                            }
 
-                    StudyActivity(
-                        isRunning = isStudyRunning.value,
-                        isPaused = isStudyPaused.value,
-                        ended = hasStudyEnded.value,
-                        resumeStudy = { viewModel.resumeStudy(context) },
-                        pauseStudy = { viewModel.pauseStudy(context) })
+                            StudyActivity(
+                                isRunning = isStudyRunning.value,
+                                isPaused = isStudyPaused.value,
+                                ended = hasStudyEnded.value,
+                                resumeStudy = { viewModel.resumeStudy(context) },
+                                pauseStudy = { viewModel.pauseStudy(context) })
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                    if (pendingQuestionnaires.value.isNotEmpty()) {
-                        QuestionnaireInbox(pendingQuestionnaires, viewModel)
-                    }
+                            if (pendingQuestionnaires.value.isNotEmpty()) {
+                                QuestionnaireInbox(pendingQuestionnaires, viewModel)
+                            }
 
-                    SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
-                    FilledTonalButton(
-                        onClick = { viewModel.openSettings(context) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.study_settings))
-                    }
-                } else {
-                    Button(
-                        onClick = { viewModel.startOnboarding() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (onboardingStep.value.startedButIncomplete()) {
-                            Text(stringResource(R.string.continue_registration))
+                            SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
+                            FilledTonalButton(
+                                onClick = { viewModel.openSettings(context) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.study_settings))
+                            }
                         } else {
-                            Text(stringResource(R.string.enroll_in_study))
+                            Button(
+                                onClick = { viewModel.startOnboarding() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (onboardingStep.value.startedButIncomplete()) {
+                                    Text(stringResource(R.string.continue_registration))
+                                } else {
+                                    Text(stringResource(R.string.enroll_in_study))
+                                }
+                            }
+                        }
+                    }
+                    StudyState.CANCELLED -> {
+                        Text("Participation has been cancelled. You can uninstall the app now.")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
+                        FilledTonalButton(
+                            onClick = { viewModel.openSettings(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.study_settings))
+                        }
+                    }
+                    StudyState.ENDED -> {
+                        Text("The study has ended. You may need to fill out the last questionnaire before uninstalling the app.")
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (pendingQuestionnaires.value.isNotEmpty()) {
+                            QuestionnaireInbox(pendingQuestionnaires, viewModel)
+                        }
+
+                        SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
+                        FilledTonalButton(
+                            onClick = { viewModel.openSettings(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.study_settings))
                         }
                     }
                 }
+
             }
         }
 

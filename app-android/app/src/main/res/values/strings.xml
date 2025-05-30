@@ -72,6 +72,7 @@
     <string name="background_work_detail">Please do not close WHALE.</string>
     <string name="background_work_channel_name">Background Work</string>
     <string name="title_activity_study_debug_info">StudyDebugInfo</string>
+    <string name="title_activity_study_info">Study Info</string>
     <string name="study_has_ended">Study has ended. Thank you for participating!</string>
     <string name="gen_cancel">Cancel</string>
     <string name="gen_add">Add</string>
