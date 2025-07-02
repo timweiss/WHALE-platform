@@ -8,7 +8,7 @@ import androidx.datastore.core.MultiProcessDataStoreFactory
 import androidx.datastore.core.Serializer
 import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
-import de.mimuc.senseeverything.activity.OnboardingStep
+import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy

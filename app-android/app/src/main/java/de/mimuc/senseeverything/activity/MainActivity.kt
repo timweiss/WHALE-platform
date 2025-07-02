@@ -68,6 +68,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
+import de.mimuc.senseeverything.activity.onboarding.Onboarding
+import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
+import de.mimuc.senseeverything.activity.onboarding.startedButIncomplete
 import de.mimuc.senseeverything.activity.settings.StudyInfo
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
@@ -381,7 +384,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         }
                     }
                     StudyState.CANCELLED -> {
-                        Text("Participation has been cancelled. You can uninstall the app now.")
+                        Text(stringResource(R.string.main_study_cancelled_uninstall_hint))
                         Spacer(modifier = Modifier.height(8.dp))
                         SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
                         FilledTonalButton(
@@ -392,7 +395,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         }
                     }
                     StudyState.ENDED -> {
-                        Text("The study has ended. You may need to fill out the last questionnaire before uninstalling the app.")
+                        Text(stringResource(R.string.main_study_ended_last_questionnaire_hint))
                         Spacer(modifier = Modifier.height(8.dp))
 
                         if (pendingQuestionnaires.value.isNotEmpty()) {
@@ -445,13 +448,13 @@ private fun QuestionnaireInbox(
                     .padding(end = 6.dp)
             )
             Text(
-                "Questionnaire Inbox", style = MaterialTheme.typography.titleSmall,
+                stringResource(R.string.main_questionnaire_inbox), style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp
             )
         }
 
-        Text("Complete them as soon as possible")
+        Text(stringResource(R.string.main_questionnaire_inbox_completion_hint))
     }
 
     Column(
@@ -468,9 +471,13 @@ private fun QuestionnaireInbox(
                 Column(modifier = Modifier.padding(6.dp)) {
                     Text(pq.title, fontWeight = FontWeight.SemiBold)
                     if (pq.validUntil != -1L) {
-                        Text("Complete in the next ${pq.distanceMillis().inWholeMinutes} min")
+                        Text(
+                            stringResource(
+                                R.string.main_questionnaire_inbox_element_duration_validitiy,
+                                pq.distanceMillis().inWholeMinutes
+                            ))
                     } else {
-                        Text("Complete when you have time")
+                        Text(stringResource(R.string.main_questionnaire_inbox_element_duration_indefinite))
                     }
                 }
             }

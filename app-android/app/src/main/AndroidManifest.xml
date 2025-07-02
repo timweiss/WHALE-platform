@@ -56,7 +56,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.Onboarding"
+            android:name=".activity.onboarding.Onboarding"
             android:exported="false"
             android:label="@string/title_activity_onboarding"
             android:theme="@style/Theme.MyApplication" />

@@ -31,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
@@ -39,6 +40,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.BuildConfig
+import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.MainActivity
 import de.mimuc.senseeverything.activity.SpacerLine
 import de.mimuc.senseeverything.activity.StudyDebugInfo
@@ -73,7 +75,7 @@ class StudyInfo : ComponentActivity() {
                                 titleContentColor = MaterialTheme.colorScheme.primary,
                             ),
                             title = {
-                                Text("Settings")
+                                Text(stringResource(R.string.studyinfo_title))
                             }
                         )
                     }
@@ -158,28 +160,35 @@ class StudyInfoViewModel @Inject constructor(
     fun sendDataDeletionEmail(context: Context, enrolmentId: String) {
         val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
             data = Uri.parse("mailto:")
-            putExtra(Intent.EXTRA_EMAIL, "whale")
-            putExtra(Intent.EXTRA_SUBJECT, "Request for Data Deletion")
-            putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to request the deletion of my study data.\nMy enrolment ID is: $enrolmentId\n\nThank you.")
+            // fixme: replace hardcoded email with study configuration
+            putExtra(Intent.EXTRA_EMAIL, context.getString(R.string.dataprotection_email))
+            putExtra(Intent.EXTRA_SUBJECT,
+                context.getString(R.string.studyinfo_data_deletion_email_subject))
+            putExtra(Intent.EXTRA_TEXT,
+                context.getString(R.string.studyinfo_data_deletion_email_body, enrolmentId))
         }
         try {
-            context.startActivity(Intent.createChooser(emailIntent, "Send email..."))
+            context.startActivity(Intent.createChooser(emailIntent,
+                context.getString(R.string.studyinfo_intent_send_email)))
         } catch (ex: android.content.ActivityNotFoundException) {
         }
         hideDataDeletionDialog()
+        cancelParticipation(context)
     }
 
     fun sendDataExportEmail(context: Context, enrolmentId: String) {
         val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
             data = Uri.parse("mailto:")
-            putExtra(Intent.EXTRA_EMAIL, "whale")
-            putExtra(Intent.EXTRA_SUBJECT, "Request for Data Export")
-            putExtra(Intent.EXTRA_TEXT, "Hello,\n\nI would like to request an export of my study data.\nMy enrolment ID is: $enrolmentId\n\nThank you.")
+            putExtra(Intent.EXTRA_EMAIL, context.getString(R.string.dataprotection_email))
+            putExtra(Intent.EXTRA_SUBJECT,
+                context.getString(R.string.studyinfo_data_export_email_subject))
+            putExtra(Intent.EXTRA_TEXT,
+                context.getString(R.string.studyinfo_data_export_email_body, enrolmentId))
         }
         try {
-            context.startActivity(Intent.createChooser(emailIntent, "Send email..."))
+            context.startActivity(Intent.createChooser(emailIntent, context.getString(R.string.studyinfo_intent_send_email)))
         } catch (ex: android.content.ActivityNotFoundException) {
-            // Behandeln Sie den Fall, dass keine E-Mail-App installiert ist
+            // no email client installed
         }
         hideDataExportDialog()
     }
@@ -210,10 +219,10 @@ fun StudyInfoView(
 
     if (showDataDeletionDialog) {
         ConfirmationDialog(
-            title = "Confirm Data Deletion",
-            text = "To request the deletion of your study data, please send an email with your enrolment ID: $enrolmentId.\n\n" +
-                    "Do you want to proceed and open your email client?",
-            confirmButtonText = "Cancel Participation",
+            title = stringResource(R.string.studyinfo_data_deletion_title),
+            text = stringResource(R.string.studyinfo_data_deletion_description, enrolmentId) +
+                    stringResource(R.string.studyinfo_data_export_proceed_email),
+            confirmButtonText = stringResource(R.string.studyinfo_cancel_participation),
             onConfirm = {
                 viewModel.sendDataDeletionEmail(context, enrolmentId)
             },
@@ -225,10 +234,10 @@ fun StudyInfoView(
 
     if (showDataExportDialog) {
         ConfirmationDialog(
-            title = "Confirm Data Export",
-            text = "To request an export of your study data, please send an email with your enrolment ID: $enrolmentId.\n\n" +
-                    "Do you want to proceed and open your email client?",
-            confirmButtonText = "Send Email",
+            title = stringResource(R.string.studyinfo_data_export_title),
+            text = stringResource(R.string.studyinfo_data_export_description, enrolmentId) +
+                    stringResource(R.string.studyinfo_data_export_proceed_email),
+            confirmButtonText = stringResource(R.string.studyinfo_send_email),
             onConfirm = {
                 viewModel.sendDataExportEmail(context, enrolmentId)
             },
@@ -241,20 +250,20 @@ fun StudyInfoView(
     Column(modifier = modifier
         .padding(16.dp)) {
 
-        Text("Your Participant ID", fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.studyinfo_your_id), fontWeight = FontWeight.Bold)
         SelectionContainer {
             Text(enrolmentId)
         }
 
         Text("Remaining Days", fontWeight = FontWeight.Bold)
         if (study.value == null) {
-            Text("No information available right now")
+            Text(stringResource(R.string.studyinfo_no_information_available))
         } else {
             val remainingDays = study.value!!.durationDays - currentDay.value
             if (remainingDays == 0L) {
-                Text("Last day of the study")
+                Text(stringResource(R.string.studyinfo_last_day))
             } else {
-                Text("$remainingDays days")
+                Text(stringResource(R.string.n_days, remainingDays))
             }
         }
 
@@ -269,20 +278,25 @@ fun StudyInfoView(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Cancel Participation")
+                    Text(stringResource(R.string.studyinfo_cancel_participation))
                 }
+
+                Text(stringResource(R.string.studyinfo_cancel_participation_deletion_hint))
 
                 SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
             }
 
-            // Data deletion and export needs to be available even after study cancellation or end
-            Button(
-                onClick = {
-                    viewModel.requestDataDeletion(context)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Request Data Deletion")
+            // only show data deletion after study cancellation or end
+            if (studyState == StudyState.CANCELLED || studyState == StudyState.ENDED) {
+                // Data deletion and export needs to be available even after study cancellation or end
+                Button(
+                    onClick = {
+                        viewModel.requestDataDeletion(context)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.studyinfo_request_data_deletion))
+                }
             }
 
             Button(
@@ -291,7 +305,7 @@ fun StudyInfoView(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Request Data Export")
+                Text(stringResource(R.string.studyinfo_request_data_export))
             }
 
             if (BuildConfig.DEBUG) {
@@ -303,7 +317,7 @@ fun StudyInfoView(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Open Debug Info")
+                    Text(stringResource(R.string.studyinfo_open_debug))
                 }
             }
         } else {
@@ -314,7 +328,7 @@ fun StudyInfoView(
                 color = MaterialTheme.colorScheme.secondary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
-            Text("Cancelling participation, please wait...")
+            Text(stringResource(R.string.studyinfo_cancelling_pending))
         }
 
     }
@@ -340,7 +354,7 @@ fun ConfirmationDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Abort")
+                Text(stringResource(R.string.abort))
             }
         }
     )

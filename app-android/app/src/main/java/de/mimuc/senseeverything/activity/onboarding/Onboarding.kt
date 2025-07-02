@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.activity
+package de.mimuc.senseeverything.activity.onboarding
 
 import android.Manifest
 import android.app.AlarmManager
@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.os.Process
 import android.provider.Settings
 import android.provider.Settings.SettingNotFoundException
 import android.text.TextUtils.SimpleStringSplitter
@@ -59,11 +60,14 @@ import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
+import de.mimuc.senseeverything.activity.EnrolmentScreen
+import de.mimuc.senseeverything.activity.getActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
@@ -181,11 +185,11 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
                 ),
                 title = {
                     when (step.value) {
-                        OnboardingStep.WELCOME -> Text("Welcome")
-                        OnboardingStep.ENTER_STUDY_ID -> Text("Join Study")
-                        OnboardingStep.ACCEPT_PERMISSIONS -> Text("Permissions")
-                        OnboardingStep.START_STUDY -> Text("Start Study")
-                        OnboardingStep.COMPLETED -> Text("Completed")
+                        OnboardingStep.WELCOME -> Text(stringResource(R.string.onboarding_welcome))
+                        OnboardingStep.ENTER_STUDY_ID -> Text(stringResource(R.string.onboarding_join_study))
+                        OnboardingStep.ACCEPT_PERMISSIONS -> Text(stringResource(R.string.onboarding_permissions))
+                        OnboardingStep.START_STUDY -> Text(stringResource(R.string.onboarding_start_study))
+                        OnboardingStep.COMPLETED -> Text(stringResource(R.string.onboarding_completed))
                     }
                 }
             )
@@ -233,13 +237,13 @@ fun WelcomeScreen(nextStep: () -> Unit, innerPadding: PaddingValues) {
         Heading(R.drawable.rounded_waving_hand_24, "Home symbol", "Welcome")
         Spacer(modifier = Modifier.padding(12.dp))
 
-        Text("We can enter some text here to explain the app and so on and so on")
+        Text(stringResource(R.string.onboarding_app_explanation))
         Spacer(modifier = Modifier.padding(16.dp))
 
         Row {
             Spacer(modifier = Modifier.weight(1f))
             Button(onClick = nextStep) {
-                Text("Continue")
+                Text(stringResource(R.string.onboarding_continue))
             }
         }
     }
@@ -455,7 +459,7 @@ class AcceptPermissionsViewModel @Inject constructor(
     private fun hasAccessToUsageStats(): Boolean {
         val application = getApplication<SEApplicationController>()
         val appOps = application.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = appOps.checkOpNoThrow(OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), application.packageName);
+        val mode = appOps.checkOpNoThrow(OPSTR_GET_USAGE_STATS, Process.myUid(), application.packageName);
         if (mode == AppOpsManager.MODE_DEFAULT) {
             return (application.checkCallingOrSelfPermission(Manifest.permission.PACKAGE_USAGE_STATS) == PackageManager.PERMISSION_GRANTED);
         } else {
@@ -486,215 +490,166 @@ fun AcceptPermissionsScreen(
         Heading(
             id = R.drawable.rounded_key_vertical_24,
             description = "Lock symbol",
-            text = "Necessary Permissions"
+            text = stringResource(R.string.onboarding_permissions_necessary)
         )
         Spacer(modifier = Modifier.padding(12.dp))
-        Text("To participate in the study, we need access to some of your phone's sensors. All data will be pseudonymized and stored securely.")
+        Text(stringResource(R.string.onboarding_permissions_hint))
 
         Spacer(modifier = Modifier.padding(12.dp))
 
         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-            // Wake Lock
-            Text("Wake Lock: ${permissions.value[Manifest.permission.WAKE_LOCK] ?: false}")
-            if (permissions.value[Manifest.permission.WAKE_LOCK] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.WAKE_LOCK,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Record Audio
-            Text("Record Audio: ${permissions.value[Manifest.permission.RECORD_AUDIO] ?: false}")
-            if (permissions.value[Manifest.permission.RECORD_AUDIO] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.RECORD_AUDIO,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Access Wifi
-            Text("Access Wifi: ${permissions.value[Manifest.permission.ACCESS_WIFI_STATE] ?: false}")
-            if (permissions.value[Manifest.permission.ACCESS_WIFI_STATE] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.ACCESS_WIFI_STATE,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Bluetooth Scan
-            Text("Bluetooth Scan: ${permissions.value[Manifest.permission.BLUETOOTH_SCAN] ?: false}")
-            if (permissions.value[Manifest.permission.BLUETOOTH_SCAN] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.BLUETOOTH_SCAN,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Access Network State
-            Text("Access Network State: ${permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] ?: false}")
-            if (permissions.value[Manifest.permission.ACCESS_NETWORK_STATE] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.ACCESS_NETWORK_STATE,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Receive Boot Completed
-            Text("Receive Boot Completed: ${permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] ?: false}")
-            if (permissions.value[Manifest.permission.RECEIVE_BOOT_COMPLETED] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.RECEIVE_BOOT_COMPLETED,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Read Phone State
-            Text("Read Phone State: ${permissions.value[Manifest.permission.READ_PHONE_STATE] ?: false}")
-            if (permissions.value[Manifest.permission.READ_PHONE_STATE] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.READ_PHONE_STATE,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Foreground Service
-            Text("Foreground Service: ${permissions.value[Manifest.permission.FOREGROUND_SERVICE] ?: false}")
-            if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.FOREGROUND_SERVICE,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Post Notifications
-            Text("Notifications: ${permissions.value[Manifest.permission.POST_NOTIFICATIONS] ?: false}")
-            if (permissions.value[Manifest.permission.FOREGROUND_SERVICE] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.POST_NOTIFICATIONS,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Schedule Exact Alarm
-            Text("Schedule Exact Alarm: ${permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] ?: false}")
-            if (permissions.value[Manifest.permission.SCHEDULE_EXACT_ALARM] == false) {
-                Button(onClick = {
-                    viewModel.requestExactAlarmPermission(
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Access Fine Location
-            Text("Access Fine Location: ${permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] ?: false}")
-            if (permissions.value[Manifest.permission.ACCESS_FINE_LOCATION] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // Background Location
-            Text("Background Location: ${permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] ?: false}")
-            if (permissions.value[Manifest.permission.ACCESS_BACKGROUND_LOCATION] == false) {
-                Button(onClick = {
-                    viewModel.requestPermission(
-                        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-                        context
-                    )
-                }) {
-                    Text("Request Permission")
-                }
-            }
-            // System Alert Window
-            Text("System Alert Window: ${permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] ?: false}")
-            if (permissions.value[Manifest.permission.SYSTEM_ALERT_WINDOW] == false) {
-                Button(onClick = { viewModel.requestSystemWindowPermission(context) }) {
-                    Text("Request Permission")
-                }
-            }
-            // Notification Listener Service
-            Text("Notification Access: ${permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] ?: false}")
-            if (permissions.value[Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE] == false) {
-                Button(onClick = { viewModel.requestNotificationListenerPermission(context) }) {
-                    Text("Request Permission")
-                }
-            }
-            // Activity Recognition
-            Text("Activity Recognition: ${permissions.value[Manifest.permission.ACTIVITY_RECOGNITION] ?: false}")
-            if (permissions.value[Manifest.permission.ACTIVITY_RECOGNITION] == false) {
-                Button(onClick = { viewModel.requestPermission(
-                    Manifest.permission.ACTIVITY_RECOGNITION,
-                    context
-                ) }) {
-                    Text("Request Permission")
-                }
-            }
-            // Accessibility Events
-            Text("Accessibility Events: ${permissions.value[Manifest.permission.BIND_ACCESSIBILITY_SERVICE] ?: false}")
-            if (permissions.value[Manifest.permission.BIND_ACCESSIBILITY_SERVICE] == false) {
-                Button(onClick = { viewModel.requestAccessibilityServicePermission(context) }) {
-                    Text("Request Permission")
-                }
-            }
-            // Usage Statistics
-            Text("Usage Statistics: ${permissions.value[Manifest.permission.PACKAGE_USAGE_STATS] ?: false}")
-            if (permissions.value[Manifest.permission.PACKAGE_USAGE_STATS] == false) {
-                Button(onClick = { viewModel.requestUsageStatsPermission(context) }) {
-                    Text("Request Permission")
-                }
-            }
-            // Power Exemptions
-            Text("Power Management: ${permissions.value[Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS] ?: false}")
-            if (permissions.value[Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS] == false) {
-                Button(onClick = { viewModel.requestPowerExemptionPermission(context) }) {
-                    Text("Request Permission")
-                }
-            }
+            // Standard permissions
+            StandardPermissionItem(
+                label = "Wake Lock",
+                permission = Manifest.permission.WAKE_LOCK,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Record Audio",
+                permission = Manifest.permission.RECORD_AUDIO,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Access Wifi",
+                permission = Manifest.permission.ACCESS_WIFI_STATE,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Bluetooth Scan",
+                permission = Manifest.permission.BLUETOOTH_SCAN,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Access Network State",
+                permission = Manifest.permission.ACCESS_NETWORK_STATE,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Receive Boot Completed",
+                permission = Manifest.permission.RECEIVE_BOOT_COMPLETED,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Read Phone State",
+                permission = Manifest.permission.READ_PHONE_STATE,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Foreground Service",
+                permission = Manifest.permission.FOREGROUND_SERVICE,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Notifications",
+                permission = Manifest.permission.POST_NOTIFICATIONS,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Access Fine Location",
+                permission = Manifest.permission.ACCESS_FINE_LOCATION,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Background Location",
+                permission = Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            StandardPermissionItem(
+                label = "Activity Recognition",
+                permission = Manifest.permission.ACTIVITY_RECOGNITION,
+                permissions = permissions.value,
+                viewModel = viewModel,
+                context = context
+            )
+
+            // Special permissions with custom request methods
+            SpecialPermissionItem(
+                label = "Schedule Exact Alarm",
+                permission = Manifest.permission.SCHEDULE_EXACT_ALARM,
+                permissions = permissions.value,
+                onRequestPermission = { viewModel.requestExactAlarmPermission(context) }
+            )
+
+            SpecialPermissionItem(
+                label = "System Alert Window",
+                permission = Manifest.permission.SYSTEM_ALERT_WINDOW,
+                permissions = permissions.value,
+                onRequestPermission = { viewModel.requestSystemWindowPermission(context) }
+            )
+
+            SpecialPermissionItem(
+                label = "Notification Access",
+                permission = Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE,
+                permissions = permissions.value,
+                onRequestPermission = { viewModel.requestNotificationListenerPermission(context) }
+            )
+
+            SpecialPermissionItem(
+                label = "Accessibility Events",
+                permission = Manifest.permission.BIND_ACCESSIBILITY_SERVICE,
+                permissions = permissions.value,
+                onRequestPermission = { viewModel.requestAccessibilityServicePermission(context) }
+            )
+
+            SpecialPermissionItem(
+                label = "Usage Statistics",
+                permission = Manifest.permission.PACKAGE_USAGE_STATS,
+                permissions = permissions.value,
+                onRequestPermission = { viewModel.requestUsageStatsPermission(context) }
+            )
+
+            SpecialPermissionItem(
+                label = "Power Management",
+                permission = Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                permissions = permissions.value,
+                onRequestPermission = { viewModel.requestPowerExemptionPermission(context) }
+            )
 
             Spacer(modifier = Modifier.padding(16.dp))
-            Text("Please accept all permissions to continue. You can pause or stop the study at any time, and have the ability to delete all data collected.")
+            Text(stringResource(R.string.onboarding_permissions_accept_all_hint))
 
             Spacer(modifier = Modifier.padding(12.dp))
             Button(onClick = nextStep, enabled = allAccepted) {
-                Text("Continue")
+                Text(stringResource(R.string.onboarding_continue))
             }
         }
 
         LaunchedEffect(lifecycleState) {
             when (lifecycleState) {
-                androidx.lifecycle.Lifecycle.State.RESUMED -> viewModel.checkPermissions()
+                Lifecycle.State.RESUMED -> viewModel.checkPermissions()
                 else -> {}
             }
         }
@@ -754,10 +709,9 @@ class StartStudyViewModel @Inject constructor(
                 dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
                 schedulePhaseChanges(context, startedTimestamp, dataStoreManager.studyPhasesFlow.first())
 
-                // automatically start study
+                // automatically start data collection
                 if (!isServiceRunning(LogService::class.java)) {
-                    // todo: uncomment when building for production
-                    // SEApplicationController.getInstance().samplingManager.startSampling(context.applicationContext)
+                    SEApplicationController.getInstance().samplingManager.startSampling(context.applicationContext)
                 }
             } else {
                 Log.e("StartStudyViewModel", "Could not load study")
@@ -787,10 +741,10 @@ fun StartStudyScreen(
         Heading(
             id = R.drawable.rounded_sentiment_very_satisfied_24,
             description = "Happy face",
-            text = "All set!"
+            text = stringResource(R.string.onboarding_start_study_heading)
         )
         Spacer(modifier = Modifier.padding(12.dp))
-        Text(stringResource(R.string.everything_set_up))
+        Text(stringResource(R.string.onboarding_start_study_everything_setup))
 
         if (pending.value) {
             Column(
@@ -804,7 +758,7 @@ fun StartStudyScreen(
                     color = MaterialTheme.colorScheme.secondary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
-                Text("Finalizing setup, this may take a while...")
+                Text(stringResource(R.string.onboarding_start_study_finalizing))
             }
         }
 
@@ -812,7 +766,7 @@ fun StartStudyScreen(
         Button(onClick = {
             viewModel.prepareStudy(context, finish)
         }, modifier = Modifier.fillMaxWidth(), enabled = !pending.value) {
-            Text(stringResource(R.string.start_study))
+            Text(stringResource(R.string.onboarding_start_study_start))
         }
     }
 }
@@ -829,3 +783,4 @@ fun GreetingPreview() {
         OnboardingView()
     }
 }
+
