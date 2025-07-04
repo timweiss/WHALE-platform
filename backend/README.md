@@ -98,6 +98,7 @@ needs to be created. Any element type can be used (except for `social_network_en
 `social_network_rating`).
 
 To get started:
+
 1. Add the network sampling questionnaire:
     - (Optional) Add a new questionnaire to `esm_questionnaires`.
     - Add an element with the type `social_network_entry` to the questionnaire.
@@ -121,11 +122,45 @@ Here's how it looks like in the questionnaire:
 | `social_network_rating` | ![Rating Element](https://github.com/user-attachments/assets/fcde1a38-3dbf-47ec-89b6-216109c25236) |
 
 #### Circumplex model
+
 A circumplex entry can be added to the questionnaire with the element of type `circumplex`.
 The configuration is a JSON object with the following keys:
+
 - `imageUrl`: the URL of the image to be displayed, will be pre-loaded on study start to ensure offline access
-- `clip`: object that defines the clipping area of the image (only taps inside that area are registered), with the following keys
-  - `top`: top offset in pixels
-  - `bottom`: bottom offset in pixels
-  - `left`: left offset in pixels
-  - `right`: right offset in pixels
+- `clip`: object that defines the clipping area of the image (only taps inside that area are registered), with the
+  following keys
+    - `top`: top offset in pixels
+    - `bottom`: bottom offset in pixels
+    - `left`: left offset in pixels
+    - `right`: right offset in pixels
+
+### Completion Tracking
+
+A study can be configured to track the completion of the study. For dynamic tracking, a set of labels can be defined,
+where each label can contain a number of conditions.
+For example, a study could have two thresholds, for partial compensation and full compensation, where the first
+threshold could be met by participating in 50% of passive data collection and 50% of EMAs.
+
+Conditions are set within the study table, and can be composed of the following elements:
+
+| Condition Type                       | Description                                                                           | Example Configuration                                       |
+|--------------------------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `PassiveSensingParticipationDays(5)` | The participant must have participated in at least 5 days of passive data collection. | `{ "type": "PassiveSensingParticipationDays", "value": 5 }` |
+| `EMAAnswered(12)`                    | The participant must have completed at least 12 EMA items.                            | `{ "type": "EMAAnswered", "value": 12 }`                    |
+
+On study creation or update, the `completionTracking` field can either be null (disabled) or an object with the following structure:
+
+```json
+{
+  "oneDayOfData": [
+    {
+      "type": "PassiveSensingParticipationDays",
+      "value": 1
+    },
+    {
+      "type": "EMAAnswered",
+      "value": 5
+    }
+  ]
+}
+```

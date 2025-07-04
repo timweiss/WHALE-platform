@@ -8,6 +8,7 @@ export interface Study {
   maxEnrolments: number;
   durationDays: number;
   allocationStrategy: StudyExperimentalGroupAllocationStrategy;
+  completionTracking: CompletionTracking | null;
 }
 
 interface StudyRow {
@@ -17,6 +18,7 @@ interface StudyRow {
   max_enrolments: number;
   duration_days: number;
   allocation_strategy: StudyExperimentalGroupAllocationStrategy;
+  completion_tracking: CompletionTracking | null;
 }
 
 enum InteractionWidgetStrategy {
@@ -46,6 +48,30 @@ export interface StudyExperimentalGroupPhase {
 
   // configuration parameters
   interactionWidgetStrategy: InteractionWidgetStrategy;
+}
+
+type CompletionTracking = {
+  [key: string]: CompletionItem[];
+};
+
+export enum CompletionItemType {
+  PassiveSensingParticipationDays = 'PassiveSensingParticipationDays',
+  EMAAnswered = 'EMAAnswered',
+}
+
+export interface CompletionItem {
+  type: CompletionItemType;
+}
+
+export interface PassiveSensingParticipationDaysCompletionItem
+  extends CompletionItem {
+  type: CompletionItemType.PassiveSensingParticipationDays;
+  value: number;
+}
+
+export interface EMAAnsweredCompletionItem extends CompletionItem {
+  type: CompletionItemType.EMAAnswered;
+  value: number;
 }
 
 export interface IStudyRepository {
@@ -97,17 +123,19 @@ export class StudyRepository extends Repository implements IStudyRepository {
       | 'maxEnrolments'
       | 'durationDays'
       | 'allocationStrategy'
+      | 'completionTracking'
     >,
   ): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO studies (name, enrolment_key, max_enrolments, duration_days, allocation_strategy) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        'INSERT INTO studies (name, enrolment_key, max_enrolments, duration_days, allocation_strategy, completion_tracking) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [
           study.name,
           study.enrolmentKey,
           study.maxEnrolments,
           study.durationDays,
           study.allocationStrategy,
+          study.completionTracking,
         ],
       );
       return this.studyFromRow(res.rows[0]);
@@ -119,13 +147,14 @@ export class StudyRepository extends Repository implements IStudyRepository {
   async updateStudy(study: Study): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5 WHERE id = $6 RETURNING *',
+        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5, completion_tracking=$6 WHERE id = $7 RETURNING *',
         [
           study.name,
           study.enrolmentKey,
           study.maxEnrolments,
           study.durationDays,
           study.allocationStrategy,
+          study.completionTracking,
           study.id,
         ],
       );
@@ -183,6 +212,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
       maxEnrolments: row.max_enrolments,
       durationDays: row.duration_days,
       allocationStrategy: row.allocation_strategy,
+      completionTracking: row.completion_tracking,
     };
   }
 

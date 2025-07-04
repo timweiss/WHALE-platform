@@ -7,6 +7,7 @@ import { createReadingController } from './controllers/reading';
 import { Pool } from 'pg';
 import { createESMController } from './controllers/esm';
 import { initializeRepositories, Repositories } from './data/repositoryHelper';
+import { createCompletionController } from './controllers/completion';
 
 export function makeExpressApp(pool: Pool, repositories: Repositories) {
   const app = express();
@@ -24,6 +25,12 @@ export function makeExpressApp(pool: Pool, repositories: Repositories) {
     app,
   );
   createESMController(repositories.experienceSampling, repositories.study, app);
+  createCompletionController(
+    repositories.completion,
+    repositories.study,
+    repositories.enrolment,
+    app,
+  );
 
   return app;
 }

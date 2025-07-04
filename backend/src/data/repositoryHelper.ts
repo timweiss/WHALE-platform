@@ -12,12 +12,17 @@ import {
   IEnrolmentRepository,
 } from './enrolmentRepository';
 import { Pool } from 'pg';
+import {
+  CompletionRepository,
+  ICompletionRepository,
+} from './completionRepository';
 
 export interface Repositories {
   study: IStudyRepository;
   experienceSampling: IExperienceSamplingRepository;
   sensorReading: ISensorReadingRepository;
   enrolment: IEnrolmentRepository;
+  completion: ICompletionRepository;
 }
 
 export function initializeRepositories(pool: Pool): Repositories {
@@ -26,5 +31,6 @@ export function initializeRepositories(pool: Pool): Repositories {
     experienceSampling: new ExperienceSamplingRepository(pool),
     sensorReading: new SensorReadingRepository(pool),
     enrolment: new EnrolmentRepository(pool),
+    completion: new CompletionRepository(pool),
   };
 }
