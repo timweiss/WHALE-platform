@@ -71,18 +71,18 @@ export async function setupO11y(): Promise<{
   });
 
   const meterProvider = new MeterProvider({
-    resource: resourceFromAttributes({ "service.name": "feed" }),
+    resource: resourceFromAttributes({ "service.name": "whale" }),
     readers: [metricReader],
   });
   opentelemetry.metrics.setGlobalMeterProvider(meterProvider);
 
   // Export logs
   const logProvider = new LoggerProvider({
-    resource: resourceFromAttributes({ "service.name": "feed" }),
+    resource: resourceFromAttributes({ "service.name": "whale" }),
     processors: [new SimpleLogRecordProcessor(logsExporter)],
   });
 
-  const logger = logProvider.getLogger("feed");
+  const logger = logProvider.getLogger("whale");
 
   const createLogger = (
     name: string,
@@ -123,7 +123,7 @@ export async function setupO11y(): Promise<{
     };
   };
 
-  const tracer = opentelemetry.trace.getTracer("learnlm_feed");
+  const tracer = opentelemetry.trace.getTracer("learnlm_whale");
 
   return {
     logger: createLogger("root"),
@@ -140,11 +140,11 @@ export function getMeter(scope: string, version?: string): Meter {
 }
 
 function metricsPrefix(name: string) {
-  return `learnlm_feed.${name}`;
+  return `learnlm_whale.${name}`;
 }
 
 export function HistogramLaunchBrowser(duration: number) {
-  const meter = getMeter("feed");
+  const meter = getMeter("whale");
 
   const histogram = meter.createHistogram(
     metricsPrefix("browser_launch_duration"),
@@ -158,7 +158,7 @@ export function HistogramLaunchBrowser(duration: number) {
 }
 
 export function HistogramSensorUpload(duration: number) {
-  const meter = getMeter("feed");
+  const meter = getMeter("whale");
 
   const histogram = meter.createHistogram(
     metricsPrefix("sensor_batch_upload_duration"),
