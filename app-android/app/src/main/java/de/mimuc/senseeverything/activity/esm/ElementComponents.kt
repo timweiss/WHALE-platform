@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
@@ -21,9 +23,11 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -54,34 +58,55 @@ fun TextViewElementComponent(element: TextViewElement) {
 @Composable
 fun RadioGroupElementComponent(
     element: RadioGroupElement,
-    value: String,
-    onValueChange: (String) -> Unit
+    value: Int,
+    onValueChange: (Int) -> Unit
 ) {
-    val selected = remember { mutableStateOf("") }
+    val selected = remember { mutableStateOf(-1) }
 
-    fun selectElement(option: String) {
-        selected.value = option
-        onValueChange(option)
+    fun selectElement(index: Int) {
+        selected.value = index
+        onValueChange(index)
     }
 
     if (element.alignment == GroupAlignment.Horizontal) {
         Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-            element.options.forEach { option ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            element.options.forEachIndexed { index, option ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .selectable(
+                            selected = (index == value),
+                            onClick = { selectElement(index) },
+                            role = Role.RadioButton
+                        )
+                        .padding(6.dp)
+                ) {
                     RadioButton(
-                        selected = value.compareTo(option) == 0,
-                        onClick = { selectElement(option) })
+                        selected = value == index,
+                        onClick = null
+                    )
                     Text(option, textAlign = TextAlign.Center)
                 }
             }
         }
     } else {
-        Column {
-            element.options.forEach { option ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            element.options.forEachIndexed { index, option ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+                        .selectable(
+                            selected = (index == value),
+                            onClick = { selectElement(index) },
+                            role = Role.RadioButton
+                        )
+                        .fillMaxWidth()
+                        .padding(6.dp)
+                ) {
                     RadioButton(
-                        selected = value.compareTo(option) == 0,
-                        onClick = { selectElement(option) })
+                        selected = value == index,
+                        onClick = null
+                    )
                     Text(option)
                 }
             }
@@ -172,7 +197,12 @@ class ExternalQuestionnaireLinkElementComponentViewModel @Inject constructor(
             val apiClient = ApiClient.getInstance(context)
 
             val urlParams = withContext(Dispatchers.IO) {
-                fetchExternalQuestionnaireParams(element.urlParams, dataStoreManager, database, apiClient)
+                fetchExternalQuestionnaireParams(
+                    element.urlParams,
+                    dataStoreManager,
+                    database,
+                    apiClient
+                )
             }
             if (!element.externalUrl.startsWith("https://")) return@launch
 

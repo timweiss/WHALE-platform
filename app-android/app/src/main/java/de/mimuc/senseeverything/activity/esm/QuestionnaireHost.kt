@@ -2,10 +2,13 @@ package de.mimuc.senseeverything.activity.esm
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
@@ -14,7 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.AndroidViewModel
 import dagger.assisted.Assisted
@@ -90,7 +95,10 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     }
 
     fun save() {
-        Log.d("Questionnaire", "Saving questionnaire from host with values: ${_elementValues.value}")
+        Log.d(
+            "Questionnaire",
+            "Saving questionnaire from host with values: ${_elementValues.value}"
+        )
         onSave(_elementValues.value)
     }
 
@@ -99,6 +107,21 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 
         for (element in questionnaire.elements) {
             setElementValue(element.id, emptyValueForElement(element))
+        }
+    }
+}
+
+@Composable
+fun QuestionnaireLayoutContainer(embedded: Boolean, content: @Composable () -> Unit) {
+    if (embedded) {
+        Column {
+            content
+        }
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            content()
         }
     }
 }
@@ -115,20 +138,57 @@ fun QuestionnaireHost(
             factory.create(questionnaire, onSave)
         }
 
-    Column {
-        if (questionnaire.elements.isEmpty()) {
-            Text("No questions have been provided. This is likely a mistake of the study creator.")
-        } else {
-            val maxStep = questionnaire.elements.maxOf { it.step }
-            val currentStep by viewModel.activeStep.collectAsState()
-            val currentElements = remember(currentStep) {
-                questionnaire.elements.filter { it.step == currentStep }
-                    .sortedBy { it.position }
-            }
-            val answerValues = viewModel.elementValues.collectAsState()
+    if (questionnaire.elements.isEmpty()) {
+        Text("No questions have been provided. This is likely a mistake of the study creator.")
+    } else {
+        val maxStep = questionnaire.elements.maxOf { it.step }
+        val currentStep by viewModel.activeStep.collectAsState()
+        val currentElements = remember(currentStep) {
+            questionnaire.elements.filter { it.step == currentStep }
+                .sortedBy { it.position }
+        }
+        val answerValues = viewModel.elementValues.collectAsState()
 
-            if (!embedded) {
-                LazyColumn {
+        if (embedded) {
+            // column layout as we cannot nest LazyColumn inside LazyColumn
+            Column {
+                for (element in currentElements) {
+                    val elementValue = answerValues.value[element.id]
+                    QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
+                        viewModel.setElementValue(id, value)
+                    })
+                }
+
+                // Navigation after content
+                if (maxStep == 1) {
+                    TextButton(onClick = { viewModel.save() }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Save")
+                    }
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { viewModel.previousStep() }, enabled = currentStep > 1) {
+                            Text("Previous")
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        if (currentStep < maxStep) {
+                            TextButton(onClick = { viewModel.nextStep() }) {
+                                Text("Next")
+                            }
+                        } else {
+                            TextButton(onClick = { viewModel.save() }) {
+                                Text("Save")
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 56.dp)
+                ) {
                     items(items = currentElements, key = { item -> item.id }) { element ->
                         val elementValue = answerValues.value[element.id]
                         QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
@@ -136,25 +196,13 @@ fun QuestionnaireHost(
                         })
                     }
                 }
-            } else {
-                Column {
-                    for (element in currentElements) {
-                        val elementValue = answerValues.value[element.id]
-                        QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
-                            viewModel.setElementValue(id, value)
-                        })
-                    }
-                }
-            }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (embedded && maxStep == 1) {
-                TextButton(onClick = { viewModel.save() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Save")
-                }
-            } else {
-                Row {
+                // Navigation buttons positioned at bottom of screen
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                ) {
                     TextButton(onClick = { viewModel.previousStep() }, enabled = currentStep > 1) {
                         Text("Previous")
                     }
@@ -172,7 +220,6 @@ fun QuestionnaireHost(
             }
         }
     }
-
 }
 
 @Composable

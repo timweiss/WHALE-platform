@@ -17,9 +17,9 @@ open class ElementValue(val elementId: Int, val elementName: String) {
     }
 }
 
-class RadioGroupValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName) {
+class RadioGroupValue(elementId: Int, elementName: String, var value: Int) : ElementValue(elementId, elementName) {
     override fun getSerializedValue(): String {
-        return value
+        return value.toString()
     }
 }
 
@@ -63,7 +63,7 @@ class TextEntryValue(elementId: Int, elementName: String, var value: String) : E
 
 fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
     return when (element.type) {
-        QuestionnaireElementType.RADIO_GROUP -> RadioGroupValue(element.id, element.name, "")
+        QuestionnaireElementType.RADIO_GROUP -> RadioGroupValue(element.id, element.name, -1)
         QuestionnaireElementType.CHECKBOX_GROUP -> CheckboxGroupValue(element.id, element.name, emptyList())
         QuestionnaireElementType.SLIDER -> SliderValue(element.id,element.name, 0.0)
         QuestionnaireElementType.TEXT_ENTRY -> TextEntryValue(element.id, element.name, "")
