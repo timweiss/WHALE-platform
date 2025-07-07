@@ -13,7 +13,8 @@ enum class QuestionnaireElementType(val apiName: String) {
     EXTERNAL_QUESTIONNAIRE_LINK("external_questionnaire_link"),
     SOCIAL_NETWORK_ENTRY("social_network_entry"),
     SOCIAL_NETWORK_RATING("social_network_rating"),
-    CIRCUMPLEX("circumplex");
+    CIRCUMPLEX("circumplex"),
+    LIKERT_SCALE_LABEL("likert_scale_label");
 
     companion object {
         fun fromApiName(apiName: String): QuestionnaireElementType? {
@@ -212,6 +213,24 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 clipBottom,
                 clipLeft,
                 clipRight
+            )
+        }
+
+        QuestionnaireElementType.LIKERT_SCALE_LABEL -> {
+            val options = mutableListOf<String>()
+            val optionsJson = config.getJSONArray("options")
+
+            for (i in 0 until optionsJson.length()) {
+                options.add(optionsJson.getString(i))
+            }
+            return LikertScaleLabelElement(
+                id,
+                questionnaireId,
+                name,
+                step,
+                position,
+                configuration,
+                options
             )
         }
 
@@ -438,6 +457,25 @@ class CircumplexElement(
         clipJson.put("left", clipLeft)
         clipJson.put("right", clipRight)
         json.getJSONObject("configuration").put("clip", clipJson)
+        return json
+    }
+}
+
+class LikertScaleLabelElement(
+    id: Int,
+    questionnaireId: Int,
+    name: String,
+    step: Int,
+    position: Int,
+    configuration: Any,
+    val options: List<String>
+) : QuestionnaireElement(
+    id, questionnaireId, name,
+    QuestionnaireElementType.LIKERT_SCALE_LABEL, step, position, configuration
+) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        json.getJSONObject("configuration").put("options", JSONArray(options))
         return json
     }
 }

@@ -35,6 +35,7 @@ import de.mimuc.senseeverything.api.model.CircumplexValue
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.LikertScaleLabelElement
 import de.mimuc.senseeverything.api.model.QuestionnaireElement
 import de.mimuc.senseeverything.api.model.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.RadioGroupElement
@@ -322,6 +323,10 @@ fun QuestionnaireElement(
                     )
                 }
             )
+        }
+
+        QuestionnaireElementType.LIKERT_SCALE_LABEL -> {
+            LikertScaleLabelElementComponent(element = element as LikertScaleLabelElement)
         }
     }
 }

@@ -28,7 +28,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -37,6 +39,7 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.GroupAlignment
+import de.mimuc.senseeverything.api.model.LikertScaleLabelElement
 import de.mimuc.senseeverything.api.model.RadioGroupElement
 import de.mimuc.senseeverything.api.model.SliderElement
 import de.mimuc.senseeverything.api.model.TextEntryElement
@@ -250,6 +253,38 @@ fun ExternalQuestionnaireLinkElementComponent(
             element.actionText,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun LikertScaleLabelElementComponent(
+    element: LikertScaleLabelElement
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // First label - left aligned
+        Text(
+            text = element.options.first(),
+            textAlign = TextAlign.Start,
+            fontSize = 12.sp,
+            lineHeight = 12.sp,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        // Last label - right aligned
+        Text(
+            text = element.options.last(),
+            textAlign = TextAlign.End,
+            fontSize = 12.sp,
+            lineHeight = 12.sp,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
     }
 }
