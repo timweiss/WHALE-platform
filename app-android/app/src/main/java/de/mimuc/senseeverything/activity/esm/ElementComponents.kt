@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -90,7 +91,7 @@ fun RadioGroupElementComponent(
             }
         }
     } else {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             element.options.forEachIndexed { index, option ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
@@ -107,7 +108,7 @@ fun RadioGroupElementComponent(
                         selected = value == index,
                         onClick = null
                     )
-                    Text(option)
+                    Text(option, textAlign = TextAlign.Start)
                 }
             }
         }
@@ -133,7 +134,11 @@ fun CheckboxGroupElementComponent(
     if (element.alignment == GroupAlignment.Horizontal) {
         Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
             element.options.forEach { option ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable {
+                        selectElement(option)
+                    }) {
                     Checkbox(checked = value.contains(option), onCheckedChange = {
                         selectElement(option)
                     })
@@ -142,9 +147,15 @@ fun CheckboxGroupElementComponent(
             }
         }
     } else {
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             element.options.forEach { option ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            selectElement(option)
+                        }) {
                     Checkbox(checked = value.contains(option), onCheckedChange = {
                         selectElement(option)
                     })
