@@ -1,5 +1,8 @@
 package de.mimuc.senseeverything.data
 
+import android.util.Log
+import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.fetchCompletionStatus
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.GeneratedKey
 import kotlinx.coroutines.flow.first
@@ -7,9 +10,10 @@ import kotlinx.coroutines.flow.first
 suspend fun fetchExternalQuestionnaireParams(
     params: Map<String, String>,
     dataStoreManager: DataStoreManager,
-    database: AppDatabase
+    database: AppDatabase,
+    apiClient: ApiClient
 ): Map<String, String> {
-    var results = mutableMapOf<String, String>()
+    val results = mutableMapOf<String, String>()
 
     for ((key, value) in params) {
         if (value.startsWith("generatedKey")) {
@@ -24,6 +28,14 @@ suspend fun fetchExternalQuestionnaireParams(
                     val enrolmentId = dataStoreManager.participantIdFlow.first()
                     results.put(key, enrolmentId)
                 }
+            }
+        } else if (value.startsWith("completionTracking")) {
+            try {
+                val completion = fetchCompletionStatus(apiClient, dataStoreManager)
+                val completedString = completion.filter { (k, v) -> v }.keys.joinToString(",")
+                results.put(key, completedString)
+            } catch (e: Exception) {
+               Log.e("ExternalQuestionnaireParamsHelper", "Error fetching completion status: $e")
             }
         }
     }

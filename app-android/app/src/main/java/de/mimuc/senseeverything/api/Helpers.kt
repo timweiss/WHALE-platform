@@ -3,6 +3,8 @@ package de.mimuc.senseeverything.api
 import android.util.Log
 import com.android.volley.VolleyError
 import de.mimuc.senseeverything.api.model.Study
+import de.mimuc.senseeverything.data.DataStoreManager
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
 import kotlin.coroutines.resume
@@ -55,4 +57,38 @@ suspend fun loadStudy(apiClient: ApiClient, studyId: Int): Study? {
     }
 
     return null
+}
+
+suspend fun fetchCompletionStatus(apiClient: ApiClient, dataStoreManager: DataStoreManager): Map<String, Boolean> {
+    val token = dataStoreManager.tokenFlow.first()
+    if (token.isEmpty()) {
+        return emptyMap()
+    }
+
+    val headers = mapOf("Authorization" to "Bearer $token")
+
+    val response = suspendCancellableCoroutine { continuation ->
+        Log.d("Api", "Fetching completion status")
+        apiClient.getJson("https://sisensing.medien.ifi.lmu.de/v1/completion", headers,
+            { response ->
+                Log.d("Api", "Received completion status: $response")
+                continuation.resume(response)
+            },
+            { error ->
+                Log.d("Api", "Error fetching completion status: $error")
+                continuation.resume(null)
+            })
+    }
+
+    if (response != null) {
+        val completionStatus = mutableMapOf<String, Boolean>()
+        val keys = response.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            completionStatus[key] = response.getBoolean(key)
+        }
+        return completionStatus
+    }
+
+    return emptyMap()
 }

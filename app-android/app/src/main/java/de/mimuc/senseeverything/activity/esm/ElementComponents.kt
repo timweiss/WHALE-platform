@@ -28,6 +28,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.GroupAlignment
@@ -168,8 +169,10 @@ class ExternalQuestionnaireLinkElementComponentViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
 
+            val apiClient = ApiClient.getInstance(context)
+
             val urlParams = withContext(Dispatchers.IO) {
-                fetchExternalQuestionnaireParams(element.urlParams, dataStoreManager, database)
+                fetchExternalQuestionnaireParams(element.urlParams, dataStoreManager, database, apiClient)
             }
             if (!element.externalUrl.startsWith("https://")) return@launch
 

@@ -141,7 +141,7 @@ class StudyInfoViewModel @Inject constructor(
             val enrolmentId = dataStoreManager.participantIdFlow.first()
             dataStoreManager.eraseAllData()
             dataStoreManager.saveParticipantId(enrolmentId)
-            dataStoreManager.saveStudyState(StudyState.ENDED)
+            dataStoreManager.saveStudyState(StudyState.CANCELLED)
         }
         // 3. pop back to main activity, it should show the end study
         context.startActivity(Intent(context, MainActivity::class.java).apply {
