@@ -10,12 +10,14 @@ import {
 import { Express } from 'express';
 import { authenticate, RequestUser } from '../middleware/authenticate';
 import { ICompletionRepository } from '../data/completionRepository';
+import { Logger, Observability } from '../o11y';
 
 export function createCompletionController(
   completionRepository: ICompletionRepository,
   studyRepository: IStudyRepository,
   enrolmentRepository: IEnrolmentRepository,
   app: Express,
+  observability: Observability,
 ) {
   app.get('/v1/completion', authenticate, async (req, res) => {
     const enrolment = await enrolmentRepository.getEnrolmentById(
@@ -32,6 +34,10 @@ export function createCompletionController(
     }
 
     if (!study.completionTracking) {
+      observability.logger.warn('Completion tracking not enabled for study', {
+        studyId: study.id,
+      });
+
       return res
         .status(400)
         .send({ error: 'Completion tracking is not enabled for this study' });
@@ -101,4 +107,6 @@ export function createCompletionController(
 
     return conditionSatisfied.every((v) => v);
   };
+
+  observability.logger.info('loaded completion controller');
 }

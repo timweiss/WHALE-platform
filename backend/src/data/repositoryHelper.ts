@@ -16,6 +16,7 @@ import {
   CompletionRepository,
   ICompletionRepository,
 } from './completionRepository';
+import { Observability } from '../o11y';
 
 export interface Repositories {
   study: IStudyRepository;
@@ -25,12 +26,15 @@ export interface Repositories {
   completion: ICompletionRepository;
 }
 
-export function initializeRepositories(pool: Pool): Repositories {
+export function initializeRepositories(
+  pool: Pool,
+  observability: Observability,
+): Repositories {
   return {
-    study: new StudyRepository(pool),
-    experienceSampling: new ExperienceSamplingRepository(pool),
-    sensorReading: new SensorReadingRepository(pool),
-    enrolment: new EnrolmentRepository(pool),
-    completion: new CompletionRepository(pool),
+    study: new StudyRepository(pool, observability),
+    experienceSampling: new ExperienceSamplingRepository(pool, observability),
+    sensorReading: new SensorReadingRepository(pool, observability),
+    enrolment: new EnrolmentRepository(pool, observability),
+    completion: new CompletionRepository(pool, observability),
   };
 }

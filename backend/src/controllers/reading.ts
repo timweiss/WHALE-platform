@@ -6,11 +6,13 @@ import {
   SensorReading,
 } from '../data/sensorReadingRepository';
 import { IEnrolmentRepository } from '../data/enrolmentRepository';
+import { HistogramSensorUpload, Logger, Observability, withDuration } from '../o11y';
 
 export function createReadingController(
   sensorReadingRepository: ISensorReadingRepository,
   enrolmentRepository: IEnrolmentRepository,
   app: Express,
+  observability: Observability,
 ) {
   app.post('/v1/reading', authenticate, async (req, res) => {
     if (!req.body.sensorType || !req.body.data) {
@@ -55,9 +57,14 @@ export function createReadingController(
     }
 
     try {
-      const readings = await sensorReadingRepository.createSensorReadingBatched(
-        enrolment.id,
-        req.body,
+      const readings = withDuration(
+        async () => {
+          return await sensorReadingRepository.createSensorReadingBatched(
+            enrolment.id,
+            req.body,
+          );
+        },
+        (duration) => HistogramSensorUpload(duration),
       );
       res.json(readings);
     } catch (e) {
@@ -85,5 +92,5 @@ export function createReadingController(
     },
   );
 
-  console.log('loaded reading controller');
+  observability.logger.info('loaded reading controller');
 }

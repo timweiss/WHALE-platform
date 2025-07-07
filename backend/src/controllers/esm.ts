@@ -9,11 +9,13 @@ import {
   IExperienceSamplingRepository,
 } from '../data/experienceSamplingRepository';
 import { IStudyRepository } from '../data/studyRepository';
+import { Logger, Observability } from '../o11y';
 
 export function createESMController(
   esmRepository: IExperienceSamplingRepository,
   studyRepository: IStudyRepository,
   app: Express,
+  observability: Observability
 ) {
   app.get('/v1/study/:studyId/questionnaire', async (req, res) => {
     const studyId = parseInt(req.params.studyId);
@@ -216,5 +218,5 @@ export function createESMController(
     },
   );
 
-  console.log('loaded esm controller');
+  observability.logger.info('loaded esm controller');
 }

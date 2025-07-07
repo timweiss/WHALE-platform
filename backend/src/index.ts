@@ -8,8 +8,13 @@ import { Pool } from 'pg';
 import { createESMController } from './controllers/esm';
 import { initializeRepositories, Repositories } from './data/repositoryHelper';
 import { createCompletionController } from './controllers/completion';
+import { Logger, Observability, setupO11y } from './o11y';
 
-export function makeExpressApp(pool: Pool, repositories: Repositories) {
+export function makeExpressApp(
+  pool: Pool,
+  repositories: Repositories,
+  observability: Observability,
+) {
   const app = express();
   app.use(express.json());
 
@@ -17,39 +22,60 @@ export function makeExpressApp(pool: Pool, repositories: Repositories) {
     res.send('Social Interaction Sensing!');
   });
 
-  createStudyController(repositories.study, app);
-  createEnrolmentController(repositories.enrolment, repositories.study, app);
+  createStudyController(repositories.study, app, observability);
+  createEnrolmentController(
+    repositories.enrolment,
+    repositories.study,
+    app,
+    observability,
+  );
   createReadingController(
     repositories.sensorReading,
     repositories.enrolment,
     app,
+    observability,
   );
-  createESMController(repositories.experienceSampling, repositories.study, app);
+  createESMController(
+    repositories.experienceSampling,
+    repositories.study,
+    app,
+    observability,
+  );
   createCompletionController(
     repositories.completion,
     repositories.study,
     repositories.enrolment,
     app,
+    observability,
   );
 
   return app;
 }
 
 export async function main() {
-  const pool = usePool();
+  const olly = await setupO11y();
 
-  const app = makeExpressApp(pool, initializeRepositories(pool));
+  olly.logger.info('Starting up');
+
+  const pool = usePool(olly);
+
+  const app = makeExpressApp(
+    pool,
+    initializeRepositories(pool, olly),
+    olly,
+  );
 
   const server = app.listen(Config.app.port, () => {
-    console.log(`Server listening on port ${Config.app.port}`);
+    olly.logger.info(`Server listening on port ${Config.app.port}`);
   });
 
   // close the pool when app shuts down
-  process.on('SIGTERM', () => {
-    pool.end();
+  process.on('SIGTERM', async () => {
+    await pool.end();
     server.close(() => {
-      console.log('HTTP server closed');
+      olly.logger.info('HTTP server closed');
     });
+    await olly.onShutdown();
     process.exit(0);
   });
 }
