@@ -4,9 +4,60 @@ import { makeExpressApp } from '../src';
 import { Config } from '../src/config';
 import jwt from 'jsonwebtoken';
 import { initializeRepositories } from '../src/data/repositoryHelper';
+import { Observability } from '../src/o11y';
 
-const pool = usePool();
-const app = makeExpressApp(pool, initializeRepositories(pool));
+// Mock observability to avoid actual logging during tests
+const mockObservability: Observability = {
+  logger: {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  },
+  tracer: {
+    startSpan: () => ({
+      end: () => {},
+      setStatus: () => {},
+      setAttribute: () => {},
+      setAttributes: () => {},
+      addEvent: () => {},
+      recordException: () => {},
+      updateName: () => {},
+      isRecording: () => false,
+      spanContext: () => ({
+        traceId: '',
+        spanId: '',
+        traceFlags: 0,
+      }),
+    }),
+    startActiveSpan: (name: string, fn: unknown) => {
+      if (typeof fn === 'function') {
+        return fn({
+          end: () => {},
+          setStatus: () => {},
+          setAttribute: () => {},
+          setAttributes: () => {},
+          addEvent: () => {},
+          recordException: () => {},
+          updateName: () => {},
+          isRecording: () => false,
+          spanContext: () => ({
+            traceId: '',
+            spanId: '',
+            traceFlags: 0,
+          }),
+        });
+      }
+    },
+  } as never,
+};
+
+const pool = usePool(mockObservability);
+const app = makeExpressApp(
+  pool,
+  initializeRepositories(pool, mockObservability),
+  mockObservability,
+);
 
 function generateAdminToken() {
   return jwt.sign({ role: 'admin' }, Config.auth.jwtSecret, {
@@ -33,6 +84,8 @@ const dummyStudy = {
   maxEnrolments: -1,
   durationDays: 10,
   allocationStrategy: 'Sequential',
+  description: 'description',
+  contactEmail: 'email',
 };
 
 async function initializeBetweenGroupsStudy() {
@@ -359,6 +412,39 @@ test('should create a questionnaire in a study', async () => {
   expect(res.body).toMatchObject({ name: 'Questionnaire' });
 });
 
+test('should create answers for questionnaire', async () => {
+  const token = generateAdminToken();
+  const study = await request(app)
+    .post('/v1/study')
+    .set({ Authorization: 'Bearer ' + token })
+    .send(dummyStudy);
+
+  const questionnaire = await request(app)
+    .post(`/v1/study/${study.body.id}/questionnaire`)
+    .set({ Authorization: 'Bearer ' + token })
+    .send({ name: 'Questionnaire', enabled: true });
+
+  const res = await request(app)
+    .post(
+      `/v1/study/${study.body.id}/questionnaire/${questionnaire.body.id}/answer`,
+    )
+    .set({ Authorization: 'Bearer ' + token })
+    .send([
+      {
+        elementId: 1,
+        elementName: 'answer1',
+        value: 'answer1',
+      },
+      {
+        elementId: 2,
+        elementName: 'answer2',
+        value: 'answer2',
+      },
+    ]);
+
+  expect(res.statusCode).toBe(200);
+});
+
 test('should add elements to a questionnaire', async () => {
   const token = generateAdminToken();
   const study = await request(app)
@@ -558,13 +644,13 @@ test('should test completion endpoint with sensor data tracking', async () => {
     enrolmentKey: 'completion-test-key',
     name: 'Completion Test Study',
     completionTracking: {
-      'oneDayOfSensorData': [
+      oneDayOfSensorData: [
         {
           type: 'PassiveSensingParticipationDays',
-          value: 1
-        }
-      ]
-    }
+          value: 1,
+        },
+      ],
+    },
   };
 
   const study = await request(app)
@@ -600,13 +686,13 @@ test('should test completion endpoint with sensor data tracking', async () => {
     .send({
       ...study.body,
       completionTracking: {
-        'oneDayOfSensorData': [
+        oneDayOfSensorData: [
           {
             type: 'PassiveSensingParticipationDays',
-            value: 1
-          }
-        ]
-      }
+            value: 1,
+          },
+        ],
+      },
     });
 
   expect(updatedStudy.statusCode).toBe(200);
@@ -635,7 +721,7 @@ test('should test completion endpoint with sensor data tracking', async () => {
   const sensorData = {
     sensorType: 'accelerometer',
     data: JSON.stringify({ x: 1.0, y: 2.0, z: 3.0 }),
-    timestamp: today.toISOString()
+    timestamp: today.toISOString(),
   };
 
   const sensorReading = await request(app)
@@ -693,13 +779,13 @@ test('should test completion endpoint with multiple sensor readings on same day'
     .send({
       ...study.body,
       completionTracking: {
-        'twoDaysOfSensorData': [
+        twoDaysOfSensorData: [
           {
             type: 'PassiveSensingParticipationDays',
-            value: 2
-          }
-        ]
-      }
+            value: 2,
+          },
+        ],
+      },
     });
 
   // Enroll participant
@@ -721,7 +807,7 @@ test('should test completion endpoint with multiple sensor readings on same day'
     .send({
       sensorType: 'accelerometer',
       data: JSON.stringify({ x: 1.0, y: 2.0, z: 3.0 }),
-      timestamp: today.toISOString()
+      timestamp: today.toISOString(),
     });
 
   await request(app)
@@ -730,7 +816,7 @@ test('should test completion endpoint with multiple sensor readings on same day'
     .send({
       sensorType: 'gyroscope',
       data: JSON.stringify({ x: 0.5, y: 1.5, z: 2.5 }),
-      timestamp: today.toISOString()
+      timestamp: today.toISOString(),
     });
 
   // Should only count as 1 day so far
@@ -748,7 +834,7 @@ test('should test completion endpoint with multiple sensor readings on same day'
     .send({
       sensorType: 'accelerometer',
       data: JSON.stringify({ x: 2.0, y: 3.0, z: 4.0 }),
-      timestamp: yesterday.toISOString()
+      timestamp: yesterday.toISOString(),
     });
 
   // Should now count as 2 days and be complete
@@ -805,6 +891,7 @@ test('should fail completion endpoint when completion tracking is not enabled', 
     .set({ Authorization: 'Bearer ' + participantToken });
 
   expect(completionResponse.statusCode).toBe(400);
-  expect(completionResponse.body.error).toBe('Completion tracking is not enabled for this study');
+  expect(completionResponse.body.error).toBe(
+    'Completion tracking is not enabled for this study',
+  );
 });
-

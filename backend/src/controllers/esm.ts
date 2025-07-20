@@ -9,13 +9,29 @@ import {
   IExperienceSamplingRepository,
 } from '../data/experienceSamplingRepository';
 import { IStudyRepository } from '../data/studyRepository';
-import { Logger, Observability } from '../o11y';
+import { Observability } from '../o11y';
+
+import * as z from 'zod';
+
+const QuestionnaireAnswerBody = z.array(
+  z.object({
+    elementId: z.number(),
+    elementName: z.string(),
+    value: z.string(),
+  }),
+);
+
+const QuestionnairePath = z.object({
+  studyId: z.coerce.number(),
+  questionnaireId: z.coerce.number(),
+  elementId: z.coerce.number().optional(),
+});
 
 export function createESMController(
   esmRepository: IExperienceSamplingRepository,
   studyRepository: IStudyRepository,
   app: Express,
-  observability: Observability
+  observability: Observability,
 ) {
   app.get('/v1/study/:studyId/questionnaire', async (req, res) => {
     const studyId = parseInt(req.params.studyId);
@@ -51,37 +67,39 @@ export function createESMController(
   app.get(
     '/v1/study/:studyId/questionnaire/:questionnaireId',
     async (req, res) => {
-      const studyId = parseInt(req.params.studyId);
-      const questionnaireId = parseInt(req.params.questionnaireId);
-      const questionnaire =
-        await esmRepository.getESMQuestionnaireById(questionnaireId);
+      const questionnaire = await fetchOrFailQuestionnaire(req, res);
+      if (!questionnaire) return;
 
-      const elements =
-        await esmRepository.getESMElementsByQuestionnaireId(questionnaireId);
+      const elements = await esmRepository.getESMElementsByQuestionnaireId(
+        questionnaire.id,
+      );
+
       const triggers =
         await esmRepository.getESMQuestionnaireTriggersByQuestionnaireId(
-          questionnaireId,
+          questionnaire.id,
         );
-
-      if (!questionnaire) {
-        return res.status(404).send({ error: 'Questionnaire not found' });
-      }
 
       res.json({ questionnaire, elements, triggers });
     },
   );
 
   async function fetchOrFailQuestionnaire(req: Request, res: Response) {
-    const studyId = parseInt(req.params.studyId);
-    const questionnaireId = parseInt(req.params.questionnaireId);
-    const questionnaire =
-      await esmRepository.getESMQuestionnaireById(questionnaireId);
+    const path = QuestionnairePath.safeParse(req.params);
+    if (!path.success) {
+      res.status(400).send({ error: 'Invalid request', errors: path.error });
+      return null;
+    }
+
+    const questionnaire = await esmRepository.getESMQuestionnaireById(
+      path.data.questionnaireId,
+    );
+
     if (!questionnaire) {
       res.status(404).send({ error: 'Questionnaire not found' });
       return null;
     }
 
-    if (questionnaire.studyId !== studyId) {
+    if (questionnaire.studyId !== path.data.studyId) {
       res.status(403).send({ error: 'Forbidden' });
       return null;
     }
@@ -189,6 +207,7 @@ export function createESMController(
   app.delete(
     '/v1/study/:studyId/questionnaire/:questionnaireId/trigger/:triggerId',
     authenticate,
+    requireAdmin,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
       if (!questionnaire) return;
@@ -206,12 +225,20 @@ export function createESMController(
     authenticate,
     async (req, res) => {
       const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return res.status(404).send();
+      if (!questionnaire) return;
+
+      const answerSchema = QuestionnaireAnswerBody.safeParse(req.body);
+      if (!answerSchema.success) {
+        return res.status(400).send({
+          error: 'Invalid answer format',
+          details: answerSchema.error,
+        });
+      }
 
       const answer = await esmRepository.createESMAnswer({
         questionnaireId: questionnaire.id,
         enrolmentId: (req.user! as RequestUser).enrolmentId,
-        answers: JSON.stringify(req.body.answers), // fixme: this could be vulnerable
+        answers: JSON.stringify(answerSchema.data),
       });
 
       res.json(answer);

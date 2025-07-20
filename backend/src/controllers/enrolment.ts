@@ -3,6 +3,7 @@ import ksuid from 'ksuid';
 import { UserPayload } from '../middleware/authenticate';
 import { Config } from '../config';
 import jwt, { JwtPayload } from 'jsonwebtoken';
+import * as z from 'zod';
 import { Enrolment, IEnrolmentRepository } from '../data/enrolmentRepository';
 import {
   IStudyRepository,
@@ -12,6 +13,10 @@ import {
 import { InvalidStudyConfigurationError } from '../config/errors';
 import { Mutex } from 'async-mutex';
 import { Observability } from '../o11y';
+
+const CreateEnrolment = z.object({
+  enrolmentKey: z.string(),
+});
 
 export function createEnrolmentController(
   enrolmentRepository: IEnrolmentRepository,
@@ -26,14 +31,15 @@ export function createEnrolmentController(
     return await observability.tracer.startActiveSpan(
       'enrolment:create',
       async (span) => {
-        if (!req.body.enrolmentKey) {
+        const body = CreateEnrolment.safeParse(req.body);
+        if (!body.success) {
           span.end();
           return res
             .status(400)
-            .send({ error: 'Missing required fields (enrolmentKey)' });
+            .send({ error: 'Missing required fields', fields: body.error });
         }
 
-        span.setAttribute('enrolmentKey', req.body.enrolmentKey);
+        span.setAttribute('enrolmentKey', body.data.enrolmentKey);
 
         const study = await studyRepository.getStudyByEnrolmentKey(
           req.body.enrolmentKey,

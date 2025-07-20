@@ -27,7 +27,7 @@ export interface ISensorReadingRepository {
 
   createSensorReadingBatched(
     enrolmentId: number,
-    readings: Pick<SensorReading, 'sensorType' | 'data'>[],
+    readings: Pick<SensorReading, 'sensorType' | 'timestamp' | 'data'>[],
   ): Promise<SensorReading[]>;
 
   createFile(

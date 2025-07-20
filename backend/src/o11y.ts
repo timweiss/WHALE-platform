@@ -29,7 +29,9 @@ export interface Logger {
   info(message: string, attributes?: Record<string, any>): void;
   warn(message: string, attributes?: Record<string, any>): void;
   error(message: string, attributes?: Record<string, any>): void;
+}
 
+export interface LoggerWithAttributes {
   withAttributes(attributes: Record<string, any>): Logger;
 }
 
@@ -87,7 +89,7 @@ export async function setupO11y(): Promise<{
   const createLogger = (
     name: string,
     loggerAttributes?: Record<string, any>
-  ): Logger => {
+  ): Logger & LoggerWithAttributes => {
     const log = (
       level: string,
       message: string,
