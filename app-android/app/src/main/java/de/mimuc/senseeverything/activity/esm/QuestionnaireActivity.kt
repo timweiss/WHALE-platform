@@ -29,6 +29,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
@@ -94,6 +95,7 @@ class QuestionnaireViewModel @Inject constructor(
             val loaded = makeFullQuestionnaireFromJson(JSONObject(json))
             _questionnaire.value = loaded
             _isLoading.value = false
+            Log.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
         } else {
             val triggerId = intent.getIntExtra("triggerId", -1)
             if (triggerId != -1) {
@@ -109,11 +111,15 @@ class QuestionnaireViewModel @Inject constructor(
                         }
                     }
                 }
+                Log.i(
+                    "Questionnaire",
+                    "Loaded questionnaire by trigger id: $triggerId, name: ${_questionnaire.value.questionnaire.name}"
+                )
             }
         }
 
         pendingQuestionnaireId = intent.getLongExtra("pendingQuestionnaireId", -1)
-        Log.d(
+        Log.i(
             "Questionnaire",
             "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
         )
@@ -125,12 +131,11 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     fun saveQuestionnaire(context: Context) {
-        Log.d("Questionnaire", "Save questionnaire")
+        Log.i("Questionnaire", "Saving questionnaire")
 
         viewModelScope.launch {
             combine(
-                dataStoreManager.studyIdFlow,
-                dataStoreManager.tokenFlow
+                dataStoreManager.studyIdFlow, dataStoreManager.tokenFlow
             ) { studyId, token ->
                 // schedule to upload answers
                 Log.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
@@ -141,17 +146,29 @@ class QuestionnaireViewModel @Inject constructor(
                     studyId,
                     token
                 )
+                Log.i("Questionnaire", "Scheduled questionnaire upload worker")
 
                 // remove pending questionnaire
                 withContext(Dispatchers.IO) {
                     if (pendingQuestionnaireId != -1L) {
                         database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId)
+                        Log.i(
+                            "Questionnaire",
+                            "Removed pending questionnaire with id: $pendingQuestionnaireId"
+                        )
                     }
                 }
 
                 // pop activity
                 val activity = (context as? Activity)
                 activity?.finish()
+
+                // show thank you toast
+                android.widget.Toast.makeText(
+                    context,
+                    context.getString(R.string.questionnaire_thank_you_toast),
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
             }.collect {}
         }
     }
@@ -165,9 +182,8 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     private fun makeAnswerJsonArray(): String {
-        val jsonArray = _elementValues.value.values
-            .filter { canHaveAnswer(it.elementId) }
-            .map { it.toJson() }
+        val jsonArray =
+            _elementValues.value.values.filter { canHaveAnswer(it.elementId) }.map { it.toJson() }
         return jsonArray.toString()
     }
 }
@@ -192,13 +208,10 @@ fun QuestionnaireView(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.primary,
-                ),
-                title = {
+                ), title = {
                     Text(questionnaire.value.questionnaire.name)
-                }
-            )
-        }
-    ) { innerPadding ->
+                })
+        }) { innerPadding ->
         Column(
             modifier = modifier
                 .padding(innerPadding)
@@ -208,7 +221,10 @@ fun QuestionnaireView(
                 Text("Loading...")
             } else {
                 QuestionnaireHost(questionnaire.value, onSave = { items ->
-                    Log.d("QuestionnaireActivity", "Saving questionnaire received from host, values: $items")
+                    Log.d(
+                        "QuestionnaireActivity",
+                        "Saving questionnaire received from host, values: $items"
+                    )
                     viewModel.saveFromHost(items, context)
                 })
             }

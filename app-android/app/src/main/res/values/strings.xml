@@ -127,4 +127,5 @@
     <string name="onboarding_permissions_accept_all_hint">Please accept all permissions to continue. You can pause or stop the study at any time, and have the ability to delete all data collected.</string>
     <string name="onboarding_start_study_finalizing">Finalizing setup, this may take a while...</string>
     <string name="onboarding_start_study_heading">All set!</string>
+    <string name="questionnaire_thank_you_toast">Your answers were saved. Thank you!</string>
 </resources>
