@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,8 +56,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -129,7 +133,7 @@ class StudyHomeViewModel @Inject constructor(
     private val _currentDay = MutableStateFlow(0)
     val currentDay: StateFlow<Int> get() = _currentDay
 
-    private val _study = MutableStateFlow(Study("", -1, "", -1))
+    private val _study = MutableStateFlow(Study("", -1, "", "", "", -1))
     val study: StateFlow<Study> get() = _study
 
     private val _onboardingStep = MutableStateFlow(OnboardingStep.WELCOME)
@@ -310,6 +314,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                 modifier = Modifier
                     .padding(innerPadding)
                     .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -358,6 +363,11 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                                 pauseStudy = { viewModel.pauseStudy(context) })
 
                             Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                AnnotatedString.fromHtml(study.value.description),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
 
                             if (pendingQuestionnaires.value.isNotEmpty()) {
                                 QuestionnaireInbox(pendingQuestionnaires, viewModel)

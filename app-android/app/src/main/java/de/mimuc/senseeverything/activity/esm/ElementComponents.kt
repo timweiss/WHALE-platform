@@ -75,9 +75,18 @@ fun RadioGroupElementComponent(
     if (element.alignment == GroupAlignment.Horizontal) {
         Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
             element.options.forEachIndexed { index, option ->
+                val rowModifier = if (option.isEmpty()) {
+                    Modifier
+                        .padding(bottom = 10.dp)
+                } else {
+                    Modifier
+                        .padding(6.dp)
+                }
+
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
+                    modifier =
+                        rowModifier
                         .selectable(
                             selected = (index == value),
                             onClick = { selectElement(index) },
@@ -89,7 +98,9 @@ fun RadioGroupElementComponent(
                         selected = value == index,
                         onClick = null
                     )
-                    Text(option, textAlign = TextAlign.Center)
+                    if (!option.isEmpty()) {
+                        Text(option, textAlign = TextAlign.Center)
+                    }
                 }
             }
         }
@@ -262,7 +273,9 @@ fun LikertScaleLabelElementComponent(
     element: LikertScaleLabelElement
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         // First label - left aligned

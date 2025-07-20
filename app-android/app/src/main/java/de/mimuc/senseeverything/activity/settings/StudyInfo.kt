@@ -160,8 +160,9 @@ class StudyInfoViewModel @Inject constructor(
     fun sendDataDeletionEmail(context: Context, enrolmentId: String) {
         val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
             data = Uri.parse("mailto:")
-            // fixme: replace hardcoded email with study configuration
-            putExtra(Intent.EXTRA_EMAIL, context.getString(R.string.dataprotection_email))
+            // Use study's contactEmail if available, fallback to resource string
+            val emailAddress = study.value?.contactEmail ?: context.getString(R.string.dataprotection_email)
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(emailAddress))
             putExtra(Intent.EXTRA_SUBJECT,
                 context.getString(R.string.studyinfo_data_deletion_email_subject))
             putExtra(Intent.EXTRA_TEXT,
@@ -179,7 +180,9 @@ class StudyInfoViewModel @Inject constructor(
     fun sendDataExportEmail(context: Context, enrolmentId: String) {
         val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
             data = Uri.parse("mailto:")
-            putExtra(Intent.EXTRA_EMAIL, context.getString(R.string.dataprotection_email))
+            // Use study's contactEmail if available, fallback to resource string
+            val emailAddress = study.value?.contactEmail ?: context.getString(R.string.dataprotection_email)
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(emailAddress))
             putExtra(Intent.EXTRA_SUBJECT,
                 context.getString(R.string.studyinfo_data_export_email_subject))
             putExtra(Intent.EXTRA_TEXT,
