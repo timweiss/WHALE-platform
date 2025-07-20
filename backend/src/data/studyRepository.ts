@@ -5,6 +5,8 @@ export interface Study {
   id: number;
   name: string;
   enrolmentKey: string;
+  description: string;
+  contactEmail: string;
   maxEnrolments: number;
   durationDays: number;
   allocationStrategy: StudyExperimentalGroupAllocationStrategy;
@@ -15,6 +17,8 @@ interface StudyRow {
   id: number;
   name: string;
   enrolment_key: string;
+  description: string;
+  contact_email: string;
   max_enrolments: number;
   duration_days: number;
   allocation_strategy: StudyExperimentalGroupAllocationStrategy;
@@ -120,6 +124,8 @@ export class StudyRepository extends Repository implements IStudyRepository {
       Study,
       | 'name'
       | 'enrolmentKey'
+      | 'description'
+      | 'contactEmail'
       | 'maxEnrolments'
       | 'durationDays'
       | 'allocationStrategy'
@@ -128,10 +134,12 @@ export class StudyRepository extends Repository implements IStudyRepository {
   ): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO studies (name, enrolment_key, max_enrolments, duration_days, allocation_strategy, completion_tracking) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        'INSERT INTO studies (name, enrolment_key, description, contact_email, max_enrolments, duration_days, allocation_strategy, completion_tracking) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
         [
           study.name,
           study.enrolmentKey,
+          study.description,
+          study.contactEmail,
           study.maxEnrolments,
           study.durationDays,
           study.allocationStrategy,
@@ -147,7 +155,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
   async updateStudy(study: Study): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5, completion_tracking=$6 WHERE id = $7 RETURNING *',
+        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5, completion_tracking=$6, description=$7, contact_email=$8 WHERE id = $9 RETURNING *',
         [
           study.name,
           study.enrolmentKey,
@@ -155,6 +163,8 @@ export class StudyRepository extends Repository implements IStudyRepository {
           study.durationDays,
           study.allocationStrategy,
           study.completionTracking,
+          study.description,
+          study.contactEmail,
           study.id,
         ],
       );
@@ -209,6 +219,8 @@ export class StudyRepository extends Repository implements IStudyRepository {
       id: row.id,
       name: row.name,
       enrolmentKey: row.enrolment_key,
+      description: row.description,
+      contactEmail: row.contact_email,
       maxEnrolments: row.max_enrolments,
       durationDays: row.duration_days,
       allocationStrategy: row.allocation_strategy,

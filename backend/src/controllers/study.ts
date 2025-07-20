@@ -4,12 +4,12 @@ import {
   IStudyRepository,
   StudyExperimentalGroupPhase,
 } from '../data/studyRepository';
-import { Logger, Observability } from '../o11y';
+import { Observability } from '../o11y';
 
 export function createStudyController(
   studyRepository: IStudyRepository,
   app: Express,
-  observability: Observability
+  observability: Observability,
 ) {
   app.get('/v1/study', async (req, res) => {
     const studies = await studyRepository.getStudies();
