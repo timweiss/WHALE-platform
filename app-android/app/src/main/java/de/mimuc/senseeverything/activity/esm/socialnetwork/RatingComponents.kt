@@ -22,6 +22,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,7 +91,7 @@ class SocialNetworkRatingViewModel @AssistedInject constructor(
     fun loadContacts() {
         viewModelScope.launch {
             val persons = withContext(Dispatchers.IO) {
-                database.socialNetworkContactDao().getAll()
+                database.socialNetworkContactDao().getAllSortedByName()
             }
             _contacts.value = persons
         }
@@ -128,6 +129,18 @@ fun SocialNetworkRatingElementComponent(
     val contacts by viewModel.contacts.collectAsState()
     val values by viewModel.ratingValues.collectAsState()
     val questionnaire by viewModel.ratingQuestionnaire.collectAsState()
+
+    val lifecycleState = androidx.lifecycle.Lifecycle.State.RESUMED
+
+    LaunchedEffect(lifecycleState) {
+        when (lifecycleState) {
+            androidx.lifecycle.Lifecycle.State.RESUMED -> {
+                viewModel.loadContacts()
+            }
+
+            else -> {}
+        }
+    }
 
     if (questionnaire == null || contacts.isEmpty()) {
         // Show loading or error state

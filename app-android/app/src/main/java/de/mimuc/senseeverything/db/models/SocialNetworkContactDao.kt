@@ -10,6 +10,9 @@ interface SocialNetworkContactDao {
     @Query("SELECT * FROM social_network_contacts")
     fun getAll(): List<SocialNetworkContact>
 
+    @Query("SELECT * FROM social_network_contacts ORDER BY name ASC")
+    fun getAllSortedByName(): List<SocialNetworkContact>
+
     @Query("SELECT * FROM social_network_contacts WHERE name LIKE '%' || :name || '%'")
     fun findMatchingName(name: String): List<SocialNetworkContact>
 

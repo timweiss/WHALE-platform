@@ -199,6 +199,7 @@ fun SocialNetworkEntryElementComponent(
             availablePersons = availablePersons.value,
             selectedPersons = selectedPersons.value,
             onSelectionChanged = { viewModel.onSelectionChanged(it) },
+            onPersonAdded = { person -> viewModel.onPersonAdded(person) },
             onDismiss = { showSelectionDialog = false }
         )
     }
@@ -219,9 +220,17 @@ fun SelectionDialog(
     availablePersons: List<SocialNetworkContact>,
     selectedPersons: List<SocialNetworkContact>,
     onSelectionChanged: (List<SocialNetworkContact>) -> Unit,
+    onPersonAdded: (SocialNetworkContact) -> Unit,
     onDismiss: () -> Unit
 ) {
     val tempSelectedIds = remember { selectedPersons.map { it.uid }.toMutableStateList() }
+    var showAddPersonDialog by remember { mutableStateOf(false) }
+
+    // Update tempSelectedIds when selectedPersons changes (e.g., when a new person is added)
+    remember(selectedPersons) {
+        tempSelectedIds.clear()
+        tempSelectedIds.addAll(selectedPersons.map { it.uid })
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -266,6 +275,21 @@ fun SelectionDialog(
                     }
                 }
 
+                // Add Person button
+                Button(
+                    onClick = { showAddPersonDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(R.string.social_network_add_person)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.social_network_add_new_person))
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -287,6 +311,17 @@ fun SelectionDialog(
                 }
             }
         }
+    }
+
+    // Show add person dialog when needed
+    if (showAddPersonDialog) {
+        AddPersonDialog(
+            onPersonAdded = { person ->
+                onPersonAdded(person)
+                showAddPersonDialog = false
+            },
+            onDismiss = { showAddPersonDialog = false }
+        )
     }
 }
 
