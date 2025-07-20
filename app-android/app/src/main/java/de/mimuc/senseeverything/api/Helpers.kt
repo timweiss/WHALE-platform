@@ -36,7 +36,7 @@ suspend fun loadStudy(apiClient: ApiClient, studyId: Int): Study? {
 
     val response = suspendCancellableCoroutine { continuation ->
         Log.d("Api", "Loading study $studyId")
-        apiClient.getJson("https://sisensing.medien.ifi.lmu.de/v1/study/$studyId",
+        apiClient.getJson(ApiResources.studyById(studyId),
             { response ->
                 continuation.resume(response)
             },
@@ -50,6 +50,8 @@ suspend fun loadStudy(apiClient: ApiClient, studyId: Int): Study? {
             response.getString("name"),
             response.getInt("id"),
             response.getString("enrolmentKey"),
+            response.getString("description"),
+            response.getString("contactEmail"),
             response.getInt("durationDays")
         )
 
@@ -69,7 +71,7 @@ suspend fun fetchCompletionStatus(apiClient: ApiClient, dataStoreManager: DataSt
 
     val response = suspendCancellableCoroutine { continuation ->
         Log.d("Api", "Fetching completion status")
-        apiClient.getJson("https://sisensing.medien.ifi.lmu.de/v1/completion", headers,
+        apiClient.getJson(ApiResources.completionStatus(), headers,
             { response ->
                 Log.d("Api", "Received completion status: $response")
                 continuation.resume(response)

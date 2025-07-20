@@ -15,7 +15,7 @@ suspend fun fetchAndPersistQuestionnaires(studyId: Int, dataStoreManager: DataSt
     val fullQuestionnaires = mutableListOf<FullQuestionnaire>()
     for (questionnaire in questionnaires) {
         val json = suspendCoroutine { continuation ->
-            client.getJson("https://sisensing.medien.ifi.lmu.de/v1/study/$studyId/questionnaire/${questionnaire.id}",
+            client.getJson(ApiResources.questionnaire(studyId, questionnaire.id),
                 { response ->
                     continuation.resume(response)
                 }, { error ->
@@ -40,7 +40,7 @@ suspend fun fetchAndPersistQuestionnaires(studyId: Int, dataStoreManager: DataSt
 
 suspend fun fetchQuestionnairesForStudy(studyId: Int, client: ApiClient): List<Questionnaire> {
     val response = suspendCoroutine { continuation ->
-        client.getJsonArray("https://sisensing.medien.ifi.lmu.de/v1/study/$studyId/questionnaire",
+        client.getJsonArray(ApiResources.questionnaires(studyId),
             { response ->
                 continuation.resume(response)
             }, { error ->

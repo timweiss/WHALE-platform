@@ -50,6 +50,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.api.decodeError
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.model.EnrolmentResponse
@@ -63,7 +64,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import javax.inject.Inject
@@ -113,7 +113,7 @@ class EnrolmentViewModel @Inject constructor(
     private val _participantId = MutableStateFlow("")
     val participantId: StateFlow<String> get() = _participantId
 
-    private val _study = MutableStateFlow(Study("", -1, "", 0))
+    private val _study = MutableStateFlow(Study("", -1, "", "", "", 0))
     val study: StateFlow<Study> get() = _study
 
     private val _questionnaires = MutableStateFlow(mutableStateListOf<FullQuestionnaire>())
@@ -150,7 +150,7 @@ class EnrolmentViewModel @Inject constructor(
             body.put("enrolmentKey", text)
 
             val response = suspendCoroutine { continuation ->
-                client.post("https://sisensing.medien.ifi.lmu.de/v1/enrolment", body, emptyMap(),
+                client.post(ApiResources.enrolment(), body, emptyMap(),
                     { response ->
                         continuation.resume(response)
                     },
@@ -195,26 +195,12 @@ class EnrolmentViewModel @Inject constructor(
 
         viewModelScope.launch {
             val client = ApiClient.getInstance(context)
-            val response = suspendCancellableCoroutine { continuation ->
-                client.getJson("https://sisensing.medien.ifi.lmu.de/v1/study/$studyId",
-                    { response ->
-                        continuation.resume(response)
-                    },
-                    { error ->
-                        continuation.resume(null)
-                    })
-            }
+            val study = de.mimuc.senseeverything.api.loadStudy(client, studyId)
 
-            if (response != null) {
-                val study = Study(
-                    response.getString("name"),
-                    response.getInt("id"),
-                    response.getString("enrolmentKey"),
-                    response.getInt("durationDays")
-                )
-
+            if (study != null) {
                 _study.value = study
 
+                dataStoreManager.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
             }

@@ -20,6 +20,7 @@ import com.google.firebase.ktx.Firebase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
@@ -101,7 +102,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         try {
             val response = suspendCoroutine { continuation ->
                 client.postArray(
-                    "https://sisensing.medien.ifi.lmu.de/v1/reading/batch",
+                    ApiResources.sensorReadingsBatched(),
                     jsonReadings,
                     headers,
                     { response ->
