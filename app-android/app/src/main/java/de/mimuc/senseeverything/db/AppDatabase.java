@@ -18,7 +18,7 @@ import de.mimuc.senseeverything.db.models.SocialNetworkContactDao;
         PendingQuestionnaire.class,
         GeneratedKey.class,
         SocialNetworkContact.class
-}, version = 6, autoMigrations = {@AutoMigration(from = 1, to = 6)}, exportSchema = true)
+}, version = 8, autoMigrations = {@AutoMigration(from = 1, to = 8)}, exportSchema = true)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract LogDataDao logDataDao();
 

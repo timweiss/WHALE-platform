@@ -59,6 +59,7 @@ import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -241,6 +242,19 @@ class EnrolmentViewModel @Inject constructor(
         }
     }
 
+    fun openQuestionnaire(context: Context, questionnaire: FullQuestionnaire) {
+        viewModelScope.launch {
+            val pendingQuestionnaireId = withContext(IO) {
+                PendingQuestionnaire.createEntry(database, dataStoreManager, questionnaire.triggers.first())
+            }
+
+            val activity = Intent(context, QuestionnaireActivity::class.java)
+            activity.putExtra("questionnaire", questionnaire.toJson().toString())
+            activity.putExtra("pendingQuestionnaireId", pendingQuestionnaireId)
+            context.startActivity(activity)
+        }
+    }
+
     fun closeError() {
         _showErrorDialog.value = false
         _errorCode.value = ""
@@ -354,9 +368,7 @@ fun EnrolmentScreen(
                     for (questionnaire in questionnaires) {
                         Text(questionnaire.questionnaire.name)
                         Button(onClick = {
-                            val activity = Intent(context, QuestionnaireActivity::class.java)
-                            activity.putExtra("questionnaire", questionnaire.toJson().toString())
-                            context.startActivity(activity)
+                            viewModel.openQuestionnaire(context, questionnaire)
                         }) {
                             Text("Start")
                         }

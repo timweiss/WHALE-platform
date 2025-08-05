@@ -3,6 +3,7 @@ package de.mimuc.senseeverything.db.models
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
@@ -16,7 +17,10 @@ data class PendingQuestionnaire(
     @ColumnInfo(name = "added_at") val addedAt: Long,
     @ColumnInfo(name = "valid_until") val validUntil: Long,
     @ColumnInfo(name = "questionnaire_json") val questionnaireJson: String,
-    @ColumnInfo(name = "trigger_json") val triggerJson: String
+    @ColumnInfo(name = "trigger_json") val triggerJson: String,
+    @ColumnInfo(name = "saved_values") var elementValuesJson: String? = null,
+    @ColumnInfo(name = "updated_at") var updatedAt: Long,
+    @ColumnInfo(name = "opened_page") var openedPage: Int? = null
 ) {
 
     companion object {
@@ -37,11 +41,28 @@ data class PendingQuestionnaire(
                 System.currentTimeMillis(),
                 validUntil,
                 questionnaire.toJson().toString(),
-                trigger.toJson().toString()
+                trigger.toJson().toString(),
+                null,
+                System.currentTimeMillis()
             )
 
             return database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
         }
+    }
+
+    fun update(
+        database: AppDatabase,
+        elementValues: Map<Int, ElementValue>?,
+        openedPage: Int?
+    ) {
+        this.updatedAt = System.currentTimeMillis()
+        this.openedPage = openedPage
+
+        if (!elementValues.isNullOrEmpty()) {
+            this.elementValuesJson = ElementValue.valueMapToJson(elementValues).toString()
+        }
+
+        database.pendingQuestionnaireDao().update(this)
     }
 }
 

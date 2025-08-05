@@ -5,6 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 enum class QuestionnaireElementType(val apiName: String) {
+    MALFORMED("malformed"),
     TEXT_VIEW("text_view"),
     RADIO_GROUP("radio_group"),
     CHECKBOX_GROUP("checkbox_group"),
@@ -232,6 +233,10 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 configuration,
                 options
             )
+        }
+
+        QuestionnaireElementType.MALFORMED -> {
+            // show nothing
         }
 
         null -> {

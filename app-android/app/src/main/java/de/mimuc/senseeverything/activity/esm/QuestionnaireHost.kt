@@ -64,7 +64,8 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     private val dataStoreManager: DataStoreManager,
     private val database: AppDatabase,
     @Assisted val questionnaire: FullQuestionnaire,
-    @Assisted val onSave: (Map<Int, ElementValue>) -> Unit
+    @Assisted val onSave: (Map<Int, ElementValue>) -> Unit,
+    @Assisted val onStepChanged: (Int, Map<Int, ElementValue>) -> Unit
 ) : AndroidViewModel(application) {
     private val _activeStep = MutableStateFlow(1)
     val activeStep: StateFlow<Int> get() = _activeStep
@@ -76,7 +77,8 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     interface Factory {
         fun create(
             questionnaire: FullQuestionnaire,
-            onSave: (Map<Int, ElementValue>) -> Unit
+            onSave: (Map<Int, ElementValue>) -> Unit,
+            onStepChanged: (Int, Map<Int, ElementValue>) -> Unit
         ): QuestionnaireHostViewModel
     }
 
@@ -92,10 +94,12 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 
     fun nextStep() {
         _activeStep.value++
+        onStepChanged(_activeStep.value, _elementValues.value)
     }
 
     fun previousStep() {
         _activeStep.value--
+        onStepChanged(_activeStep.value, _elementValues.value)
     }
 
     fun save() {
@@ -116,30 +120,16 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 }
 
 @Composable
-fun QuestionnaireLayoutContainer(embedded: Boolean, content: @Composable () -> Unit) {
-    if (embedded) {
-        Column {
-            content
-        }
-    } else {
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            content()
-        }
-    }
-}
-
-@Composable
 fun QuestionnaireHost(
     questionnaire: FullQuestionnaire,
     onSave: (Map<Int, ElementValue>) -> Unit,
+    onStepChanged: (Int, Map<Int, ElementValue>) -> Unit = { _, _ -> },
     embedded: Boolean = false,
     hostKey: String = "default_host"
 ) {
     val viewModel =
         hiltViewModel<QuestionnaireHostViewModel, QuestionnaireHostViewModel.Factory>(key = hostKey) { factory ->
-            factory.create(questionnaire, onSave)
+            factory.create(questionnaire, onSave, onStepChanged)
         }
 
     if (questionnaire.elements.isEmpty()) {
@@ -350,6 +340,10 @@ fun QuestionnaireElement(
 
         QuestionnaireElementType.LIKERT_SCALE_LABEL -> {
             LikertScaleLabelElementComponent(element = element as LikertScaleLabelElement)
+        }
+
+        QuestionnaireElementType.MALFORMED -> {
+            Text("Malformed element type: ${element.type}")
         }
     }
 }

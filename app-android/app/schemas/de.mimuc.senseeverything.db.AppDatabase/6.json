@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "df71f6b3bfcdc92694255cb516516d58",
+    "identityHash": "60e5d8d036641c7f6bcb3b62d6b000f9",
     "entities": [
       {
         "tableName": "LogData",
@@ -23,8 +23,7 @@
           {
             "fieldPath": "sensorName",
             "columnName": "sensorName",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "synced",
@@ -35,8 +34,7 @@
           {
             "fieldPath": "data",
             "columnName": "data",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "hasFile",
@@ -47,8 +45,7 @@
           {
             "fieldPath": "filePath",
             "columnName": "filePath",
-            "affinity": "TEXT",
-            "notNull": false
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -56,13 +53,11 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "pending_questionnaire",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `added_at` INTEGER NOT NULL, `valid_until` INTEGER NOT NULL, `questionnaire_json` TEXT NOT NULL, `trigger_json` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `added_at` INTEGER NOT NULL, `valid_until` INTEGER NOT NULL, `questionnaire_json` TEXT NOT NULL, `trigger_json` TEXT NOT NULL, `saved_values` TEXT)",
         "fields": [
           {
             "fieldPath": "uid",
@@ -93,6 +88,11 @@
             "columnName": "trigger_json",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "elementValues",
+            "columnName": "saved_values",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -100,9 +100,7 @@
           "columnNames": [
             "uid"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "generated_keys",
@@ -138,9 +136,7 @@
           "columnNames": [
             "uid"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "social_network_contacts",
@@ -170,15 +166,12 @@
           "columnNames": [
             "uid"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       }
     ],
-    "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'df71f6b3bfcdc92694255cb516516d58')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '60e5d8d036641c7f6bcb3b62d6b000f9')"
     ]
   }
 }

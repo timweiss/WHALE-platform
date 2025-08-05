@@ -33,11 +33,11 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.FullQuestionnaire
-import de.mimuc.senseeverything.api.model.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,6 +76,8 @@ class QuestionnaireViewModel @Inject constructor(
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
 
     private var pendingQuestionnaireId: Long = -1
+
+    private var pendingQuestionnaire: PendingQuestionnaire? = null
 
     init {
         _isLoading.value = true
@@ -119,15 +121,33 @@ class QuestionnaireViewModel @Inject constructor(
         }
 
         pendingQuestionnaireId = intent.getLongExtra("pendingQuestionnaireId", -1)
-        Log.i(
-            "Questionnaire",
-            "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
-        )
+        if (pendingQuestionnaireId != -1L) {
+            Log.i(
+                "Questionnaire",
+                "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
+            )
+
+            viewModelScope.launch(Dispatchers.IO) {
+                pendingQuestionnaire = database.pendingQuestionnaireDao()?.getById(pendingQuestionnaireId)
+                loadFromPendingQuestionnaire()
+            }
+        }
     }
 
     fun saveFromHost(values: Map<Int, ElementValue>, context: Context) {
         _elementValues.value = values
         saveQuestionnaire(context)
+    }
+
+    fun stepChanged(page: Int, values: Map<Int, ElementValue>, context: Context) {
+        Log.d("QuestionnaireViewModel", "Step changed to page $page with values: $values")
+        _elementValues.value = values
+
+        viewModelScope.launch(Dispatchers.IO) {
+            if (pendingQuestionnaire != null) {
+                pendingQuestionnaire?.update(database, values, page)
+            }
+        }
     }
 
     fun saveQuestionnaire(context: Context) {
@@ -173,18 +193,17 @@ class QuestionnaireViewModel @Inject constructor(
         }
     }
 
-    private fun canHaveAnswer(elementId: Int): Boolean {
-        val element = questionnaire.value.elements.find { it.id == elementId }
-        if (element != null) {
-            return element.type != QuestionnaireElementType.TEXT_VIEW
-        }
-        return false
+    private fun makeAnswerJsonArray(): String {
+        return ElementValue.valueMapToJson(_elementValues.value.filter { it -> it.value.isAnswer }).toString()
     }
 
-    private fun makeAnswerJsonArray(): String {
-        val jsonArray =
-            _elementValues.value.values.filter { canHaveAnswer(it.elementId) }.map { it.toJson() }
-        return jsonArray.toString()
+    private fun loadFromPendingQuestionnaire() {
+        if (pendingQuestionnaire != null) {
+            _elementValues.value = ElementValue.valueMapFromJson(JSONObject(pendingQuestionnaire!!.elementValuesJson ?: "{}"))
+            Log.i("Questionnaire", "Loaded pending questionnaire values: ${_elementValues.value}")
+        } else {
+            Log.w("Questionnaire", "No pending questionnaire to load from")
+        }
     }
 }
 
@@ -226,6 +245,8 @@ fun QuestionnaireView(
                         "Saving questionnaire received from host, values: $items"
                     )
                     viewModel.saveFromHost(items, context)
+                }, onStepChanged = { page, values ->
+                    viewModel.stepChanged(page, values, context)
                 })
             }
         }
