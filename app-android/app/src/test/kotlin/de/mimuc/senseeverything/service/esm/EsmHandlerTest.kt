@@ -1,7 +1,9 @@
 package de.mimuc.senseeverything.service.esm
 
 import de.mimuc.senseeverything.api.model.RandomEMAQuestionnaireTrigger
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import java.util.Calendar
@@ -241,7 +243,7 @@ class EsmHandlerTest {
 
     @Test
     fun testNextRandomNotificationOnSameDayNoRandomTolerance() {
-        val trigger = RandomEMAQuestionnaireTrigger(0,0, "", 60, 0, 0, "08:00-23:00", "Phase 1")
+        val trigger = RandomEMAQuestionnaireTrigger(0,0,  15,"", 60, 0, 0, "08:00-23:00", "Phase 1")
 
         val startCalendar = Calendar.getInstance()
         startCalendar.apply {
@@ -259,7 +261,7 @@ class EsmHandlerTest {
 
     @Test
     fun testNextRandomNotificationOnNextDayNoRandomTolerance() {
-        val trigger = RandomEMAQuestionnaireTrigger(0,0, "", 60, 0, 0, "08:00-23:00", "Phase 1")
+        val trigger = RandomEMAQuestionnaireTrigger(0,0, 15, "", 60, 0, 0, "08:00-23:00", "Phase 1")
 
         val startCalendar = Calendar.getInstance()
         startCalendar.apply {
@@ -277,7 +279,7 @@ class EsmHandlerTest {
 
     @RepeatedTest(10)
     fun testNextRandomNotificationOnSameDayWithRandomTolerance() {
-        val trigger = RandomEMAQuestionnaireTrigger(0,0, "", 60, 10, 0, "08:00-23:00", "Phase 1")
+        val trigger = RandomEMAQuestionnaireTrigger(0,0, 15, "", 60, 10, 0, "08:00-23:00", "Phase 1")
 
         val startCalendar = Calendar.getInstance()
         startCalendar.apply {

@@ -74,6 +74,7 @@ class QuestionnaireViewModel @Inject constructor(
     val questionnaire: StateFlow<FullQuestionnaire> get() = _questionnaire
 
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
+    val elementValues: StateFlow<Map<Int, ElementValue>> get() = _elementValues
 
     private var pendingQuestionnaireId: Long = -1
 
@@ -135,17 +136,21 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     fun saveFromHost(values: Map<Int, ElementValue>, context: Context) {
+        Log.i(
+            "QuestionnaireActivity",
+            "Saving questionnaire received from host, values: $values"
+        )
+
         _elementValues.value = values
         saveQuestionnaire(context)
     }
 
     fun stepChanged(page: Int, values: Map<Int, ElementValue>, context: Context) {
         Log.d("QuestionnaireViewModel", "Step changed to page $page with values: $values")
-        _elementValues.value = values
 
         viewModelScope.launch(Dispatchers.IO) {
             if (pendingQuestionnaire != null) {
-                pendingQuestionnaire?.update(database, values, page)
+                pendingQuestionnaire?.update(database, answerValues(values), page)
             }
         }
     }
@@ -194,7 +199,11 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     private fun makeAnswerJsonArray(): String {
-        return ElementValue.valueMapToJson(_elementValues.value.filter { it -> it.value.isAnswer }).toString()
+        return ElementValue.valueMapToJson(answerValues(_elementValues.value)).toString()
+    }
+
+    private fun answerValues(values: Map<Int, ElementValue>): Map<Int, ElementValue> {
+        return values.filter { it -> it.value.isAnswer }
     }
 
     private fun loadFromPendingQuestionnaire() {
@@ -214,6 +223,7 @@ fun QuestionnaireView(
 ) {
     val isLoading = viewModel.isLoading.collectAsState()
     val questionnaire = viewModel.questionnaire.collectAsState()
+    val initialValues = viewModel.elementValues.collectAsState()
 
     val context = LocalContext.current
 
@@ -240,14 +250,10 @@ fun QuestionnaireView(
                 Text("Loading...")
             } else {
                 QuestionnaireHost(questionnaire.value, onSave = { items ->
-                    Log.d(
-                        "QuestionnaireActivity",
-                        "Saving questionnaire received from host, values: $items"
-                    )
                     viewModel.saveFromHost(items, context)
                 }, onStepChanged = { page, values ->
                     viewModel.stepChanged(page, values, context)
-                })
+                }, initialValues = initialValues.value)
             }
         }
     }

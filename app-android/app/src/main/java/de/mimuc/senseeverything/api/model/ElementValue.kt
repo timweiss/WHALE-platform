@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.api.model
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 
@@ -49,29 +50,30 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
             val elementId = json.getInt("elementId")
             val elementName = json.getString("elementName")
             val elementType = QuestionnaireElementType.fromApiName(json.getString("elementType"))
+            val valueJson = json.getJSONObject("valueJson")
 
             return when (elementType) {
                 QuestionnaireElementType.RADIO_GROUP -> RadioGroupValue(
-                    elementId, elementName, json.getInt("value")
+                    elementId, elementName, valueJson.getInt("value")
                 )
                 QuestionnaireElementType.CHECKBOX_GROUP -> CheckboxGroupValue(
-                    elementId, elementName, json.getJSONArray("values").let { valuesJson ->
-                        (0 until valuesJson.length()).map { index -> valuesJson.getString(index) }
+                    elementId, elementName, valueJson.getJSONArray("values").let { entries ->
+                        (0 until entries.length()).map { index -> entries.getString(index) }
                     }
                 )
                 QuestionnaireElementType.SLIDER -> SliderValue(
-                    elementId, elementName, json.getDouble("value")
+                    elementId, elementName, valueJson.getDouble("value")
                 )
                 QuestionnaireElementType.TEXT_ENTRY -> TextEntryValue(
-                    elementId, elementName, json.getString("value")
+                    elementId, elementName, valueJson.getString("value")
                 )
                 QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> SocialNetworkEntryValue(
-                    elementId, elementName, json.getJSONArray("values").let { valuesJson ->
-                        (0 until valuesJson.length()).map { index -> valuesJson.getLong(index) }
+                    elementId, elementName, valueJson.getJSONArray("values").let { entries ->
+                        (0 until entries.length()).map { index -> entries.getLong(index) }
                     }
                 )
                 QuestionnaireElementType.SOCIAL_NETWORK_RATING -> {
-                    val ratingsJson = json.getJSONObject("ratings")
+                    val ratingsJson = valueJson.getJSONObject("ratings")
                     val ratings = mutableMapOf<Int, Map<Int, ElementValue>>()
 
                     for (key in ratingsJson.keys()) {
@@ -91,7 +93,7 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
                 }
                 QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(
                     elementId, elementName,
-                    Pair(json.getDouble("x"), json.getDouble("y"))
+                    Pair(valueJson.getDouble("x"), valueJson.getDouble("y"))
                 )
                 else -> ElementValue(elementId, elementName, QuestionnaireElementType.MALFORMED)
             }
@@ -118,7 +120,7 @@ class CheckboxGroupValue(elementId: Int, elementName: String, var values: List<S
 
     override fun valueAsJsonObject(): JSONObject {
         val json = JSONObject()
-        json.put("values", values)
+        json.put("values", JSONArray(values))
         return json
     }
 }
@@ -130,7 +132,7 @@ class SocialNetworkEntryValue(elementId: Int, elementName: String, var values: L
 
     override fun valueAsJsonObject(): JSONObject {
         val json = JSONObject()
-        json.put("values", values)
+        json.put("values", JSONArray(values))
         return json
     }
 }

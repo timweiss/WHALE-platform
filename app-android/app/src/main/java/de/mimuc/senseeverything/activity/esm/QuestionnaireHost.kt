@@ -65,7 +65,8 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     private val database: AppDatabase,
     @Assisted val questionnaire: FullQuestionnaire,
     @Assisted val onSave: (Map<Int, ElementValue>) -> Unit,
-    @Assisted val onStepChanged: (Int, Map<Int, ElementValue>) -> Unit
+    @Assisted val onStepChanged: (Int, Map<Int, ElementValue>) -> Unit,
+    @Assisted val initialValues: Map<Int, ElementValue> = emptyMap(),
 ) : AndroidViewModel(application) {
     private val _activeStep = MutableStateFlow(1)
     val activeStep: StateFlow<Int> get() = _activeStep
@@ -78,7 +79,8 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
         fun create(
             questionnaire: FullQuestionnaire,
             onSave: (Map<Int, ElementValue>) -> Unit,
-            onStepChanged: (Int, Map<Int, ElementValue>) -> Unit
+            onStepChanged: (Int, Map<Int, ElementValue>) -> Unit,
+            initialValues: Map<Int, ElementValue> = emptyMap()
         ): QuestionnaireHostViewModel
     }
 
@@ -113,8 +115,14 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     private fun initializeValues() {
         _elementValues.value = mutableMapOf()
 
+        Log.i("QuestionnaireHostViewModel", "Initial values set: ${initialValues.size}")
+
         for (element in questionnaire.elements) {
-            setElementValue(element.id, emptyValueForElement(element))
+            val elementValue =
+                if (initialValues.contains(element.id)) initialValues.getValue(element.id) else emptyValueForElement(
+                    element
+                )
+            setElementValue(element.id, elementValue)
         }
     }
 }
@@ -124,12 +132,13 @@ fun QuestionnaireHost(
     questionnaire: FullQuestionnaire,
     onSave: (Map<Int, ElementValue>) -> Unit,
     onStepChanged: (Int, Map<Int, ElementValue>) -> Unit = { _, _ -> },
+    initialValues: Map<Int, ElementValue> = emptyMap(),
     embedded: Boolean = false,
     hostKey: String = "default_host"
 ) {
     val viewModel =
         hiltViewModel<QuestionnaireHostViewModel, QuestionnaireHostViewModel.Factory>(key = hostKey) { factory ->
-            factory.create(questionnaire, onSave, onStepChanged)
+            factory.create(questionnaire, onSave, onStepChanged, initialValues)
         }
 
     if (questionnaire.elements.isEmpty()) {
