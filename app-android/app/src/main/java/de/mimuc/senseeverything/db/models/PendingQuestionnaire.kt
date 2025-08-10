@@ -8,12 +8,13 @@ import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.flow.first
+import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 @Entity(tableName = "pending_questionnaire")
 data class PendingQuestionnaire(
-    @PrimaryKey(autoGenerate = true) var uid: Long,
+    @PrimaryKey() var uid: UUID,
     @ColumnInfo(name = "added_at") val addedAt: Long,
     @ColumnInfo(name = "valid_until") val validUntil: Long,
     @ColumnInfo(name = "questionnaire_json") val questionnaireJson: String,
@@ -28,16 +29,16 @@ data class PendingQuestionnaire(
             database: AppDatabase,
             dataStoreManager: DataStoreManager,
             trigger: QuestionnaireTrigger
-        ): Long {
+        ): UUID? {
             val questionnaire = dataStoreManager.questionnairesFlow.first()
                 .find { q -> q.questionnaire.id == trigger.questionnaireId }
-            if (questionnaire == null) return -1
+            if (questionnaire == null) return null
 
             val validUntil =
                 if (trigger.validDuration != -1L) System.currentTimeMillis() + trigger.validDuration * 1000L * 60L else -1L
 
             val pendingQuestionnaire = PendingQuestionnaire(
-                0,
+                uid = UUID.randomUUID(),
                 System.currentTimeMillis(),
                 validUntil,
                 questionnaire.toJson().toString(),
@@ -46,7 +47,8 @@ data class PendingQuestionnaire(
                 System.currentTimeMillis()
             )
 
-            return database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
+            database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
+            return pendingQuestionnaire.uid
         }
     }
 

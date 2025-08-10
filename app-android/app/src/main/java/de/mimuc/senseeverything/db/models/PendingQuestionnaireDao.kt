@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import java.util.UUID
 
 @Dao
 interface PendingQuestionnaireDao {
@@ -15,10 +16,10 @@ interface PendingQuestionnaireDao {
     fun getAllNotExpired(now: Long): List<PendingQuestionnaire>
 
     @Query("SELECT * FROM pending_questionnaire WHERE uid = :uid")
-    fun getById(uid: Long): PendingQuestionnaire?
+    fun getById(uid: UUID): PendingQuestionnaire?
 
     @Insert
-    fun insert(pendingQuestionnaire: PendingQuestionnaire): Long
+    fun insert(pendingQuestionnaire: PendingQuestionnaire)
 
     @Delete
     fun delete(pendingQuestionnaire: PendingQuestionnaire)
@@ -27,7 +28,7 @@ interface PendingQuestionnaireDao {
     fun update(pendingQuestionnaire: PendingQuestionnaire)
 
     @Query("DELETE FROM pending_questionnaire WHERE uid = :uid")
-    fun deleteById(uid: Long)
+    fun deleteById(uid: UUID)
 
     @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now")
     fun deleteExpired(now: Long)

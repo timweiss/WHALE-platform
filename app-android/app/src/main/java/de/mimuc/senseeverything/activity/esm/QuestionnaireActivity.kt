@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.util.UUID
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -58,6 +59,12 @@ class QuestionnaireActivity : ComponentActivity() {
                 QuestionnaireView()
             }
         }
+    }
+
+    companion object {
+        val INTENT_PENDING_QUESTIONNAIRE_ID = "pendingQuestionnaireId"
+        val INTENT_TRIGGER_ID = "triggerId"
+        val INTENT_QUESTIONNAIRE = "questionnaire"
     }
 }
 
@@ -76,7 +83,7 @@ class QuestionnaireViewModel @Inject constructor(
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
     val elementValues: StateFlow<Map<Int, ElementValue>> get() = _elementValues
 
-    private var pendingQuestionnaireId: Long = -1
+    private var pendingQuestionnaireId: UUID? = null
 
     private var pendingQuestionnaire: PendingQuestionnaire? = null
 
@@ -93,14 +100,14 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     private fun loadFromIntent(intent: Intent) {
-        val json = intent.getStringExtra("questionnaire")
+        val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
         if (json != null) {
             val loaded = makeFullQuestionnaireFromJson(JSONObject(json))
             _questionnaire.value = loaded
             _isLoading.value = false
             Log.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
         } else {
-            val triggerId = intent.getIntExtra("triggerId", -1)
+            val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
             if (triggerId != -1) {
                 viewModelScope.launch {
                     dataStoreManager.questionnairesFlow.collect { questionnaires ->
@@ -121,15 +128,17 @@ class QuestionnaireViewModel @Inject constructor(
             }
         }
 
-        pendingQuestionnaireId = intent.getLongExtra("pendingQuestionnaireId", -1)
-        if (pendingQuestionnaireId != -1L) {
+        pendingQuestionnaireId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)?.let { UUID.fromString(it) }
+        if (pendingQuestionnaireId != null) {
             Log.i(
                 "Questionnaire",
                 "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
             )
 
             viewModelScope.launch(Dispatchers.IO) {
-                pendingQuestionnaire = database.pendingQuestionnaireDao()?.getById(pendingQuestionnaireId)
+                pendingQuestionnaire = database.pendingQuestionnaireDao()?.getById(
+                    pendingQuestionnaireId!!
+                )
                 loadFromPendingQuestionnaire()
             }
         }
@@ -175,8 +184,8 @@ class QuestionnaireViewModel @Inject constructor(
 
                 // remove pending questionnaire
                 withContext(Dispatchers.IO) {
-                    if (pendingQuestionnaireId != -1L) {
-                        database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId)
+                    if (pendingQuestionnaireId != null) {
+                        database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId!!)
                         Log.i(
                             "Questionnaire",
                             "Removed pending questionnaire with id: $pendingQuestionnaireId"

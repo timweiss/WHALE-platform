@@ -249,8 +249,8 @@ class EnrolmentViewModel @Inject constructor(
             }
 
             val activity = Intent(context, QuestionnaireActivity::class.java)
-            activity.putExtra("questionnaire", questionnaire.toJson().toString())
-            activity.putExtra("pendingQuestionnaireId", pendingQuestionnaireId)
+            activity.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, questionnaire.toJson().toString())
+            activity.putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID, pendingQuestionnaireId.toString())
             context.startActivity(activity)
         }
     }

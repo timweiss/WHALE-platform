@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.invoke
 import kotlinx.coroutines.withContext
 import java.util.Calendar
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class EsmHandler {
@@ -89,7 +90,7 @@ class EsmHandler {
         dataStoreManager: DataStoreManager,
         database: AppDatabase
     ) {
-        var pendingId: Long
+        var pendingId: UUID?
 
         coroutineScope {
             withContext(Dispatchers.IO) {
@@ -101,10 +102,15 @@ class EsmHandler {
             }
         }
 
+        if (pendingId == null) {
+            Log.e("EsmHandler", "Failed to create pending questionnaire entry for trigger ${trigger.id}")
+            return
+        }
+
         // open questionnaire
         val intent = Intent(context, QuestionnaireActivity::class.java)
-        intent.putExtra("questionnaire", questionnaire.toJson().toString())
-        intent.putExtra("pendingQuestionnaireId", pendingId)
+        intent.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, questionnaire.toJson().toString())
+        intent.putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID, pendingId.toString())
 
         // this will make it appear but not go back to the MainActivity afterwards
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -456,11 +462,13 @@ class ReminderNotification(private val context: Context) {
 
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: Long, title: String?, questionnaireName: String? = "") {
+    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: UUID?, title: String?, questionnaireName: String? = "") {
         val intent = Intent(context, QuestionnaireActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("triggerId", triggerId)
-            putExtra("pendingQuestionnaireId", pendingQuestionnaireId)
+            putExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, triggerId)
+            putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID,
+                pendingQuestionnaireId?.toString()
+            )
         }
 
         val notification = NotificationCompat.Builder(context, "SEChannel")

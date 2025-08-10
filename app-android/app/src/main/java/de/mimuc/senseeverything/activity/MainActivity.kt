@@ -196,8 +196,8 @@ class StudyHomeViewModel @Inject constructor(
 
         val intent = Intent(context, QuestionnaireActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            putExtra("triggerId", trigger.id)
-            putExtra("pendingQuestionnaireId", pending.pendingQuestionnaire.uid)
+            putExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, trigger.id)
+            putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID, pending.pendingQuestionnaire.uid.toString())
         }
 
         context.startActivity(intent)
