@@ -36,11 +36,37 @@ export interface ExperienceSamplingTrigger {
   enabled: boolean;
 }
 
+export enum ExperienceSamplingAnswerStatus {
+  Notified = 'notified',
+  Pending = 'pending',
+  Completed = 'completed',
+}
+
 export interface ExperienceSamplingAnswer {
   id: number;
   enrolmentId: string;
   questionnaireId: number;
   answers: string;
+
+  pendingQuestionnaireId: string;
+  status: ExperienceSamplingAnswerStatus;
+  lastOpenedPage: number;
+  createdTimestamp: number;
+  lastUpdatedTimestamp: number;
+  finishedTimestamp: number | null;
+}
+
+interface ExperienceSamplingAnswerRow {
+  id: number;
+  enrolment_id: string;
+  questionnaire_id: number;
+  answers: string;
+  pending_questionnaire_id: string;
+  status: ExperienceSamplingAnswerStatus;
+  last_opened_page: number;
+  created_timestamp: number;
+  last_updated_timestamp: number;
+  finished_timestamp: number | null;
 }
 
 export interface IExperienceSamplingRepository {
@@ -98,9 +124,19 @@ export interface IExperienceSamplingRepository {
   createESMAnswer(
     answer: Pick<
       ExperienceSamplingAnswer,
-      'enrolmentId' | 'questionnaireId' | 'answers'
+      | 'enrolmentId'
+      | 'questionnaireId'
+      | 'answers'
+      | 'pendingQuestionnaireId'
+      | 'lastOpenedPage'
+      | 'status'
+      | 'createdTimestamp'
+      | 'lastUpdatedTimestamp'
+      | 'finishedTimestamp'
     >,
   ): Promise<ExperienceSamplingAnswer>;
+
+  getESMAnswerForPendingQuestionnaireId(pendingQuestionnaireId: string): Promise<ExperienceSamplingAnswer | null>;
 }
 
 export class ExperienceSamplingRepository
@@ -389,24 +425,73 @@ export class ExperienceSamplingRepository
     }
   }
 
+  private answerFromRow(
+    row: ExperienceSamplingAnswerRow,
+  ): ExperienceSamplingAnswer {
+    return {
+      id: row.id,
+      enrolmentId: row.enrolment_id,
+      questionnaireId: row.questionnaire_id,
+      answers: row.answers,
+      pendingQuestionnaireId: row.pending_questionnaire_id,
+      createdTimestamp: row.created_timestamp,
+      finishedTimestamp: row.finished_timestamp,
+      lastUpdatedTimestamp: row.last_updated_timestamp,
+      lastOpenedPage: row.last_opened_page,
+      status: row.status as ExperienceSamplingAnswerStatus,
+    };
+  }
+
   async createESMAnswer(
     answer: Pick<
       ExperienceSamplingAnswer,
-      'enrolmentId' | 'questionnaireId' | 'answers'
+      | 'answers'
+      | 'enrolmentId'
+      | 'questionnaireId'
+      | 'pendingQuestionnaireId'
+      | 'lastOpenedPage'
+      | 'status'
+      | 'createdTimestamp'
+      | 'lastUpdatedTimestamp'
+      | 'finishedTimestamp'
     >,
   ): Promise<ExperienceSamplingAnswer> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO esm_answers (enrolment_id, questionnaire_id, answers) VALUES ($1, $2, $3) RETURNING *',
-        [answer.enrolmentId, answer.questionnaireId, answer.answers],
+        'INSERT INTO esm_answers (enrolment_id, questionnaire_id, answers, pending_questionnaire_id, created_timestamp, last_updated_timestamp, finished_timestamp, last_opened_page, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        [
+          answer.enrolmentId,
+          answer.questionnaireId,
+          answer.answers,
+          answer.pendingQuestionnaireId,
+          answer.createdTimestamp,
+          answer.lastUpdatedTimestamp,
+          answer.finishedTimestamp,
+          answer.lastOpenedPage,
+          answer.status,
+        ],
       );
 
-      return {
-        id: res.rows[0].id,
-        enrolmentId: res.rows[0].enrolment_id,
-        questionnaireId: res.rows[0].questionnaire_id,
-        answers: res.rows[0].answers,
-      };
+      return this.answerFromRow(res.rows[0]);
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  async getESMAnswerForPendingQuestionnaireId(
+    pendingQuestionnaireId: string,
+  ): Promise<ExperienceSamplingAnswer | null> {
+    try {
+      const res = await this.pool.query(
+        'SELECT * FROM esm_answers WHERE pending_questionnaire_id = $1',
+        [pendingQuestionnaireId],
+      );
+
+      if (res.rows.length === 0) {
+        return null;
+      }
+
+      return this.answerFromRow(res.rows[0]);
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }

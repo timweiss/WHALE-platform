@@ -1,31 +1,47 @@
 import { Express, Request, Response } from 'express';
+import * as z from 'zod';
 import {
   authenticate,
   RequestUser,
   requireAdmin,
 } from '../middleware/authenticate';
 import {
+  ExperienceSamplingAnswerStatus,
   ExperienceSamplingQuestionnaire,
   IExperienceSamplingRepository,
 } from '../data/experienceSamplingRepository';
 import { IStudyRepository } from '../data/studyRepository';
 import { Observability } from '../o11y';
 
-import * as z from 'zod';
-
-const QuestionnaireAnswerBody = z.array(
-  z.object({
-    elementId: z.number(),
-    elementName: z.string(),
-    value: z.string(),
-  }),
-);
+const QuestionnaireAnswerBody = z.object({
+  pendingQuestionnaireId: z.uuid(),
+  status: z.enum(ExperienceSamplingAnswerStatus),
+  lastOpenedPage: z.number(),
+  createdTimestamp: z.number(),
+  lastUpdatedTimestamp: z.number(),
+  finishedTimestamp: z.number().nullable(),
+  answers: z.array(
+    z.object({
+      elementId: z.number(),
+      elementName: z.string(),
+      value: z.string(),
+    }),
+  ),
+});
 
 const QuestionnairePath = z.object({
   studyId: z.coerce.number(),
   questionnaireId: z.coerce.number(),
   elementId: z.coerce.number().optional(),
 });
+
+enum AnswerUpdateStatus {
+  Created = 'created',
+  Updated = 'updated',
+  Skipped = 'skipped',
+}
+
+type AnswerUpdate = { status: AnswerUpdateStatus; answerId: number };
 
 export function createESMController(
   esmRepository: IExperienceSamplingRepository,
@@ -220,6 +236,40 @@ export function createESMController(
     },
   );
 
+  async function saveOrUpdateAnswer(
+    questionnaire: ExperienceSamplingQuestionnaire,
+    user: RequestUser,
+    answer: z.infer<typeof QuestionnaireAnswerBody>,
+  ): Promise<AnswerUpdate> {
+    const existingAnswer =
+      await esmRepository.getESMAnswerForPendingQuestionnaireId(
+        answer.pendingQuestionnaireId,
+      );
+    if (
+      existingAnswer &&
+      existingAnswer.status == ExperienceSamplingAnswerStatus.Completed
+    ) {
+      return {
+        status: AnswerUpdateStatus.Skipped,
+        answerId: existingAnswer.id,
+      };
+    }
+
+    const createdAnswer = await esmRepository.createESMAnswer({
+      questionnaireId: questionnaire.id,
+      enrolmentId: (user! as RequestUser).enrolmentId,
+      answers: JSON.stringify(answer.answers),
+      pendingQuestionnaireId: answer.pendingQuestionnaireId,
+      status: answer.status,
+      lastOpenedPage: answer.lastOpenedPage,
+      createdTimestamp: answer.createdTimestamp,
+      lastUpdatedTimestamp: answer.lastUpdatedTimestamp,
+      finishedTimestamp: answer.finishedTimestamp,
+    });
+
+    return { status: AnswerUpdateStatus.Created, answerId: createdAnswer.id };
+  }
+
   app.post(
     '/v1/study/:studyId/questionnaire/:questionnaireId/answer',
     authenticate,
@@ -235,13 +285,13 @@ export function createESMController(
         });
       }
 
-      const answer = await esmRepository.createESMAnswer({
-        questionnaireId: questionnaire.id,
-        enrolmentId: (req.user! as RequestUser).enrolmentId,
-        answers: JSON.stringify(answerSchema.data),
-      });
+      const result = await saveOrUpdateAnswer(
+        questionnaire,
+        req.user as RequestUser,
+        answerSchema.data,
+      );
 
-      res.json(answer);
+      res.json(result);
     },
   );
 
