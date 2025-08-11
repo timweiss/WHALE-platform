@@ -9,9 +9,6 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.data.DataStoreManager
-import java.time.Duration
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
 
@@ -31,21 +28,8 @@ class ClearInteractionWidgetTimeBucketsWorker @AssistedInject constructor(
     }
 }
 
-
-fun hoursUntil(targetHour: Int): Long {
-    val now = LocalDateTime.now()
-    val todayTarget = now.toLocalDate().atTime(LocalTime.of(targetHour, 0))
-    val targetTime = if (now.isAfter(todayTarget)) {
-        // If the target time has already passed today, use tomorrow's target time
-        todayTarget.plusDays(1)
-    } else {
-        todayTarget
-    }
-    return Duration.between(now, targetTime).toHours()
-}
-
 fun enqueueClearInteractionWidgetTimeBucketsWorker(context: Context) {
-    val delay = hoursUntil(0).coerceAtLeast(1)
+    val delay = WorkerHelpers.hoursUntil(0).coerceAtLeast(1)
 
     val clearTimeBucketsRequest =
         PeriodicWorkRequestBuilder<ClearInteractionWidgetTimeBucketsWorker>(24, TimeUnit.HOURS)

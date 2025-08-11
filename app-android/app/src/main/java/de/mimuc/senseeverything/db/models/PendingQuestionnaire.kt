@@ -12,6 +12,12 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
+enum class PendingQuestionnaireStatus {
+    NOTIFIED,
+    PENDING,
+    COMPLETED
+}
+
 @Entity(tableName = "pending_questionnaire")
 data class PendingQuestionnaire(
     @PrimaryKey() var uid: UUID,
@@ -21,7 +27,9 @@ data class PendingQuestionnaire(
     @ColumnInfo(name = "trigger_json") val triggerJson: String,
     @ColumnInfo(name = "saved_values") var elementValuesJson: String? = null,
     @ColumnInfo(name = "updated_at") var updatedAt: Long,
-    @ColumnInfo(name = "opened_page") var openedPage: Int? = null
+    @ColumnInfo(name = "opened_page") var openedPage: Int? = null,
+    @ColumnInfo(name = "status") var status: PendingQuestionnaireStatus,
+    @ColumnInfo(name = "finished_at") var finishedAt: Long? = null
 ) {
 
     companion object {
@@ -44,7 +52,10 @@ data class PendingQuestionnaire(
                 questionnaire.toJson().toString(),
                 trigger.toJson().toString(),
                 null,
-                System.currentTimeMillis()
+                System.currentTimeMillis(),
+                -1,
+                PendingQuestionnaireStatus.NOTIFIED,
+                null
             )
 
             database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
@@ -59,8 +70,24 @@ data class PendingQuestionnaire(
     ) {
         this.updatedAt = System.currentTimeMillis()
         this.openedPage = openedPage
+        this.status = PendingQuestionnaireStatus.PENDING
 
         if (!elementValues.isNullOrEmpty()) {
+            this.elementValuesJson = ElementValue.valueMapToJson(elementValues).toString()
+        }
+
+        database.pendingQuestionnaireDao().update(this)
+    }
+
+    fun markCompleted(
+        database: AppDatabase,
+        elementValues: Map<Int, ElementValue>
+    ) {
+        this.updatedAt = System.currentTimeMillis()
+        this.finishedAt = System.currentTimeMillis()
+        this.status = PendingQuestionnaireStatus.COMPLETED
+
+        if (elementValues.isNotEmpty()) {
             this.elementValuesJson = ElementValue.valueMapToJson(elementValues).toString()
         }
 

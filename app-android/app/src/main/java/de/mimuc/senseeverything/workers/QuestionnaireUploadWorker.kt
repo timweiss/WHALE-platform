@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.workers
 
 import android.content.Context
 import android.util.Log
+import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.NetworkType
@@ -11,23 +12,30 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
-import de.mimuc.senseeverything.api.ApiResources
+import de.mimuc.senseeverything.api.model.uploadQuestionnaireAnswer
+import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
+import java.util.UUID
 
-class QuestionnaireUploadWorker(appContext: Context, workerParams: WorkerParameters):
+@HiltWorker
+class QuestionnaireUploadWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val database: AppDatabase
+) :
     CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         val questionnaireAnswers = inputData.getString("questionnaireAnswers") ?: ""
         val questionnaireId = inputData.getInt("questionnaireId", -1)
         val studyId = inputData.getInt("studyId", -1)
         val userToken = inputData.getString("userToken") ?: ""
+        val pendingQuestionnaireId =
+            inputData.getString("pendingQuestionnaireId")?.let { UUID.fromString(it) }
 
         if (questionnaireAnswers.isEmpty() || questionnaireId == -1 || studyId == -1 || userToken.isEmpty()) {
             return Result.failure()
@@ -35,47 +43,61 @@ class QuestionnaireUploadWorker(appContext: Context, workerParams: WorkerParamet
 
         return withContext(Dispatchers.IO) {
             try {
-                upload(questionnaireAnswers, questionnaireId, studyId, userToken)
+                val pendingQuestionnaire = getPendingQuestionnaire(pendingQuestionnaireId)
+
+                val apiClient = ApiClient.getInstance(applicationContext)
+                uploadQuestionnaireAnswer(
+                    apiClient,
+                    questionnaireAnswers,
+                    questionnaireId,
+                    studyId,
+                    userToken,
+                    pendingQuestionnaire!!
+                )
+
+                deletePendingQuestionnaire(pendingQuestionnaireId)
+
                 Result.success()
             } catch (e: Exception) {
                 if (e is NetworkError || e is TimeoutError) {
                     Result.retry()
                 } else {
-                    Log.d("QuestionnaireUploadWorker", "Error uploading questionnaire answers: $e, ${e.stackTraceToString()}")
+                    Log.d(
+                        "QuestionnaireUploadWorker",
+                        "Error uploading questionnaire answers: $e, ${e.stackTraceToString()}"
+                    )
                     Result.failure()
                 }
             }
         }
     }
 
-    private suspend fun upload(answers: String, questionnaireId: Int, studyId: Int, userToken: String) {
-        val client = ApiClient.getInstance(applicationContext)
-        val json = JSONObject()
-        json.put("answers", JSONArray(answers))
-        val headers = mapOf("Authorization" to "Bearer $userToken")
-        val response = suspendCoroutine { continuation ->
-            client.post(
-                ApiResources.questionnaireAnswer(studyId, questionnaireId),
-                json,
-                headers,
-                { response ->
-                    // Success
-                    continuation.resume(response)
-                },
-                { error ->
-                    // Error
-                    continuation.resumeWithException(error)
-                })
-        }
+    private fun getPendingQuestionnaire(id: UUID?): PendingQuestionnaire? {
+        if (id == null) return null
+        val pendingQuestionnaire = database.pendingQuestionnaireDao().getById(id)
+        return pendingQuestionnaire
+    }
+
+    private fun deletePendingQuestionnaire(id: UUID?) {
+        if (id == null) return
+        database.pendingQuestionnaireDao().deleteById(id)
     }
 }
 
-fun enqueueQuestionnaireUploadWorker(context: Context, questionnaireAnswers: String, questionnaireId: Int, studyId: Int, userToken: String) {
+fun enqueueQuestionnaireUploadWorker(
+    context: Context,
+    questionnaireAnswers: String,
+    questionnaireId: Int,
+    studyId: Int,
+    userToken: String,
+    pendingQuestionnaireId: UUID?
+) {
     val data = workDataOf(
         "questionnaireAnswers" to questionnaireAnswers,
         "questionnaireId" to questionnaireId,
         "studyId" to studyId,
-        "userToken" to userToken
+        "userToken" to userToken,
+        "pendingQuestionnaireId" to pendingQuestionnaireId.toString()
     )
 
     val constraints = Constraints.Builder()

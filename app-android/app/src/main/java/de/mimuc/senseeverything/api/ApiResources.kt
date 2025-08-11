@@ -31,5 +31,9 @@ class ApiResources {
         fun questionnaireAnswer(studyId: Int, questionnaireId: Int): String {
             return "$API_BASE/study/$studyId/questionnaire/$questionnaireId/answer"
         }
+
+        fun questionnaireAnswerBatched(studyId: Int, questionnaireId: Int): String {
+            return "$API_BASE/study/$studyId/questionnaire/$questionnaireId/answer/batched"
+        }
     }
 }

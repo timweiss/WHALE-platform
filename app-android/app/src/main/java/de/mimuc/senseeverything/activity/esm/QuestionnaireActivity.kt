@@ -171,6 +171,8 @@ class QuestionnaireViewModel @Inject constructor(
             combine(
                 dataStoreManager.studyIdFlow, dataStoreManager.tokenFlow
             ) { studyId, token ->
+                pendingQuestionnaire?.markCompleted(database, answerValues(elementValues.value))
+
                 // schedule to upload answers
                 Log.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
                 enqueueQuestionnaireUploadWorker(
@@ -178,8 +180,10 @@ class QuestionnaireViewModel @Inject constructor(
                     makeAnswerJsonArray(),
                     questionnaire.value.questionnaire.id,
                     studyId,
-                    token
+                    token,
+                    pendingQuestionnaireId
                 )
+
                 Log.i("Questionnaire", "Scheduled questionnaire upload worker")
 
                 // remove pending questionnaire
