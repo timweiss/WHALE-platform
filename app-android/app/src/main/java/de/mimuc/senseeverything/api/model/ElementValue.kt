@@ -23,6 +23,10 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
         return json
     }
 
+    open fun isAnswered(): Boolean {
+        return true
+    }
+
     val isAnswer: Boolean get() {
         return elementType != QuestionnaireElementType.TEXT_VIEW
     }
@@ -102,6 +106,10 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
 }
 
 class RadioGroupValue(elementId: Int, elementName: String, var value: Int) : ElementValue(elementId, elementName, QuestionnaireElementType.RADIO_GROUP) {
+    override fun isAnswered(): Boolean {
+        return value != -1
+    }
+
     override fun getSerializedValue(): String {
         return value.toString()
     }
@@ -114,6 +122,10 @@ class RadioGroupValue(elementId: Int, elementName: String, var value: Int) : Ele
 }
 
 class CheckboxGroupValue(elementId: Int, elementName: String, var values: List<String>) : ElementValue(elementId, elementName, QuestionnaireElementType.CHECKBOX_GROUP) {
+    override fun isAnswered(): Boolean {
+        return values.isNotEmpty()
+    }
+
     override fun getSerializedValue(): String {
         return values.joinToString(",")
     }
@@ -160,6 +172,10 @@ class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: 
 }
 
 class SliderValue(elementId: Int, elementName: String, var value: Double) : ElementValue(elementId, elementName, QuestionnaireElementType.SLIDER) {
+    override fun isAnswered(): Boolean {
+        return value != 0.0
+    }
+
     override fun getSerializedValue(): String {
         return value.toString()
     }
@@ -172,6 +188,10 @@ class SliderValue(elementId: Int, elementName: String, var value: Double) : Elem
 }
 
 class CircumplexValue(elementId: Int, elementName: String, var value: Pair<Double, Double>) : ElementValue(elementId, elementName, QuestionnaireElementType.CIRCUMPLEX) {
+    override fun isAnswered(): Boolean {
+        return value.first != 0.0 || value.second != 0.0
+    }
+
     override fun getSerializedValue(): String {
         return "x:${value.first}, y:${value.second}"
     }
@@ -185,6 +205,10 @@ class CircumplexValue(elementId: Int, elementName: String, var value: Pair<Doubl
 }
 
 class TextEntryValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName, QuestionnaireElementType.TEXT_ENTRY) {
+    override fun isAnswered(): Boolean {
+        return value.isNotBlank()
+    }
+
     override fun getSerializedValue(): String {
         return value
     }

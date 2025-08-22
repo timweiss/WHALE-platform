@@ -128,4 +128,9 @@
     <string name="onboarding_start_study_finalizing">Finalizing setup, this may take a while...</string>
     <string name="onboarding_start_study_heading">All set!</string>
     <string name="questionnaire_thank_you_toast">Your answers were saved. Thank you!</string>
+    <string name="questionnaire_answer_all_questions">Please answer all questions.</string>
+    <string name="questionnaire_previous">Previous</string>
+    <string name="questionnaire_next">Next</string>
+    <string name="questionnaire_save">Save</string>
+    <string name="questionnaire_empty_error">No questions have been provided. This is likely a mistake of the study creator.</string>
 </resources>

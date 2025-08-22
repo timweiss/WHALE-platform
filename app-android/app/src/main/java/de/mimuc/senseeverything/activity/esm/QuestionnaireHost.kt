@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.activity.esm
 
 import android.app.Application
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.AndroidViewModel
@@ -28,6 +31,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkEntryElementComponent
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkRatingElementComponent
 import de.mimuc.senseeverything.api.model.CheckboxGroupElement
@@ -94,6 +98,14 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
         }
     }
 
+    fun stepElementsAnswered(): Boolean {
+        val currentStep = _activeStep.value
+        return questionnaire.elements.filter { it.step == currentStep }
+            .all { element ->
+                _elementValues.value[element.id]?.isAnswered() ?: false
+            }
+    }
+
     fun nextStep() {
         _activeStep.value++
         onStepChanged(_activeStep.value, _elementValues.value)
@@ -142,7 +154,7 @@ fun QuestionnaireHost(
         }
 
     if (questionnaire.elements.isEmpty()) {
-        Text("No questions have been provided. This is likely a mistake of the study creator.")
+        Text(stringResource(R.string.questionnaire_empty_error))
     } else {
         val maxStep = questionnaire.elements.maxOf { it.step }
         val currentStep by viewModel.activeStep.collectAsState()
@@ -165,7 +177,7 @@ fun QuestionnaireHost(
                 // Navigation after content
                 if (maxStep == 1) {
                     TextButton(onClick = { viewModel.save() }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Save")
+                        Text(stringResource(R.string.questionnaire_save))
                     }
                 } else {
                     Row(modifier = Modifier.fillMaxWidth()) {
@@ -173,16 +185,16 @@ fun QuestionnaireHost(
                             onClick = { viewModel.previousStep() },
                             enabled = currentStep > 1
                         ) {
-                            Text("Previous")
+                            Text(stringResource(R.string.questionnaire_previous))
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         if (currentStep < maxStep) {
                             TextButton(onClick = { viewModel.nextStep() }) {
-                                Text("Next")
+                                Text(stringResource(R.string.questionnaire_next))
                             }
                         } else {
                             TextButton(onClick = { viewModel.save() }) {
-                                Text("Save")
+                                Text(stringResource(R.string.questionnaire_save))
                             }
                         }
                     }
@@ -191,6 +203,7 @@ fun QuestionnaireHost(
         } else {
             val listState = rememberLazyListState()
             val coroutineScope = rememberCoroutineScope()
+            val context = LocalContext.current
 
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -222,21 +235,26 @@ fun QuestionnaireHost(
                         },
                         enabled = currentStep > 1
                     ) {
-                        Text("Previous")
+                        Text(stringResource(R.string.questionnaire_previous))
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     if (currentStep < maxStep) {
                         TextButton(onClick = {
-                            viewModel.nextStep()
-                            coroutineScope.launch {
-                                listState.animateScrollToItem(0)
+                            if (viewModel.stepElementsAnswered()) {
+                                viewModel.nextStep()
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(0)
+                                }
+                            } else {
+                                Toast.makeText(context,
+                                    context.getString(R.string.questionnaire_answer_all_questions), Toast.LENGTH_SHORT).show()
                             }
                         }) {
-                            Text("Next")
+                            Text(stringResource(R.string.questionnaire_next))
                         }
                     } else {
                         TextButton(onClick = { viewModel.save() }) {
-                            Text("Save")
+                            Text(stringResource(R.string.questionnaire_save))
                         }
                     }
                 }
