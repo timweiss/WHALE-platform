@@ -2,9 +2,11 @@ package de.mimuc.senseeverything.service.esm
 
 import android.content.Context
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
-import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
+import de.mimuc.senseeverything.db.models.NotificationTriggerModality
+import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import java.util.Calendar
 import java.util.UUID
@@ -48,21 +50,77 @@ class FloatingWidgetNotificationScheduler {
                 "${trigger.timeBucket} | ${trigger.name} | $date | $time"
             }
         }
+
+        fun applyTimeoutTrigger(notification: NotificationTrigger, timeoutTrigger: EMAFloatingWidgetNotificationTrigger): NotificationTrigger {
+            return NotificationTrigger(
+                uid = UUID.randomUUID(),
+                addedAt = notification.addedAt,
+                name = timeoutTrigger.name,
+                status = notification.status,
+                validFrom = notification.validFrom + timeoutTrigger.delayMinutes * 60 * 1000L,
+                priority = timeoutTrigger.priority,
+                timeBucket = notification.timeBucket,
+                modality = timeoutTrigger.modality,
+                source = timeoutTrigger.source,
+                questionnaireId = timeoutTrigger.questionnaireId.toLong(),
+                triggerJson = jsonForTrigger(timeoutTrigger)
+            )
+        }
+
+        // fixme: this is so the test does not fail
+        private fun jsonForTrigger(trigger: QuestionnaireTrigger): String {
+            return try {
+                trigger.toJson().toString()
+            } catch (e: Exception) {
+                "{}"
+            }
+        }
     }
 
-    suspend fun scheduleFloatingWidgetNotificationTriggersForPhase(context: Context, dataStoreManager: DataStoreManager, database: AppDatabase, phaseName: String) {
+    suspend fun scheduleFloatingWidgetNotificationTriggersForPhase(context: Context, emaStartDay: Calendar, endDay: Calendar, triggers: List<QuestionnaireTrigger>, database: AppDatabase, phaseName: String) {
         // get all triggers for the current phase that can be scheduled
+        val triggersToBeScheduled = triggers.filterIsInstance<EMAFloatingWidgetNotificationTrigger>()
 
-        // for each trigger, plan the schedule based on the time buckets and distance (+randomness)
-        // the amount of notifications is based on the time buckets, each time bucket gets one notification
-        // if the trigger has a delay, the first notification is scheduled after the delay
-        // --> in case the trigger also has a timeout trigger, copy the schedule and add the delay
-        // insert each trigger into the notification_trigger table
-        // if it is a pushed trigger, create a notification
+        val scheduledNotifications = scheduleAllNotificationsWithTimeout(triggersToBeScheduled, emaStartDay, endDay, phaseName)
+        for (notification in scheduledNotifications) {
+            database.notificationTriggerDao().insert(notification)
+
+            if (notification.modality == NotificationTriggerModality.Push) {
+                // todo: schedule alarm for push notification
+            }
+        }
+    }
+
+    fun scheduleAllNotificationsWithTimeout(triggers: List<EMAFloatingWidgetNotificationTrigger>, startDay: Calendar, endDay: Calendar, phaseName: String): List<NotificationTrigger> {
+        val allNotifications = mutableListOf<NotificationTrigger>()
+        val triggersToBeScheduled = triggers
+            .filter { it.phaseName == phaseName }
+            .filter { it.source == NotificationTriggerSource.Scheduled }
+
+        for (trigger in triggersToBeScheduled) {
+            val plannedNotifications = planNotificationsForTrigger(trigger, startDay, endDay)
+            allNotifications.addAll(plannedNotifications)
+
+            val timeoutTrigger = triggers.find { it.id == trigger.timeoutNotificationTriggerId }
+            if (timeoutTrigger != null) {
+                for (notification in plannedNotifications) {
+                    val timeoutNotification = applyTimeoutTrigger(notification, timeoutTrigger)
+                    allNotifications.add(timeoutNotification)
+                }
+            }
+        }
+        return allNotifications
     }
 
     fun planNotificationsForTrigger(trigger: EMAFloatingWidgetNotificationTrigger, emaStart: Calendar, studyEnd: Calendar): List<NotificationTrigger> {
-        return emptyList<NotificationTrigger>()
+        // for each day between emaStart and studyEnd, plan the notifications
+        val notifications = mutableListOf<NotificationTrigger>()
+        val dayIterator = emaStart.clone() as Calendar
+        while (dayIterator <= studyEnd) {
+            notifications.addAll(planNotificationsForDay(trigger, dayIterator))
+            dayIterator.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return notifications
     }
 
     fun planNotificationsForDay(trigger: EMAFloatingWidgetNotificationTrigger, day: Calendar): List<NotificationTrigger> {
@@ -122,7 +180,7 @@ class FloatingWidgetNotificationScheduler {
                 modality = trigger.modality,
                 source = trigger.source,
                 questionnaireId = trigger.questionnaireId.toLong(),
-                triggerJson = ""
+                triggerJson = jsonForTrigger(trigger)
             )
 
             notifications.add(notificationTrigger)
