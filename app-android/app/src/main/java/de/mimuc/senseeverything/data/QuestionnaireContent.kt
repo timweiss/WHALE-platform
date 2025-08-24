@@ -10,9 +10,9 @@ import com.android.volley.Response.ErrorListener
 import com.android.volley.VolleyError
 import com.android.volley.toolbox.HttpHeaderParser
 import de.mimuc.senseeverything.api.ApiClient
-import de.mimuc.senseeverything.api.model.CircumplexElement
-import de.mimuc.senseeverything.api.model.FullQuestionnaire
-import de.mimuc.senseeverything.api.model.QuestionnaireElementType
+import de.mimuc.senseeverything.api.model.ema.CircumplexElement
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine

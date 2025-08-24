@@ -44,7 +44,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
-import de.mimuc.senseeverything.api.model.SocialNetworkEntryElement
+import de.mimuc.senseeverything.api.model.ema.SocialNetworkEntryElement
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.SocialNetworkContact

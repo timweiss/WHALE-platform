@@ -54,7 +54,7 @@ import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.api.decodeError
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.model.EnrolmentResponse
-import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent

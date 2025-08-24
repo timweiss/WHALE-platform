@@ -80,8 +80,8 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
-import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
-import de.mimuc.senseeverything.api.model.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase

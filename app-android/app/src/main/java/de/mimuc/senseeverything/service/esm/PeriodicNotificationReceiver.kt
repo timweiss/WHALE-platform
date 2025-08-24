@@ -5,8 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
-import de.mimuc.senseeverything.api.model.PeriodicQuestionnaireTrigger
-import de.mimuc.senseeverything.api.model.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.PeriodicQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire

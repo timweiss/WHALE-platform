@@ -10,10 +10,10 @@ import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
-import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.Study
-import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map

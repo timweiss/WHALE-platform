@@ -1,5 +1,7 @@
 package de.mimuc.senseeverything.api.model
 
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireElement
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
 import org.json.JSONArray
 import org.json.JSONObject
 

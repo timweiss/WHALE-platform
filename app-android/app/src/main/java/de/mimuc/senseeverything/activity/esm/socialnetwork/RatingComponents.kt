@@ -43,8 +43,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.esm.QuestionnaireHost
 import de.mimuc.senseeverything.activity.ui.theme.Typography
 import de.mimuc.senseeverything.api.model.ElementValue
-import de.mimuc.senseeverything.api.model.FullQuestionnaire
-import de.mimuc.senseeverything.api.model.SocialNetworkRatingElement
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.SocialNetworkRatingElement
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.getQuestionnaireById
 import de.mimuc.senseeverything.db.AppDatabase

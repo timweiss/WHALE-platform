@@ -1,6 +1,6 @@
 package de.mimuc.senseeverything.service.esm
 
-import de.mimuc.senseeverything.api.model.RandomEMAQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

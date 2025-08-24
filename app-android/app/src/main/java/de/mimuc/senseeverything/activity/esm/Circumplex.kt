@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.toSize
 import de.mimuc.senseeverything.activity.ui.theme.Black
 import de.mimuc.senseeverything.activity.ui.theme.Purple80
-import de.mimuc.senseeverything.api.model.CircumplexElement
+import de.mimuc.senseeverything.api.model.ema.CircumplexElement
 import de.mimuc.senseeverything.data.getCircumplexImageBitmap
 
 

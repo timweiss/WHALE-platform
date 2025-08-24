@@ -32,7 +32,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
-import de.mimuc.senseeverything.api.model.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState

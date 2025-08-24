@@ -1,25 +1,9 @@
-package de.mimuc.senseeverything.api.model
+package de.mimuc.senseeverything.api.model.ema
 
-import org.json.JSONArray
+import de.mimuc.senseeverything.db.models.NotificationTriggerModality
+import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
+import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import org.json.JSONObject
-
-data class Questionnaire(
-    val name: String,
-    val id: Int,
-    val version: Int,
-    val studyId: Int,
-    val enabled: Boolean
-) {
-    fun toJson(): JSONObject {
-        val json = JSONObject()
-        json.put("name", name)
-        json.put("id", id)
-        json.put("version", version)
-        json.put("studyId", studyId)
-        json.put("enabled", enabled)
-        return json
-    }
-}
 
 open class QuestionnaireTrigger(
     val id: Int,
@@ -47,22 +31,6 @@ class EventQuestionnaireTrigger(
     val eventName: String,
 ) : QuestionnaireTrigger(id, questionnaireId, "event", validUntil, configuration)
 
-data class FullQuestionnaire(
-    val questionnaire: Questionnaire,
-    val elements: List<QuestionnaireElement>,
-    val triggers: List<QuestionnaireTrigger>
-) {
-    fun toJson(): JSONObject {
-        val json = JSONObject()
-        json.put("questionnaire", questionnaire.toJson())
-        val elementsJson = JSONArray(elements.map { it.toJson() })
-        json.put("elements", elementsJson)
-        val triggersJson = JSONArray(triggers.map { it.toJson() })
-        json.put("triggers", triggersJson)
-        return json
-    }
-}
-
 enum class PeriodicQuestionnaireTriggerInterval {
     DAILY,
     WEEKLY,
@@ -89,6 +57,30 @@ class RandomEMAQuestionnaireTrigger(
     val phaseName: String
 ): QuestionnaireTrigger(id, questionnaireId, "random_ema", validUntil, configuration)
 
+class EMAFloatingWidgetNotificationTrigger(
+    id: Int,
+    questionnaireId: Int,
+    validUntil: Long,
+    configuration: Any,
+    val name: String,
+    val phaseName: String,
+    /** Defines the time buckets in which at least one notification should be scheduled. */
+    val timeBuckets: List<String>,
+    val distanceMinutes: Int,
+    val delayMinutes: Int,
+    val randomToleranceMinutes: Int,
+    val modality: NotificationTriggerModality,
+    val priority: NotificationTriggerPriority,
+    val source: NotificationTriggerSource,
+    val notificationText: String,
+    /**
+     * Defines a notification trigger which is to be pushed after the current trigger, serving as a timeout.
+     * Due to the study design, there is a need to define a different questionnaire to be shown after the timeout.
+     * The timeout notification trigger will use the same bucket, but adds the delayMinutes as additional delay.
+     * */
+    val timeoutNotificationTriggerId: Int?
+): QuestionnaireTrigger(id, questionnaireId, "ema_floating_widget_notification", validUntil, configuration)
+
 class OneTimeQuestionnaireTrigger(
     id: Int,
     questionnaireId: Int,
@@ -98,24 +90,6 @@ class OneTimeQuestionnaireTrigger(
     val time: String,
     val randomToleranceMinutes: Int
 ): QuestionnaireTrigger(id, questionnaireId, "one_time", validUntil, configuration)
-
-fun emptyQuestionnaire(): FullQuestionnaire {
-    return FullQuestionnaire(
-        Questionnaire("", 0, 0, 0, false),
-        emptyList(),
-        emptyList()
-    )
-}
-
-fun makeQuestionnaireFromJson(json: JSONObject): Questionnaire {
-    val name = json.getString("name")
-    val id = json.getInt("id")
-    val version = json.getInt("version")
-    val studyId = json.getInt("studyId")
-    val enabled = json.getBoolean("enabled")
-
-    return Questionnaire(name, id, version, studyId, enabled)
-}
 
 fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
     val id = json.getInt("id")
@@ -172,29 +146,40 @@ fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
             )
         }
 
+        "ema_floating_widget_notification" -> {
+            val timeoutTriggerId = if (configuration.has("timeoutNotificationTriggerId") && !configuration.isNull("timeoutNotificationTriggerId")) {
+                configuration.getInt("timeoutNotificationTriggerId")
+            } else {
+                null
+            }
+
+            val timeBucketsJson = configuration.getJSONArray("timeBuckets")
+            val timeBuckets = mutableListOf<String>()
+            for (i in 0 until timeBucketsJson.length()) {
+                timeBuckets.add(timeBucketsJson.getString(i))
+            }
+
+            return EMAFloatingWidgetNotificationTrigger(
+                id,
+                questionnaireId,
+                validDuration,
+                configuration,
+                configuration.getString("name"),
+                configuration.getString("phaseName"),
+                timeBuckets,
+                configuration.getInt("distanceMinutes"),
+                configuration.getInt("delayMinutes"),
+                configuration.getInt("randomToleranceMinutes"),
+                NotificationTriggerModality.valueOf(configuration.getString("modality").replace(" ", "_")),
+                NotificationTriggerPriority.valueOf(configuration.getString("priority").replace(" ", "_")),
+                NotificationTriggerSource.valueOf(configuration.getString("source").replace(" ", "_")),
+                configuration.getString("notificationText"),
+                timeoutTriggerId
+            )
+        }
+
         else -> {
             return QuestionnaireTrigger(id, questionnaireId, type, validDuration, configuration)
         }
     }
-}
-
-fun makeFullQuestionnaireFromJson(json: JSONObject): FullQuestionnaire {
-    val questionnaire = makeQuestionnaireFromJson(json.getJSONObject("questionnaire"))
-    val elementsJson = json.getJSONArray("elements")
-    val elements = mutableListOf<QuestionnaireElement>()
-    for (i in 0 until elementsJson.length()) {
-        val elementJson = elementsJson.getJSONObject(i)
-        val element = makeElementFromJson(elementJson)
-        if (element != null) {
-            elements.add(element)
-        }
-    }
-    val triggersJson = json.getJSONArray("triggers")
-    val triggers = mutableListOf<QuestionnaireTrigger>()
-    for (i in 0 until triggersJson.length()) {
-        val triggerJson = triggersJson.getJSONObject(i)
-        triggers.add(makeTriggerFromJson(triggerJson))
-    }
-
-    return FullQuestionnaire(questionnaire, elements, triggers)
 }

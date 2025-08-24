@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import de.mimuc.senseeverything.api.model.ElementValue
-import de.mimuc.senseeverything.api.model.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.flow.first

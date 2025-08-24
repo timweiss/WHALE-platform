@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.api.model
+package de.mimuc.senseeverything.api.model.ema
 
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.ApiResources

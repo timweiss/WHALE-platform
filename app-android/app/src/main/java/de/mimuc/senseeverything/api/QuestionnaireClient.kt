@@ -1,9 +1,9 @@
 package de.mimuc.senseeverything.api
 
-import de.mimuc.senseeverything.api.model.FullQuestionnaire
-import de.mimuc.senseeverything.api.model.Questionnaire
-import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
-import de.mimuc.senseeverything.api.model.makeQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.Questionnaire
+import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.makeQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine

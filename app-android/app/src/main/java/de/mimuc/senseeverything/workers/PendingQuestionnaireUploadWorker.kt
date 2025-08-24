@@ -15,8 +15,8 @@ import com.android.volley.TimeoutError
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
-import de.mimuc.senseeverything.api.model.makeQuestionnaireFromJson
-import de.mimuc.senseeverything.api.model.uploadQuestionnaireAnswer
+import de.mimuc.senseeverything.api.model.ema.makeQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.uploadQuestionnaireAnswer
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

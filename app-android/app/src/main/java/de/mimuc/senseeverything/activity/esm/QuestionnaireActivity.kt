@@ -32,9 +32,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ElementValue
-import de.mimuc.senseeverything.api.model.FullQuestionnaire
-import de.mimuc.senseeverything.api.model.emptyQuestionnaire
-import de.mimuc.senseeverything.api.model.makeFullQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.emptyQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire

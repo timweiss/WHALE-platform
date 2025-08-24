@@ -1,4 +1,4 @@
-package de.mimuc.senseeverything.api.model
+package de.mimuc.senseeverything.api.model.ema
 
 import android.util.Log
 import org.json.JSONArray
