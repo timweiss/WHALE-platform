@@ -9,9 +9,9 @@ import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.service.SEApplicationController
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.Calendar
@@ -23,6 +23,9 @@ class ChangePhaseReceiver  : BroadcastReceiver() {
     @Inject
     lateinit var dataStoreManager: DataStoreManager
 
+    @Inject
+    lateinit var database: AppDatabase
+
     override fun onReceive(context: Context?, intent: Intent?) = goAsync {
         if (context == null) return@goAsync
 
@@ -31,9 +34,9 @@ class ChangePhaseReceiver  : BroadcastReceiver() {
 
         Log.d("ChangePhaseReceiver", "Changing phase to $phase")
 
-        // todo: change the display mode of the widget
         val application = context.applicationContext as SEApplicationController
         application.esmHandler.scheduleRandomEMANotificationsForPhase(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager)
+        application.esmHandler.scheduleFloatingWidgetNotifications(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager, database)
     }
 }
 

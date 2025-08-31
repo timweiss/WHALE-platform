@@ -17,7 +17,11 @@ data class NotificationTrigger(
     @ColumnInfo(name = "modality") val modality: NotificationTriggerModality,
     @ColumnInfo(name = "source") val source: NotificationTriggerSource,
     @ColumnInfo(name = "questionnaire_id") val questionnaireId: Long,
-    @ColumnInfo(name = "trigger_json") val triggerJson: String
+    @ColumnInfo(name = "trigger_json") val triggerJson: String,
+    @ColumnInfo(name = "planned_at") var plannedAt: Long? = null,
+    @ColumnInfo(name = "pushed_at") var pushedAt: Long? = null,
+    @ColumnInfo(name = "displayed_at") var displayedAt: Long? = null,
+    @ColumnInfo(name = "answered_at") var answeredAt: Long? = null
 )
 
 /** The priority determines whether the next wave of notifications will be triggered as usual or whether the current wave should be continued instead. */

@@ -24,7 +24,7 @@ class RandomNotificationReceiver: BroadcastReceiver() {
     lateinit var database: AppDatabase
 
     override fun onReceive(context: Context?, intent: Intent?) = goAsync {
-        val scheduleNotificationService = context?.let { ReminderNotification(it) }
+        val scheduleNotificationService = context?.let { NotificationPushHelper(it) }
         if (intent == null) {
             return@goAsync
         }

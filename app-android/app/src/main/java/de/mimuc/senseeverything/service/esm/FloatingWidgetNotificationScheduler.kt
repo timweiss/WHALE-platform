@@ -1,19 +1,29 @@
 package de.mimuc.senseeverything.service.esm
 
+import android.annotation.SuppressLint
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.util.Log
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerModality
+import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_JSON
+import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_NOTIFICATION_ID
 import java.util.Calendar
 import java.util.UUID
 import kotlin.random.Random
 
 class FloatingWidgetNotificationScheduler {
     companion object {
+        val TAG = "FloatingWidgetNotificationScheduler"
+
         fun timesForBucket(bucket: String, startDay: Calendar): Pair<Calendar, Calendar> {
             val startHour = bucket.split("-")[0].split(":")[0].toInt()
             val startMinute = bucket.split("-")[0].split(":")[1].toInt()
@@ -32,6 +42,7 @@ class FloatingWidgetNotificationScheduler {
             return Pair(startCal, endCal)
         }
 
+        @SuppressLint("DefaultLocale")
         fun schedulePrint(schedule: List<NotificationTrigger>): String {
             // list the bucket, trigger name, day and time
             return schedule.joinToString("\n") { trigger ->
@@ -51,7 +62,10 @@ class FloatingWidgetNotificationScheduler {
             }
         }
 
-        fun applyTimeoutTrigger(notification: NotificationTrigger, timeoutTrigger: EMAFloatingWidgetNotificationTrigger): NotificationTrigger {
+        fun applyTimeoutTrigger(
+            notification: NotificationTrigger,
+            timeoutTrigger: EMAFloatingWidgetNotificationTrigger
+        ): NotificationTrigger {
             return NotificationTrigger(
                 uid = UUID.randomUUID(),
                 addedAt = notification.addedAt,
@@ -75,23 +89,143 @@ class FloatingWidgetNotificationScheduler {
                 "{}"
             }
         }
+
+        fun getLatestValidTriggerForTime(
+            calendar: Calendar,
+            database: AppDatabase
+        ): NotificationTrigger? {
+            val startOfDay = calendar.clone() as Calendar
+            startOfDay.set(Calendar.HOUR_OF_DAY, 0)
+            startOfDay.set(Calendar.MINUTE, 0)
+            startOfDay.set(Calendar.SECOND, 0)
+            startOfDay.set(Calendar.MILLISECOND, 0)
+            val endOfDay = startOfDay.clone() as Calendar
+            endOfDay.add(Calendar.DAY_OF_YEAR, 1)
+            endOfDay.add(Calendar.MILLISECOND, -1)
+
+            // get all triggers valid on the day of calendar
+            val notifications = database.notificationTriggerDao()
+                .getForInterval(startOfDay.timeInMillis, endOfDay.timeInMillis)
+                .filter { it.validFrom <= calendar.timeInMillis }
+                // strip all that are not yet valid
+                .sortedByDescending { it.validFrom }
+
+            // check if the previous bucket has an unanswered wave-breaking notification
+            return selectLastValidTrigger(notifications, calendar.clone() as Calendar)
+        }
+
+        fun selectLastValidTrigger(
+            triggers: List<NotificationTrigger>,
+            currentTime: Calendar
+        ): NotificationTrigger? {
+            if (triggers.isEmpty()) return null
+
+            // Group triggers by time bucket
+            val triggersByBucket = triggers.groupBy { it.timeBucket }
+
+            // Find which bucket the current time falls into
+            var currentBucket: String? = null
+            for ((bucket, _) in triggersByBucket) {
+                val (start, end) = timesForBucket(bucket, currentTime)
+                if (currentTime >= start && currentTime <= end) {
+                    currentBucket = bucket
+                    break
+                }
+            }
+
+            // Look for unanswered wave-breaking triggers from previous buckets
+            val sortedBuckets = triggersByBucket.keys.map { bucket ->
+                val times = timesForBucket(bucket, currentTime)
+                Triple(bucket, times.first.timeInMillis, times.second.timeInMillis)
+            }.sortedBy { it.second }
+
+            // Collect all unanswered wave-breaking triggers from previous buckets
+            var latestWaveBreakingTrigger: NotificationTrigger? = null
+
+            for ((bucketName, _, bucketEnd) in sortedBuckets) {
+                if (bucketEnd < currentTime.timeInMillis) {
+                    val bucketTriggers = triggersByBucket[bucketName] ?: continue
+                    val waveBreakingTrigger = bucketTriggers
+                        .filter { it.priority == NotificationTriggerPriority.WaveBreaking }
+                        .filter { it.status != NotificationTriggerStatus.Answered }
+                        .maxByOrNull { it.validFrom }
+
+                    // Keep track of the latest wave-breaking trigger across all previous buckets
+                    if (waveBreakingTrigger != null) {
+                        if (latestWaveBreakingTrigger == null || waveBreakingTrigger.validFrom > latestWaveBreakingTrigger.validFrom) {
+                            latestWaveBreakingTrigger = waveBreakingTrigger
+                        }
+                    }
+                }
+            }
+
+            // Return the latest wave-breaking trigger if found
+            if (latestWaveBreakingTrigger != null) {
+                return latestWaveBreakingTrigger
+            }
+
+            // If no unanswered wave-breaking trigger from previous buckets, return the latest trigger from current bucket
+            if (currentBucket != null) {
+                val currentBucketTriggers = triggersByBucket[currentBucket]
+                if (!currentBucketTriggers.isNullOrEmpty()) {
+                    return currentBucketTriggers.maxByOrNull { it.validFrom }
+                }
+            }
+
+            // no triggers found, return null
+            return null
+        }
     }
 
-    suspend fun scheduleFloatingWidgetNotificationTriggersForPhase(context: Context, emaStartDay: Calendar, endDay: Calendar, triggers: List<QuestionnaireTrigger>, database: AppDatabase, phaseName: String) {
+    fun scheduleFloatingWidgetNotificationTriggersForPhase(
+        context: Context,
+        emaStartDay: Calendar,
+        endDay: Calendar,
+        triggers: List<QuestionnaireTrigger>,
+        database: AppDatabase,
+        phaseName: String
+    ) {
         // get all triggers for the current phase that can be scheduled
-        val triggersToBeScheduled = triggers.filterIsInstance<EMAFloatingWidgetNotificationTrigger>()
+        val triggersToBeScheduled =
+            triggers.filterIsInstance<EMAFloatingWidgetNotificationTrigger>()
 
-        val scheduledNotifications = scheduleAllNotificationsWithTimeout(triggersToBeScheduled, emaStartDay, endDay, phaseName)
+        val scheduledNotifications = scheduleAllNotificationsWithTimeout(
+            triggersToBeScheduled,
+            emaStartDay,
+            endDay,
+            phaseName
+        )
         for (notification in scheduledNotifications) {
             database.notificationTriggerDao().insert(notification)
 
             if (notification.modality == NotificationTriggerModality.Push) {
-                // todo: schedule alarm for push notification
+                scheduleAlarmForNotificationTrigger(notification, context)
             }
         }
     }
 
-    fun scheduleAllNotificationsWithTimeout(triggers: List<EMAFloatingWidgetNotificationTrigger>, startDay: Calendar, endDay: Calendar, phaseName: String): List<NotificationTrigger> {
+    fun schedulePlannedNotificationTriggers(context: Context, database: AppDatabase) {
+        val now = System.currentTimeMillis()
+        val plannedNotifications = database.notificationTriggerDao().getNextForModality(
+            NotificationTriggerModality.Push, now
+        )
+
+        Log.i(
+            TAG,
+            "Scheduling ${plannedNotifications.size} planned push notification triggers after $now"
+        )
+
+        for (notification in plannedNotifications) {
+            scheduleAlarmForNotificationTrigger(notification, context)
+        }
+    }
+
+    fun scheduleAllNotificationsWithTimeout(
+        triggers: List<EMAFloatingWidgetNotificationTrigger>,
+        startDay: Calendar,
+        endDay: Calendar,
+        phaseName: String
+    ): List<NotificationTrigger> {
         val allNotifications = mutableListOf<NotificationTrigger>()
         val triggersToBeScheduled = triggers
             .filter { it.phaseName == phaseName }
@@ -112,7 +246,11 @@ class FloatingWidgetNotificationScheduler {
         return allNotifications
     }
 
-    fun planNotificationsForTrigger(trigger: EMAFloatingWidgetNotificationTrigger, emaStart: Calendar, studyEnd: Calendar): List<NotificationTrigger> {
+    fun planNotificationsForTrigger(
+        trigger: EMAFloatingWidgetNotificationTrigger,
+        emaStart: Calendar,
+        studyEnd: Calendar
+    ): List<NotificationTrigger> {
         // for each day between emaStart and studyEnd, plan the notifications
         val notifications = mutableListOf<NotificationTrigger>()
         val dayIterator = emaStart.clone() as Calendar
@@ -123,7 +261,10 @@ class FloatingWidgetNotificationScheduler {
         return notifications
     }
 
-    fun planNotificationsForDay(trigger: EMAFloatingWidgetNotificationTrigger, day: Calendar): List<NotificationTrigger> {
+    fun planNotificationsForDay(
+        trigger: EMAFloatingWidgetNotificationTrigger,
+        day: Calendar
+    ): List<NotificationTrigger> {
         val notifications = mutableListOf<NotificationTrigger>()
 
         val sortedBuckets = trigger.timeBuckets.map { bucket ->
@@ -188,5 +329,36 @@ class FloatingWidgetNotificationScheduler {
         }
 
         return notifications
+    }
+
+    private fun scheduleAlarmForNotificationTrigger(
+        notificationTrigger: NotificationTrigger,
+        context: Context
+    ) {
+        val intent = Intent(context, NotificationTriggerReceiver::class.java)
+        intent.apply {
+            putExtra(INTENT_TRIGGER_JSON, notificationTrigger.triggerJson)
+            putExtra(INTENT_TRIGGER_NOTIFICATION_ID, notificationTrigger.uid.toString())
+        }
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context.applicationContext,
+            notificationTrigger.uid.hashCode(), // the best we can do to avoid collisions
+            intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
+        )
+
+        Log.i(
+            "EsmHandler",
+            "Scheduling notification trigger for ${notificationTrigger.uid} at ${notificationTrigger.validFrom}"
+        )
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            notificationTrigger.validFrom,
+            pendingIntent
+        )
     }
 }

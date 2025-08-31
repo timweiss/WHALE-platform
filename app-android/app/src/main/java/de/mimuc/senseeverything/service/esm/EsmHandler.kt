@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.service.esm
 
 import android.app.AlarmManager
+import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -12,20 +13,24 @@ import androidx.core.app.NotificationCompat
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
+import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.EventQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.OneTimeQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.invoke
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.util.Calendar
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -39,6 +44,8 @@ class EsmHandler {
         const val INTENT_NOTIFY_PHASE_UNTIL_TIMESTAMP = "untilTimestamp"
         const val INTENT_REMAINING_STUDY_DAYS = "remainingDays"
         const val INTENT_TOTAL_STUDY_DAYS = "totalDays"
+        const val INTENT_TRIGGER_NOTIFICATION_ID = "notificationId"
+        const val INTENT_NOTIFICATION_TRIGGER_VALID_FROM = "validFrom"
     }
 
     private var triggers: List<QuestionnaireTrigger> = emptyList()
@@ -117,6 +124,30 @@ class EsmHandler {
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
 
         context.startActivity(intent)
+    }
+
+    suspend fun scheduleFloatingWidgetNotifications(
+        phase: ExperimentalGroupPhase,
+        fromTime: Calendar,
+        context: Context,
+        dataStoreManager: DataStoreManager,
+        database: AppDatabase
+    ) {
+        val triggers = dataStoreManager.questionnairesFlow.first().flatMap { it.triggers }
+
+        val floatingWidgetNotificationScheduler = FloatingWidgetNotificationScheduler()
+
+        val endTime = fromTime.clone() as Calendar
+        endTime.add(Calendar.DAY_OF_YEAR, phase.durationDays)
+
+        floatingWidgetNotificationScheduler.scheduleFloatingWidgetNotificationTriggersForPhase(
+            context,
+            fromTime,
+            endTime,
+            triggers,
+            database,
+            phase.name
+        )
     }
 
     suspend fun scheduleRandomEMANotificationsForPhase(
@@ -458,7 +489,7 @@ class EsmHandler {
     }
 }
 
-class ReminderNotification(private val context: Context) {
+class NotificationPushHelper(private val context: Context) {
 
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
@@ -471,7 +502,26 @@ class ReminderNotification(private val context: Context) {
             )
         }
 
-        val notification = NotificationCompat.Builder(context, "SEChannel")
+        val notification = buildNotification("It's time for $questionnaireName", intent)
+
+        notificationManager.notify(triggerId, notification)
+    }
+
+    fun pushNotificationTrigger(notificationTrigger: NotificationTrigger) {
+        try {
+            val trigger: EMAFloatingWidgetNotificationTrigger =
+                notificationTrigger.triggerJson.let { makeTriggerFromJson(JSONObject(it)) as EMAFloatingWidgetNotificationTrigger }
+
+            val notification = buildNotification(trigger.notificationText, Intent())
+
+            notificationManager.notify(notificationTrigger.uid.hashCode(), notification)
+        } catch (e: Exception) {
+            Log.e(NotificationPushHelper::class.simpleName, e.message ?: "Error pushing notification trigger")
+        }
+    }
+
+    private fun buildNotification(title: String, intent: Intent): Notification {
+        return NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
             .setContentTitle(title)
             .setSmallIcon(R.drawable.notification_whale)
@@ -484,7 +534,7 @@ class ReminderNotification(private val context: Context) {
             .setPriority(NotificationManager.IMPORTANCE_HIGH)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("It's time for $questionnaireName")
+                    .bigText(title)
             )
             .setAutoCancel(true)
             .setContentIntent(
@@ -496,8 +546,6 @@ class ReminderNotification(private val context: Context) {
                 )
             )
             .build()
-
-        notificationManager.notify(triggerId, notification)
     }
 
     private fun Context.bitmapFromResource(
