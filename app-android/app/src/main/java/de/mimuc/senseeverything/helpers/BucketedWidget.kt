@@ -15,7 +15,7 @@ val TIME_BUCKETS = listOf(
     "16:00-18:00",
     "18:00-20:00",
     "20:00-22:00",
-    "22:00-00:00"
+    "22:00-23:59"
 )
 
 fun getCurrentTimeBucket(): String {
@@ -33,4 +33,23 @@ fun getCurrentTimeBucket(): String {
 fun shouldDisplayFromRandomDiceThrow(): Boolean {
     val random = Random.nextInt(1, 3)
     return random == 1
+}
+
+
+fun parseTimebucket(bucket: String, startDay: Calendar): Pair<Calendar, Calendar> {
+    val startHour = bucket.split("-")[0].split(":")[0].toInt()
+    val startMinute = bucket.split("-")[0].split(":")[1].toInt()
+    val endHour = bucket.split("-")[1].split(":")[0].toInt()
+    val endMinute = bucket.split("-")[1].split(":")[1].toInt()
+    val startCal = startDay.clone() as Calendar
+    startCal.set(Calendar.HOUR_OF_DAY, startHour)
+    startCal.set(Calendar.MINUTE, startMinute)
+    startCal.set(Calendar.SECOND, 0)
+    startCal.set(Calendar.MILLISECOND, 0)
+    val endCal = startDay.clone() as Calendar
+    endCal.set(Calendar.HOUR_OF_DAY, endHour)
+    endCal.set(Calendar.MINUTE, endMinute)
+    endCal.set(Calendar.SECOND, 0)
+    endCal.set(Calendar.MILLISECOND, 0)
+    return Pair(startCal, endCal)
 }

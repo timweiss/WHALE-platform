@@ -14,8 +14,11 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.helpers.parseTimebucket
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_JSON
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_NOTIFICATION_ID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.UUID
 import kotlin.random.Random
@@ -23,24 +26,6 @@ import kotlin.random.Random
 class FloatingWidgetNotificationScheduler {
     companion object {
         val TAG = "FloatingWidgetNotificationScheduler"
-
-        fun timesForBucket(bucket: String, startDay: Calendar): Pair<Calendar, Calendar> {
-            val startHour = bucket.split("-")[0].split(":")[0].toInt()
-            val startMinute = bucket.split("-")[0].split(":")[1].toInt()
-            val endHour = bucket.split("-")[1].split(":")[0].toInt()
-            val endMinute = bucket.split("-")[1].split(":")[1].toInt()
-            val startCal = startDay.clone() as Calendar
-            startCal.set(Calendar.HOUR_OF_DAY, startHour)
-            startCal.set(Calendar.MINUTE, startMinute)
-            startCal.set(Calendar.SECOND, 0)
-            startCal.set(Calendar.MILLISECOND, 0)
-            val endCal = startDay.clone() as Calendar
-            endCal.set(Calendar.HOUR_OF_DAY, endHour)
-            endCal.set(Calendar.MINUTE, endMinute)
-            endCal.set(Calendar.SECOND, 0)
-            endCal.set(Calendar.MILLISECOND, 0)
-            return Pair(startCal, endCal)
-        }
 
         @SuppressLint("DefaultLocale")
         fun schedulePrint(schedule: List<NotificationTrigger>): String {
@@ -90,7 +75,7 @@ class FloatingWidgetNotificationScheduler {
             }
         }
 
-        fun getLatestValidTriggerForTime(
+        suspend fun getLatestValidTriggerForTime(
             calendar: Calendar,
             database: AppDatabase
         ): NotificationTrigger? {
@@ -104,11 +89,14 @@ class FloatingWidgetNotificationScheduler {
             endOfDay.add(Calendar.MILLISECOND, -1)
 
             // get all triggers valid on the day of calendar
-            val notifications = database.notificationTriggerDao()
-                .getForInterval(startOfDay.timeInMillis, endOfDay.timeInMillis)
-                .filter { it.validFrom <= calendar.timeInMillis }
-                // strip all that are not yet valid
-                .sortedByDescending { it.validFrom }
+            val notifications =
+                withContext(Dispatchers.IO) {
+                    database.notificationTriggerDao()
+                        .getForInterval(startOfDay.timeInMillis, endOfDay.timeInMillis)
+                        .filter { it.validFrom <= calendar.timeInMillis }
+                        // strip all that are not yet valid
+                        .sortedByDescending { it.validFrom }
+                }
 
             // check if the previous bucket has an unanswered wave-breaking notification
             return selectLastValidTrigger(notifications, calendar.clone() as Calendar)
@@ -126,7 +114,7 @@ class FloatingWidgetNotificationScheduler {
             // Find which bucket the current time falls into
             var currentBucket: String? = null
             for ((bucket, _) in triggersByBucket) {
-                val (start, end) = timesForBucket(bucket, currentTime)
+                val (start, end) = parseTimebucket(bucket, currentTime)
                 if (currentTime >= start && currentTime <= end) {
                     currentBucket = bucket
                     break
@@ -135,7 +123,7 @@ class FloatingWidgetNotificationScheduler {
 
             // Look for unanswered wave-breaking triggers from previous buckets
             val sortedBuckets = triggersByBucket.keys.map { bucket ->
-                val times = timesForBucket(bucket, currentTime)
+                val times = parseTimebucket(bucket, currentTime)
                 Triple(bucket, times.first.timeInMillis, times.second.timeInMillis)
             }.sortedBy { it.second }
 
@@ -268,7 +256,7 @@ class FloatingWidgetNotificationScheduler {
         val notifications = mutableListOf<NotificationTrigger>()
 
         val sortedBuckets = trigger.timeBuckets.map { bucket ->
-            val times = timesForBucket(bucket, day.clone() as Calendar)
+            val times = parseTimebucket(bucket, day.clone() as Calendar)
 
             Triple(bucket, times.first.timeInMillis, times.second.timeInMillis)
         }.sortedBy { it.second }

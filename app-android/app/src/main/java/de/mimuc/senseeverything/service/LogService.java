@@ -23,6 +23,7 @@ import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SensorNotRunningException;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
+import de.mimuc.senseeverything.service.floatingWidget.NotificationTriggerFloatingWidgetService;
 import kotlin.Unit;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.BuildersKt;
@@ -313,12 +314,12 @@ public class LogService extends AbstractService {
     /* Section: Interaction Widget */
 
     private void showInteractionWidget() {
-        Intent intent = new Intent(this, InteractionFloatingWidgetService.class);
+        Intent intent = new Intent(this, NotificationTriggerFloatingWidgetService.class);
         startService(intent);
     }
 
     private void hideInteractionWidget() {
-        Intent intent = new Intent(this, InteractionFloatingWidgetService.class);
+        Intent intent = new Intent(this, NotificationTriggerFloatingWidgetService.class);
         stopService(intent);
     }
 

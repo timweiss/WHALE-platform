@@ -15,7 +15,8 @@ enum class QuestionnaireElementType(val apiName: String) {
     SOCIAL_NETWORK_ENTRY("social_network_entry"),
     SOCIAL_NETWORK_RATING("social_network_rating"),
     CIRCUMPLEX("circumplex"),
-    LIKERT_SCALE_LABEL("likert_scale_label");
+    LIKERT_SCALE_LABEL("likert_scale_label"),
+    BUTTON_GROUP("button_group");
 
     companion object {
         fun fromApiName(apiName: String): QuestionnaireElementType? {
@@ -232,6 +233,39 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
                 position,
                 configuration,
                 options
+            )
+        }
+
+        QuestionnaireElementType.BUTTON_GROUP -> {
+            val buttons = mutableMapOf<String, Int?>()
+            val buttonsJson = config.getJSONArray("buttons")
+
+            for (i in 0 until buttonsJson.length()) {
+                val buttonConfig = buttonsJson.getJSONObject(i)
+                val label = buttonConfig.getString("label")
+                val nextStep = if (buttonConfig.has("nextStep") && !buttonConfig.isNull("nextStep")) {
+                    buttonConfig.getInt("nextStep")
+                } else {
+                    null // null means final step
+                }
+                buttons[label] = nextStep
+            }
+
+            val alignment = if (config.has("alignment")) {
+                getAlignmentValue(config.getString("alignment"))
+            } else {
+                GroupAlignment.Horizontal
+            }
+
+            return ButtonGroupElement(
+                id,
+                questionnaireId,
+                name,
+                step,
+                position,
+                configuration,
+                buttons,
+                alignment
             )
         }
 
@@ -481,6 +515,36 @@ class LikertScaleLabelElement(
     override fun toJson(): JSONObject {
         val json = super.toJson()
         json.getJSONObject("configuration").put("options", JSONArray(options))
+        return json
+    }
+}
+
+class ButtonGroupElement(
+    id: Int,
+    questionnaireId: Int,
+    name: String,
+    step: Int,
+    position: Int,
+    configuration: Any,
+    val buttons: Map<String, Int?>,
+    val alignment: GroupAlignment = GroupAlignment.Horizontal
+) : QuestionnaireElement(
+    id, questionnaireId, name,
+    QuestionnaireElementType.BUTTON_GROUP, step, position, configuration
+) {
+    override fun toJson(): JSONObject {
+        val json = super.toJson()
+        val buttonsJson = JSONArray()
+        for ((label, nextStep) in buttons) {
+            val buttonConfig = JSONObject()
+            buttonConfig.put("label", label)
+            if (nextStep != null) {
+                buttonConfig.put("nextStep", nextStep)
+            }
+            buttonsJson.put(buttonConfig)
+        }
+        json.getJSONObject("configuration").put("buttons", buttonsJson)
+        json.getJSONObject("configuration").put("alignment", alignment.toString().lowercase())
         return json
     }
 }

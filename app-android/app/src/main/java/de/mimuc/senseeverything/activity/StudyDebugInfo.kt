@@ -32,13 +32,19 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
-import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.getCurrentStudyPhase
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
+import de.mimuc.senseeverything.db.models.NotificationTrigger
+import de.mimuc.senseeverything.db.models.NotificationTriggerModality
+import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
+import de.mimuc.senseeverything.db.models.NotificationTriggerSource
+import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +53,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -152,6 +159,28 @@ class StudyDebugInfoViewModel @Inject constructor(
         conversationSensor?.stop()
         _sensorRunning.value = false
     }
+
+    fun pushNotificationTrigger() {
+        val trigger = NotificationTrigger(
+            uid = UUID.randomUUID(),
+            modality = NotificationTriggerModality.EventContingent,
+            name = "Debug Trigger",
+            questionnaireId = 3L,
+            addedAt = System.currentTimeMillis(),
+            validFrom = System.currentTimeMillis(),
+            priority = NotificationTriggerPriority.Default,
+            source = NotificationTriggerSource.Scheduled,
+            status = NotificationTriggerStatus.Planned,
+            triggerJson = "{}",
+            timeBucket = getCurrentTimeBucket()
+        )
+
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                database.notificationTriggerDao().insert(trigger)
+            }
+        }
+    }
 }
 
 @Composable
@@ -193,6 +222,17 @@ fun StudyDebugInfoView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sync all data now")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                viewModel.pushNotificationTrigger()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Add notification trigger")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

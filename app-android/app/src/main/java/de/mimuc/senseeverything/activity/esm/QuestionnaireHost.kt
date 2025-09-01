@@ -34,26 +34,26 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkEntryElementComponent
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkRatingElementComponent
-import de.mimuc.senseeverything.api.model.ema.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
-import de.mimuc.senseeverything.api.model.ema.CircumplexElement
 import de.mimuc.senseeverything.api.model.CircumplexValue
 import de.mimuc.senseeverything.api.model.ElementValue
+import de.mimuc.senseeverything.api.model.RadioGroupValue
+import de.mimuc.senseeverything.api.model.SliderValue
+import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
+import de.mimuc.senseeverything.api.model.SocialNetworkRatingValue
+import de.mimuc.senseeverything.api.model.TextEntryValue
+import de.mimuc.senseeverything.api.model.ema.CheckboxGroupElement
+import de.mimuc.senseeverything.api.model.ema.CircumplexElement
 import de.mimuc.senseeverything.api.model.ema.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.LikertScaleLabelElement
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElement
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.ema.RadioGroupElement
-import de.mimuc.senseeverything.api.model.RadioGroupValue
 import de.mimuc.senseeverything.api.model.ema.SliderElement
-import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.ema.SocialNetworkEntryElement
-import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
 import de.mimuc.senseeverything.api.model.ema.SocialNetworkRatingElement
-import de.mimuc.senseeverything.api.model.SocialNetworkRatingValue
 import de.mimuc.senseeverything.api.model.ema.TextEntryElement
-import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.ema.TextViewElement
 import de.mimuc.senseeverything.api.model.emptyValueForElement
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -369,7 +369,7 @@ fun QuestionnaireElement(
             LikertScaleLabelElementComponent(element = element as LikertScaleLabelElement)
         }
 
-        QuestionnaireElementType.MALFORMED -> {
+        QuestionnaireElementType.BUTTON_GROUP, QuestionnaireElementType.MALFORMED -> {
             Text("Malformed element type: ${element.type}")
         }
     }

@@ -101,6 +101,9 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
                     elementId, elementName,
                     Pair(valueJson.getDouble("x"), valueJson.getDouble("y"))
                 )
+                QuestionnaireElementType.BUTTON_GROUP -> ButtonGroupValue(
+                    elementId, elementName, valueJson.getString("selectedButton")
+                )
                 else -> ElementValue(elementId, elementName, QuestionnaireElementType.MALFORMED)
             }
         }
@@ -154,7 +157,7 @@ class SocialNetworkEntryValue(elementId: Int, elementName: String, var values: L
 class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: Map<Int, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SOCIAL_NETWORK_RATING) {
     override fun getSerializedValue(): String {
         return values.entries.joinToString(",") { (key, value) ->
-            "$key:${value.entries.joinToString(",") { (k, v) -> "${v.elementName}:${v.getSerializedValue()}" }}"
+            "$key:${value.entries.joinToString(",") { (_, v) -> "${v.elementName}:${v.getSerializedValue()}" }}"
         }
     }
 
@@ -189,6 +192,22 @@ class SliderValue(elementId: Int, elementName: String, var value: Double) : Elem
     }
 }
 
+class TextEntryValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName, QuestionnaireElementType.TEXT_ENTRY) {
+    override fun isAnswered(): Boolean {
+        return value.isNotBlank()
+    }
+
+    override fun getSerializedValue(): String {
+        return value
+    }
+
+    override fun valueAsJsonObject(): JSONObject {
+        val json = JSONObject()
+        json.put("value", value)
+        return json
+    }
+}
+
 class CircumplexValue(elementId: Int, elementName: String, var value: Pair<Double, Double>) : ElementValue(elementId, elementName, QuestionnaireElementType.CIRCUMPLEX) {
     override fun isAnswered(): Boolean {
         return value.first != 0.0 || value.second != 0.0
@@ -206,7 +225,7 @@ class CircumplexValue(elementId: Int, elementName: String, var value: Pair<Doubl
     }
 }
 
-class TextEntryValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName, QuestionnaireElementType.TEXT_ENTRY) {
+class ButtonGroupValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName, QuestionnaireElementType.BUTTON_GROUP) {
     override fun isAnswered(): Boolean {
         return value.isNotBlank()
     }
@@ -226,11 +245,12 @@ fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
     return when (element.type) {
         QuestionnaireElementType.RADIO_GROUP -> RadioGroupValue(element.id, element.name, -1)
         QuestionnaireElementType.CHECKBOX_GROUP -> CheckboxGroupValue(element.id, element.name, emptyList())
-        QuestionnaireElementType.SLIDER -> SliderValue(element.id,element.name, 0.0)
+        QuestionnaireElementType.SLIDER -> SliderValue(element.id, element.name, 0.0)
         QuestionnaireElementType.TEXT_ENTRY -> TextEntryValue(element.id, element.name, "")
         QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> SocialNetworkEntryValue(element.id, element.name, emptyList())
         QuestionnaireElementType.SOCIAL_NETWORK_RATING -> SocialNetworkRatingValue(element.id, element.name, emptyMap())
         QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(element.id, element.name, (0.0 to 0.0))
+        QuestionnaireElementType.BUTTON_GROUP -> ButtonGroupValue(element.id, element.name, "")
         QuestionnaireElementType.MALFORMED -> ElementValue(element.id, element.name, element.type)
         else -> ElementValue(element.id, element.name, element.type)
     }

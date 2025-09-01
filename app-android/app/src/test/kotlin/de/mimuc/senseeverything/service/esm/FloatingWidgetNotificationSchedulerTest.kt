@@ -6,6 +6,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.helpers.parseTimebucket
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import java.util.Calendar
@@ -50,7 +51,7 @@ class FloatingWidgetNotificationSchedulerTest {
         // check if timestamp is in bucket time, including minutes
         for (notification in notifications) {
             val bucket = notification.timeBucket
-            val (start, end) = FloatingWidgetNotificationScheduler.timesForBucket(bucket, Calendar.getInstance())
+            val (start, end) = parseTimebucket(bucket, Calendar.getInstance())
             val notifTime = Calendar.getInstance().apply { timeInMillis = notification.validFrom }
             assert(notifTime >= start && notifTime <= end) { "Notification time ${notifTime.time} is not in bucket $bucket ($start - $end)" }
         }
