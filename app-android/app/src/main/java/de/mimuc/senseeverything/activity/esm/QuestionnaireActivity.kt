@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 import javax.inject.Inject
@@ -171,7 +172,9 @@ class QuestionnaireViewModel @Inject constructor(
             combine(
                 dataStoreManager.studyIdFlow, dataStoreManager.tokenFlow
             ) { studyId, token ->
-                pendingQuestionnaire?.markCompleted(database, answerValues(elementValues.value))
+                withContext(Dispatchers.IO) {
+                    pendingQuestionnaire?.markCompleted(database, answerValues(elementValues.value))
+                }
 
                 // schedule to upload answers
                 Log.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
@@ -185,17 +188,6 @@ class QuestionnaireViewModel @Inject constructor(
                 )
 
                 Log.i("Questionnaire", "Scheduled questionnaire upload worker")
-
-                // remove pending questionnaire
-                withContext(Dispatchers.IO) {
-                    if (pendingQuestionnaireId != null) {
-                        database.pendingQuestionnaireDao()?.deleteById(pendingQuestionnaireId!!)
-                        Log.i(
-                            "Questionnaire",
-                            "Removed pending questionnaire with id: $pendingQuestionnaireId"
-                        )
-                    }
-                }
 
                 // pop activity
                 val activity = (context as? Activity)
@@ -221,7 +213,7 @@ class QuestionnaireViewModel @Inject constructor(
 
     private fun loadFromPendingQuestionnaire() {
         if (pendingQuestionnaire != null) {
-            _elementValues.value = ElementValue.valueMapFromJson(JSONObject(pendingQuestionnaire!!.elementValuesJson ?: "{}"))
+            _elementValues.value = ElementValue.valueMapFromJson(JSONArray(pendingQuestionnaire!!.elementValuesJson ?: "[]"))
             Log.i("Questionnaire", "Loaded pending questionnaire values: ${_elementValues.value}")
         } else {
             Log.w("Questionnaire", "No pending questionnaire to load from")

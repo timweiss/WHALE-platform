@@ -238,7 +238,7 @@ fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
 
         QuestionnaireElementType.BUTTON_GROUP -> {
             val buttons = mutableMapOf<String, Int?>()
-            val buttonsJson = config.getJSONArray("buttons")
+            val buttonsJson = config.getJSONArray("options")
 
             for (i in 0 until buttonsJson.length()) {
                 val buttonConfig = buttonsJson.getJSONObject(i)
@@ -543,7 +543,7 @@ class ButtonGroupElement(
             }
             buttonsJson.put(buttonConfig)
         }
-        json.getJSONObject("configuration").put("buttons", buttonsJson)
+        json.getJSONObject("configuration").put("options", buttonsJson)
         json.getJSONObject("configuration").put("alignment", alignment.toString().lowercase())
         return json
     }

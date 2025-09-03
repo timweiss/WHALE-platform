@@ -33,6 +33,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
+import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.util.UUID
 import javax.inject.Inject
 
@@ -165,13 +167,41 @@ class StudyDebugInfoViewModel @Inject constructor(
             uid = UUID.randomUUID(),
             modality = NotificationTriggerModality.EventContingent,
             name = "Debug Trigger",
-            questionnaireId = 3L,
+            questionnaireId = 8L,
             addedAt = System.currentTimeMillis(),
             validFrom = System.currentTimeMillis(),
             priority = NotificationTriggerPriority.Default,
             source = NotificationTriggerSource.Scheduled,
             status = NotificationTriggerStatus.Planned,
-            triggerJson = "{}",
+            triggerJson = EMAFloatingWidgetNotificationTrigger(
+                1,
+                8,
+                0,
+                JSONObject("{\n" +
+                        "    \"name\": \"Debug Trigger\",\n" +
+                        "    \"phaseName\": \"Debug\",\n" +
+                        "    \"timeBuckets\": [],\n" +
+                        "    \"distanceMinutes\": 0,\n" +
+                        "    \"delayMinutes\": 0,\n" +
+                        "    \"randomToleranceMinutes\": 0,\n" +
+                        "    \"modality\": \"EventContingent\",\n" +
+                        "    \"priority\": \"Default\",\n" +
+                        "    \"source\": \"Scheduled\",\n" +
+                        "    \"notificationText\": \"Debug\",\n" +
+                        "    \"timeoutNotificationTriggerId\": null\n" +
+                        "  }"),
+                "Debug Trigger",
+                "Debug",
+                emptyList(),
+                0,
+                0,
+                0,
+                NotificationTriggerModality.EventContingent,
+                NotificationTriggerPriority.Default,
+                NotificationTriggerSource.Scheduled,
+                "Debug",
+                -1
+            ).toJson().toString(),
             timeBucket = getCurrentTimeBucket()
         )
 

@@ -10,26 +10,33 @@ import android.os.Messenger
 import android.os.RemoteException
 import android.util.Log
 import android.view.Gravity
-import android.view.View
 import android.view.WindowManager
 import androidx.lifecycle.LifecycleService
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import dagger.hilt.android.AndroidEntryPoint
+import de.mimuc.senseeverything.api.model.ElementValue
+import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
+import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.esm.FloatingWidgetNotificationScheduler
+import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -52,8 +59,13 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
     private var windowManager: WindowManager? = null
     private var floatingWidgetComposeView: FloatingWidgetComposeView? = null
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
+
     private var currentQuestionnaire: FullQuestionnaire? = null
-    private var currentTrigger: NotificationTrigger? = null
+    private var currentNotificationTrigger: NotificationTrigger? = null
+    private var currentQuestionnaireTrigger: EMAFloatingWidgetNotificationTrigger? = null
 
     private val TAG = "NotificationTriggerFloatingWidgetService"
 
@@ -65,16 +77,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
     @Inject
     lateinit var database: AppDatabase
 
-    private val savedStateRegistryController = SavedStateRegistryController.create(this)
-    private lateinit var contentView: View
-    override val savedStateRegistry: SavedStateRegistry
-        get() = savedStateRegistryController.savedStateRegistry
-
-    companion object {
-        const val EXTRA_TRIGGER_UID = "trigger_uid"
-        const val EXTRA_QUESTIONNAIRE_ID = "questionnaire_id"
-    }
-
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
         return null
@@ -83,7 +85,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
     override fun onCreate() {
         super.onCreate()
 
-        savedStateRegistryController.performAttach() // you can ignore this line, becase performRestore method will auto call performAttach() first.
+        savedStateRegistryController.performAttach()
         savedStateRegistryController.performRestore(null)
 
         // bind to LogService
@@ -99,33 +101,40 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
         scope.launch {
             try {
                 // Load the trigger from database
-                currentTrigger = FloatingWidgetNotificationScheduler.getLatestValidTriggerForTime(
+                currentNotificationTrigger = FloatingWidgetNotificationScheduler.getLatestValidTriggerForTime(
                     Calendar.getInstance(), database
                 )
 
-                if (currentTrigger == null) {
+                if (currentNotificationTrigger == null) {
                     Log.i(TAG, "No valid trigger found")
                     stopSelf()
                     return@launch
                 }
 
+                try {
+                    currentQuestionnaireTrigger = makeTriggerFromJson(JSONObject(currentNotificationTrigger!!.triggerJson)) as EMAFloatingWidgetNotificationTrigger?
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to parse questionnaire trigger JSON: ${currentNotificationTrigger!!.triggerJson}", e)
+                }
+
                 // Load questionnaire from DataStoreManager
                 val questionnaires = dataStore.questionnairesFlow.first()
-                currentQuestionnaire = questionnaires.find { it.questionnaire.id.toLong() == currentTrigger!!.questionnaireId }
+                currentQuestionnaire = questionnaires.find { it.questionnaire.id.toLong() == currentNotificationTrigger!!.questionnaireId }
 
-                if (currentQuestionnaire != null && currentTrigger != null) {
+                if (currentQuestionnaire != null && currentNotificationTrigger != null) {
                     // Update trigger status to displayed
-                    currentTrigger?.displayedAt = System.currentTimeMillis()
+                    currentNotificationTrigger?.displayedAt = System.currentTimeMillis()
+                    currentNotificationTrigger?.status = NotificationTriggerStatus.Displayed
                     withContext(Dispatchers.IO) {
-                        database.notificationTriggerDao()?.update(currentTrigger!!)
+                        database.notificationTriggerDao()?.update(currentNotificationTrigger!!)
                     }
 
                     // Render the dynamic questionnaire widget
                     renderDynamicWidget()
 
-                    Log.i(TAG, "Loaded questionnaire: ${currentQuestionnaire!!.questionnaire.name}")
+                    Log.i(TAG, "Displaying questionnaire: ${currentQuestionnaire!!.questionnaire.name}")
                 } else {
-                    Log.e(TAG, "Failed to load questionnaire for trigger ${currentTrigger?.name}: ${currentTrigger?.questionnaireId}")
+                    Log.e(TAG, "Failed to load questionnaire for trigger ${currentNotificationTrigger?.name}: ${currentNotificationTrigger?.questionnaireId}")
                     stopSelf()
                 }
             } catch (e: Exception) {
@@ -147,8 +156,8 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
             floatingWidgetComposeView = FloatingWidgetComposeView(
                 context = this,
                 questionnaire = currentQuestionnaire!!,
-                triggerUid = currentTrigger?.uid,
-                onComplete = { handleQuestionnaireComplete() },
+                triggerUid = currentNotificationTrigger?.uid,
+                onComplete = { handleQuestionnaireComplete(it) },
                 onDismiss = { handleQuestionnaireDismiss() }
             )
 
@@ -170,27 +179,67 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
         }
     }
 
-    private fun handleQuestionnaireComplete() {
+    private fun handleQuestionnaireComplete(elementValues: Map<Int, ElementValue>) {
         Log.i(TAG, "Questionnaire completed")
 
         scope.launch {
             try {
-                // The ViewModel handles the upload scheduling automatically
-                // since it has access to the answer values and pending questionnaire ID
-
                 // Update trigger status
-                currentTrigger?.answeredAt = System.currentTimeMillis()
-                database.notificationTriggerDao()?.update(currentTrigger!!)
+                currentNotificationTrigger?.answeredAt = System.currentTimeMillis()
+                currentNotificationTrigger?.status = NotificationTriggerStatus.Answered
 
-                // Log completion
-                logInteractionMessage(InteractionLogType.Confirm)
+                withContext (Dispatchers.IO) {
+                    database.notificationTriggerDao()?.update(currentNotificationTrigger!!)
+                    Log.i(TAG, "Trigger marked as answered in database")
+                }
 
+                scheduleAnswerUpload(elementValues)
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling questionnaire completion", e)
             }
 
             // Stop the service
             stopSelf()
+        }
+    }
+
+    private suspend fun scheduleAnswerUpload(elementValues: Map<Int, ElementValue>) {
+        withContext(Dispatchers.IO) {
+            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
+                database,
+                dataStore,
+                currentQuestionnaireTrigger as QuestionnaireTrigger
+            )
+            val pendingQuestionnaire =
+                database.pendingQuestionnaireDao().getById(pendingQuestionnaireId!!)
+
+            if (pendingQuestionnaire == null) {
+                Log.e(TAG, "Failed to find pending questionnaire after creation")
+                return@withContext
+            }
+
+            if (currentQuestionnaire == null) {
+                Log.e(TAG, "Cannot schedule upload: currentQuestionnaire is null")
+                return@withContext
+            }
+
+            val answers = elementValues.filter { it.value.isAnswer }
+            pendingQuestionnaire.markCompleted(database, answers)
+
+            Log.d(TAG, "Pending questionnaire marked as completed with answers: ${pendingQuestionnaire.elementValuesJson}")
+
+            val userToken = dataStore.tokenFlow.first()
+
+            enqueueQuestionnaireUploadWorker(
+                this@NotificationTriggerFloatingWidgetService.applicationContext,
+                pendingQuestionnaire.elementValuesJson!!,
+                currentQuestionnaire!!.questionnaire.id,
+                currentQuestionnaire!!.questionnaire.studyId,
+                userToken,
+                pendingQuestionnaireId
+            )
+
+            Log.i(TAG, "Scheduled questionnaire upload with pending ID: $pendingQuestionnaireId")
         }
     }
 

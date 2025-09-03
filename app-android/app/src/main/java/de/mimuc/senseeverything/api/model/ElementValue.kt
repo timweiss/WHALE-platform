@@ -34,20 +34,20 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
     }
 
     companion object {
-        fun valueMapToJson(values: Map<Int, ElementValue>): JSONObject {
-            val json = JSONObject()
-            for ((key, value) in values) {
-                json.put(key.toString(), value.toJson())
+        fun valueMapToJson(values: Map<Int, ElementValue>): JSONArray {
+            val jsonArray = JSONArray()
+            for (value in values.values) {
+                jsonArray.put(value.toJson())
             }
-            return json
+            return jsonArray
         }
 
-        fun valueMapFromJson(json: JSONObject): Map<Int, ElementValue> {
+        fun valueMapFromJson(jsonArray: JSONArray): Map<Int, ElementValue> {
             val values = mutableMapOf<Int, ElementValue>()
-            for (key in json.keys()) {
-                val valueJson = json.getJSONObject(key)
+            for (i in 0 until jsonArray.length()) {
+                val valueJson = jsonArray.getJSONObject(i)
                 val value = fromJson(valueJson)
-                values[key.toInt()] = value
+                values[value.elementId] = value
             }
             return values
         }

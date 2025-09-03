@@ -2,7 +2,6 @@ package de.mimuc.senseeverything.service.floatingWidget
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import de.mimuc.senseeverything.api.model.ButtonGroupValue
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.ButtonGroupElement
@@ -11,7 +10,6 @@ import de.mimuc.senseeverything.api.model.emptyValueForElement
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import java.util.UUID
 
 class FloatingWidgetViewModel() : ViewModel() {
@@ -74,34 +72,7 @@ class FloatingWidgetViewModel() : ViewModel() {
 
     private fun completeQuestionnaire() {
         _isCompleted.value = true
-        scheduleQuestionnaireUpload()
         Log.i("FloatingWidgetViewModel", "Questionnaire completed")
-    }
-
-    private fun scheduleQuestionnaireUpload() {
-        viewModelScope.launch {
-            try {
-                if (questionnaire != null) {
-                    val answerJson = ElementValue.valueMapToJson(getAnswerValues()).toString()
-
-                    // todo: upload answers, possibly pass back to service for handling
-
-                    Log.i("FloatingWidgetViewModel", "Questionnaire upload scheduled")
-                }
-            } catch (e: Exception) {
-                Log.e("FloatingWidgetViewModel", "Failed to schedule questionnaire upload", e)
-            }
-        }
-    }
-
-    fun getPendingQuestionnaireId(): UUID? = pendingQuestionnaireId
-
-    fun getAnswerValues(): Map<Int, ElementValue> {
-        return answerValues(_elementValues.value)
-    }
-
-    private fun answerValues(values: Map<Int, ElementValue>): Map<Int, ElementValue> {
-        return values.filter { it.value.isAnswer }
     }
 
     override fun onCleared() {

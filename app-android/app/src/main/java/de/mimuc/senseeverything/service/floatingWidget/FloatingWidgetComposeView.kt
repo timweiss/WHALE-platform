@@ -31,6 +31,7 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
+import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import java.util.UUID
 
@@ -41,7 +42,7 @@ class FloatingWidgetComposeView(
     private val context: Context,
     private val questionnaire: FullQuestionnaire,
     private val triggerUid: UUID?,
-    private val onComplete: () -> Unit,
+    private val onComplete: (Map<Int, ElementValue>) -> Unit,
     private val onDismiss: () -> Unit
 ) : ViewModelStoreOwner {
 
@@ -100,7 +101,7 @@ class FloatingWidgetComposeView(
 fun FloatingQuestionnaireHost(
     questionnaire: FullQuestionnaire,
     triggerUid: UUID?,
-    onComplete: () -> Unit,
+    onComplete: (Map<Int, ElementValue>) -> Unit,
     onDismiss: () -> Unit,
     viewModel: FloatingWidgetViewModel,
     modifier: Modifier = Modifier
@@ -117,7 +118,7 @@ fun FloatingQuestionnaireHost(
     // Handle completion
     LaunchedEffect(isCompleted) {
         if (isCompleted) {
-            onComplete()
+            onComplete(elementValues)
         }
     }
 
