@@ -17,6 +17,7 @@ import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.model.ema.uploadQuestionnaireAnswer
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -45,6 +46,13 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
             try {
                 val pendingQuestionnaire = getPendingQuestionnaire(pendingQuestionnaireId)
 
+                if (pendingQuestionnaire == null) {
+                    Log.e("QuestionnaireUploadWorker", "Pending questionnaire not found for ID: $pendingQuestionnaireId")
+                    return@withContext Result.failure()
+                }
+
+                val notificationTrigger = getNotificationTrigger(pendingQuestionnaire.notificationTriggerUid)
+
                 val apiClient = ApiClient.getInstance(applicationContext)
                 uploadQuestionnaireAnswer(
                     apiClient,
@@ -52,7 +60,8 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
                     questionnaireId,
                     studyId,
                     userToken,
-                    pendingQuestionnaire!!
+                    pendingQuestionnaire,
+                    notificationTrigger
                 )
 
                 deletePendingQuestionnaire(pendingQuestionnaireId)
@@ -70,6 +79,12 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
                 }
             }
         }
+    }
+
+    private fun getNotificationTrigger(id: UUID?): NotificationTrigger? {
+        if (id == null) return null
+        val notificationTrigger = database.notificationTriggerDao().getById(id)
+        return notificationTrigger
     }
 
     private fun getPendingQuestionnaire(id: UUID?): PendingQuestionnaire? {

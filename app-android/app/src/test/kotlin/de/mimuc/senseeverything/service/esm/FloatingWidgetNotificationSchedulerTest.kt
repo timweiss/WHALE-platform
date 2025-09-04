@@ -309,6 +309,20 @@ class FloatingWidgetNotificationSchedulerTest {
         }
     }
 
+    @Test
+    fun getsNotificationTriggerInCurrentBucketNoneToAnswer() {
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 12)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+
+        val triggers = normalTriggerRun(calendar).map { if(it.name == "Current Bucket Trigger") it.copy(status = NotificationTriggerStatus.Answered) else it }
+        val latest = FloatingWidgetNotificationScheduler.selectLastValidTrigger(triggers, calendar)
+
+        assert(latest == null) { "Expected to find null but got a trigger" }
+    }
+
     /**
      * Even though we are in the time range of the "Current Bucket Trigger", we have to select the "Last Bucket Trigger", as it is wave-breaking but was not answered yet.
      */

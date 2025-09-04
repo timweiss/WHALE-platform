@@ -36,40 +36,7 @@ export interface ExperienceSamplingTrigger {
   enabled: boolean;
 }
 
-export enum ExperienceSamplingAnswerStatus {
-  Notified = 'notified',
-  Pending = 'pending',
-  Completed = 'completed',
-}
-
-export interface ExperienceSamplingAnswer {
-  id: number;
-  enrolmentId: string;
-  questionnaireId: number;
-  answers: string;
-
-  pendingQuestionnaireId: string;
-  status: ExperienceSamplingAnswerStatus;
-  lastOpenedPage: number;
-  createdTimestamp: number;
-  lastUpdatedTimestamp: number;
-  finishedTimestamp: number | null;
-}
-
-interface ExperienceSamplingAnswerRow {
-  id: number;
-  enrolment_id: string;
-  questionnaire_id: number;
-  answers: string;
-  pending_questionnaire_id: string;
-  status: ExperienceSamplingAnswerStatus;
-  last_opened_page: number;
-  created_timestamp: number;
-  last_updated_timestamp: number;
-  finished_timestamp: number | null;
-}
-
-export interface IExperienceSamplingRepository {
+export interface IESMConfigRepository {
   getESMQuestionnaireById(id: number): Promise<ExperienceSamplingQuestionnaire>;
 
   getESMQuestionnairesByStudyId(
@@ -111,7 +78,12 @@ export interface IExperienceSamplingRepository {
   createESMElement(
     element: Pick<
       ExperienceSamplingElement,
-      'questionnaireId' | 'type' | 'step' | 'position' | 'configuration'
+      | 'questionnaireId'
+      | 'name'
+      | 'type'
+      | 'step'
+      | 'position'
+      | 'configuration'
     >,
   ): Promise<ExperienceSamplingElement>;
 
@@ -120,28 +92,11 @@ export interface IExperienceSamplingRepository {
   ): Promise<ExperienceSamplingElement>;
 
   deleteESMElement(id: number): Promise<void>;
-
-  createESMAnswer(
-    answer: Pick<
-      ExperienceSamplingAnswer,
-      | 'enrolmentId'
-      | 'questionnaireId'
-      | 'answers'
-      | 'pendingQuestionnaireId'
-      | 'lastOpenedPage'
-      | 'status'
-      | 'createdTimestamp'
-      | 'lastUpdatedTimestamp'
-      | 'finishedTimestamp'
-    >,
-  ): Promise<ExperienceSamplingAnswer>;
-
-  getESMAnswerForPendingQuestionnaireId(pendingQuestionnaireId: string): Promise<ExperienceSamplingAnswer | null>;
 }
 
-export class ExperienceSamplingRepository
+export class ESMConfigRepository
   extends Repository
-  implements IExperienceSamplingRepository
+  implements IESMConfigRepository
 {
   async getESMQuestionnairesByStudyId(
     studyId: number,
@@ -355,9 +310,9 @@ export class ExperienceSamplingRepository
       | 'questionnaireId'
       | 'name'
       | 'type'
-      | 'configuration'
       | 'step'
       | 'position'
+      | 'configuration'
     >,
   ): Promise<ExperienceSamplingElement> {
     try {
@@ -420,78 +375,6 @@ export class ExperienceSamplingRepository
   async deleteESMElement(id: number): Promise<void> {
     try {
       await this.pool.query('DELETE FROM esm_elements WHERE id = $1', [id]);
-    } catch (e) {
-      throw new DatabaseError((e as Error).message.toString());
-    }
-  }
-
-  private answerFromRow(
-    row: ExperienceSamplingAnswerRow,
-  ): ExperienceSamplingAnswer {
-    return {
-      id: row.id,
-      enrolmentId: row.enrolment_id,
-      questionnaireId: row.questionnaire_id,
-      answers: row.answers,
-      pendingQuestionnaireId: row.pending_questionnaire_id,
-      createdTimestamp: row.created_timestamp,
-      finishedTimestamp: row.finished_timestamp,
-      lastUpdatedTimestamp: row.last_updated_timestamp,
-      lastOpenedPage: row.last_opened_page,
-      status: row.status as ExperienceSamplingAnswerStatus,
-    };
-  }
-
-  async createESMAnswer(
-    answer: Pick<
-      ExperienceSamplingAnswer,
-      | 'answers'
-      | 'enrolmentId'
-      | 'questionnaireId'
-      | 'pendingQuestionnaireId'
-      | 'lastOpenedPage'
-      | 'status'
-      | 'createdTimestamp'
-      | 'lastUpdatedTimestamp'
-      | 'finishedTimestamp'
-    >,
-  ): Promise<ExperienceSamplingAnswer> {
-    try {
-      const res = await this.pool.query(
-        'INSERT INTO esm_answers (enrolment_id, questionnaire_id, answers, pending_questionnaire_id, created_timestamp, last_updated_timestamp, finished_timestamp, last_opened_page, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-        [
-          answer.enrolmentId,
-          answer.questionnaireId,
-          answer.answers,
-          answer.pendingQuestionnaireId,
-          answer.createdTimestamp,
-          answer.lastUpdatedTimestamp,
-          answer.finishedTimestamp,
-          answer.lastOpenedPage,
-          answer.status,
-        ],
-      );
-
-      return this.answerFromRow(res.rows[0]);
-    } catch (e) {
-      throw new DatabaseError((e as Error).message.toString());
-    }
-  }
-
-  async getESMAnswerForPendingQuestionnaireId(
-    pendingQuestionnaireId: string,
-  ): Promise<ExperienceSamplingAnswer | null> {
-    try {
-      const res = await this.pool.query(
-        'SELECT * FROM esm_answers WHERE pending_questionnaire_id = $1',
-        [pendingQuestionnaireId],
-      );
-
-      if (res.rows.length === 0) {
-        return null;
-      }
-
-      return this.answerFromRow(res.rows[0]);
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }

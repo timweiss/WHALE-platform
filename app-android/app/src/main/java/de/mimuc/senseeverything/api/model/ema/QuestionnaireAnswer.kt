@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.api.model.ema
 
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.ApiResources
+import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import org.json.JSONArray
 import org.json.JSONObject
@@ -9,8 +10,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-suspend fun uploadQuestionnaireAnswer(client: ApiClient, answers: String, questionnaireId: Int, studyId: Int, userToken: String, pendingQuestionnaire: PendingQuestionnaire) {
-    val json = makeAnswerJson(answers, pendingQuestionnaire)
+suspend fun uploadQuestionnaireAnswer(client: ApiClient, answers: String, questionnaireId: Int, studyId: Int, userToken: String, pendingQuestionnaire: PendingQuestionnaire, notificationTrigger: NotificationTrigger?
+) {
+    val json = makeAnswerJson(answers, pendingQuestionnaire, notificationTrigger)
     val headers = mapOf("Authorization" to "Bearer $userToken")
     val response = suspendCoroutine { continuation ->
         client.post(
@@ -28,7 +30,7 @@ suspend fun uploadQuestionnaireAnswer(client: ApiClient, answers: String, questi
     }
 }
 
-fun makeAnswerJson(answers: String, pendingQuestionnaire: PendingQuestionnaire): JSONObject {
+fun makeAnswerJson(answers: String, pendingQuestionnaire: PendingQuestionnaire, notificationTrigger: NotificationTrigger?): JSONObject {
     return JSONObject().apply {
         put("pendingQuestionnaireId", pendingQuestionnaire.uid.toString())
         put("createdTimestamp", pendingQuestionnaire.addedAt)
@@ -36,6 +38,7 @@ fun makeAnswerJson(answers: String, pendingQuestionnaire: PendingQuestionnaire):
         put("finishedTimestamp", pendingQuestionnaire.finishedAt ?: -1)
         put("lastOpenedPage", pendingQuestionnaire.openedPage ?: -1)
         put("status", pendingQuestionnaire.status.name)
+        put("notificationTrigger", notificationTrigger?.toJson())
         put("answers", JSONArray(answers))
     }
 }

@@ -16,18 +16,24 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.model.ema.makeQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
 import de.mimuc.senseeverything.api.model.ema.uploadQuestionnaireAnswer
+import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.NotificationTrigger
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class PendingQuestionnaireUploadWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val dataStoreManager: DataStoreManager
 ) :
     CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
@@ -50,18 +56,23 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 Log.i("PendingQuestionnaireUploadWorker", "Found ${pendingQuestionnaires.size} pending questionnaires to upload.")
                 val apiClient = ApiClient.getInstance(applicationContext)
 
+                val notificationTriggers = database.notificationTriggerDao().getAll().associateBy { it.uid }
+
                 for (pendingQuestionnaire in pendingQuestionnaires) {
                     Log.i("PendingQuestionnaireUploadWorker", "Uploading pending questionnaire: ${pendingQuestionnaire.uid}")
                     val questionnaire = makeQuestionnaireFromJson(JSONObject(pendingQuestionnaire.questionnaireJson))
                     uploadQuestionnaireAnswer(
                         apiClient,
-                        pendingQuestionnaire.elementValuesJson ?: "",
+                        pendingQuestionnaire.elementValuesJson ?: "[]",
                         questionnaire.id,
                         studyId,
                         userToken,
-                        pendingQuestionnaire
+                        pendingQuestionnaire,
+                        notificationTriggers.getOrDefault(pendingQuestionnaire.notificationTriggerUid, null)
                     )
                 }
+
+                synchronizeLeftoverNotificationTriggers(notificationTriggers, pendingQuestionnaires)
 
                 // clear all expired pending questionnaires
                 database.pendingQuestionnaireDao().deleteExpired(System.currentTimeMillis())
@@ -75,6 +86,51 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                     Result.failure()
                 }
             }
+        }
+    }
+
+    suspend fun synchronizeLeftoverNotificationTriggers(notificationTriggers: Map<UUID, NotificationTrigger>, pendingQuestionnaires: List<PendingQuestionnaire>) {
+        // remove triggers present in pendingQuestionnaires
+        val remainingNotificationTriggers = notificationTriggers.toMutableMap()
+        for (pending in pendingQuestionnaires) {
+            if (pending.notificationTriggerUid != null) {
+                remainingNotificationTriggers.remove(pending.notificationTriggerUid)
+            }
+        }
+
+        if (remainingNotificationTriggers.isEmpty()) return
+
+        Log.i("PendingQuestionnaireUploadWorker", "Synchronizing ${remainingNotificationTriggers.size} leftover notification triggers without pending questionnaires.")
+        for ((_, trigger) in remainingNotificationTriggers) {
+            // create dummy pending questionnaire for each remaining trigger
+            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
+                database,
+                dataStoreManager,
+                trigger = makeTriggerFromJson(JSONObject(trigger.triggerJson)),
+                notificationTriggerUid = trigger.uid
+            )
+
+            if (pendingQuestionnaireId == null) {
+                Log.e("PendingQuestionnaireUploadWorker", "Failed to create pending questionnaire for trigger: ${trigger.uid}")
+                continue
+            }
+
+            val pendingQuestionnaire = database.pendingQuestionnaireDao().getById(pendingQuestionnaireId)
+            if (pendingQuestionnaire == null) {
+                Log.e("PendingQuestionnaireUploadWorker", "Failed to retrieve created pending questionnaire for trigger: ${trigger.uid}")
+                continue
+            }
+
+            val questionnaire = makeQuestionnaireFromJson(JSONObject(pendingQuestionnaire.questionnaireJson))
+            uploadQuestionnaireAnswer(
+                ApiClient.getInstance(applicationContext),
+                "[]",
+                questionnaire.id,
+                inputData.getInt("studyId", -1),
+                inputData.getString("userToken") ?: "",
+                pendingQuestionnaire,
+                trigger
+            )
         }
     }
 }

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import java.util.UUID
 
 @Dao
 interface NotificationTriggerDao {
@@ -18,6 +19,9 @@ interface NotificationTriggerDao {
 
     @Query("SELECT * FROM notification_trigger WHERE valid_from BETWEEN :from AND :to ORDER BY valid_from ASC")
     fun getForInterval(from: Long, to: Long): List<NotificationTrigger>
+
+    @Query("SELECT * FROM notification_trigger WHERE uid = :uid")
+    fun getById(uid: UUID): NotificationTrigger?
 
     @Insert()
     fun insert(notificationTrigger: NotificationTrigger): Long

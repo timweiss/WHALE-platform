@@ -3,6 +3,8 @@ package de.mimuc.senseeverything.db.models
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
+import org.json.JSONObject
 import java.util.UUID
 
 @Entity(tableName = "notification_trigger")
@@ -22,7 +24,27 @@ data class NotificationTrigger(
     @ColumnInfo(name = "pushed_at") var pushedAt: Long? = null,
     @ColumnInfo(name = "displayed_at") var displayedAt: Long? = null,
     @ColumnInfo(name = "answered_at") var answeredAt: Long? = null
-)
+) {
+    fun toJson(): JSONObject {
+        val jsonObject = JSONObject()
+        jsonObject.put("uid", uid.toString())
+        jsonObject.put("addedAt", addedAt)
+        jsonObject.put("name", name)
+        jsonObject.put("status", status.name)
+        jsonObject.put("validFrom", validFrom)
+        jsonObject.put("priority", priority.name)
+        jsonObject.put("timeBucket", timeBucket)
+        jsonObject.put("modality", modality.name)
+        jsonObject.put("source", source.name)
+        jsonObject.put("questionnaireId", questionnaireId)
+        jsonObject.put("triggerId", makeTriggerFromJson(JSONObject(triggerJson)).id)
+        jsonObject.put("plannedAt", plannedAt)
+        jsonObject.put("pushedAt", pushedAt)
+        jsonObject.put("displayedAt", displayedAt)
+        jsonObject.put("answeredAt", answeredAt)
+        return jsonObject
+    }
+}
 
 /** The priority determines whether the next wave of notifications will be triggered as usual or whether the current wave should be continued instead. */
 enum class NotificationTriggerPriority {

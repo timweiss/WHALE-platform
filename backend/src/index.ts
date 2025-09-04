@@ -5,10 +5,11 @@ import { createStudyController } from './controllers/study';
 import { createEnrolmentController } from './controllers/enrolment';
 import { createReadingController } from './controllers/reading';
 import { Pool } from 'pg';
-import { createESMController } from './controllers/esm';
+import { createESMConfigController } from './controllers/esmConfig';
+import { createESMAnswerController } from './controllers/esmResponse';
 import { initializeRepositories, Repositories } from './data/repositoryHelper';
 import { createCompletionController } from './controllers/completion';
-import { Logger, Observability, setupO11y } from './o11y';
+import { Observability, setupO11y } from './o11y';
 
 export function makeExpressApp(
   pool: Pool,
@@ -35,9 +36,15 @@ export function makeExpressApp(
     app,
     observability,
   );
-  createESMController(
-    repositories.experienceSampling,
+  createESMConfigController(
+    repositories.esmConfig,
     repositories.study,
+    app,
+    observability,
+  );
+  createESMAnswerController(
+    repositories.esmAnswer,
+    repositories.esmConfig,
     app,
     observability,
   );

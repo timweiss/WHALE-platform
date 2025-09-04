@@ -66,6 +66,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
     private var currentQuestionnaire: FullQuestionnaire? = null
     private var currentNotificationTrigger: NotificationTrigger? = null
     private var currentQuestionnaireTrigger: EMAFloatingWidgetNotificationTrigger? = null
+    private var pendingQuestionnaire: PendingQuestionnaire? = null
 
     private val TAG = "NotificationTriggerFloatingWidgetService"
 
@@ -106,7 +107,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                 )
 
                 if (currentNotificationTrigger == null) {
-                    Log.i(TAG, "No valid trigger found")
+                    Log.i(TAG, "No valid trigger found for this unlock, stopping service")
                     stopSelf()
                     return@launch
                 }
@@ -127,6 +128,15 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                     currentNotificationTrigger?.status = NotificationTriggerStatus.Displayed
                     withContext(Dispatchers.IO) {
                         database.notificationTriggerDao()?.update(currentNotificationTrigger!!)
+
+                        val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
+                            database,
+                            dataStore,
+                            currentQuestionnaireTrigger as QuestionnaireTrigger,
+                            currentNotificationTrigger?.uid
+                        )
+                        pendingQuestionnaire =
+                            database.pendingQuestionnaireDao().getById(pendingQuestionnaireId!!)
                     }
 
                     // Render the dynamic questionnaire widget
@@ -205,19 +215,13 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
     private suspend fun scheduleAnswerUpload(elementValues: Map<Int, ElementValue>) {
         withContext(Dispatchers.IO) {
-            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
-                database,
-                dataStore,
-                currentQuestionnaireTrigger as QuestionnaireTrigger
-            )
-            val pendingQuestionnaire =
-                database.pendingQuestionnaireDao().getById(pendingQuestionnaireId!!)
-
+            val pendingQuestionnaire = pendingQuestionnaire
             if (pendingQuestionnaire == null) {
                 Log.e(TAG, "Failed to find pending questionnaire after creation")
                 return@withContext
             }
 
+            val currentQuestionnaire = currentQuestionnaire
             if (currentQuestionnaire == null) {
                 Log.e(TAG, "Cannot schedule upload: currentQuestionnaire is null")
                 return@withContext
@@ -233,13 +237,13 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
             enqueueQuestionnaireUploadWorker(
                 this@NotificationTriggerFloatingWidgetService.applicationContext,
                 pendingQuestionnaire.elementValuesJson!!,
-                currentQuestionnaire!!.questionnaire.id,
-                currentQuestionnaire!!.questionnaire.studyId,
+                currentQuestionnaire.questionnaire.id,
+                currentQuestionnaire.questionnaire.studyId,
                 userToken,
-                pendingQuestionnaireId
+                pendingQuestionnaire.uid
             )
 
-            Log.i(TAG, "Scheduled questionnaire upload with pending ID: $pendingQuestionnaireId")
+            Log.i(TAG, "Scheduled questionnaire upload with pending ID: ${pendingQuestionnaire.uid}")
         }
     }
 
@@ -254,11 +258,14 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
         // Clean up the floating widget
         floatingWidgetComposeView?.let { composeView ->
-            try {
-                val view = composeView.createView(this) // Get the view to remove it
-                windowManager?.removeView(view)
-            } catch (e: Exception) {
-                Log.w(TAG, "Error removing view from window manager", e)
+            // Use the getter method to access the attached view
+            composeView.getAttachedView()?.let { view ->
+                try {
+                    windowManager?.removeView(view)
+                    Log.d(TAG, "Removed view from window manager")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error removing view from window manager", e)
+                }
             }
             composeView.dispose()
         }

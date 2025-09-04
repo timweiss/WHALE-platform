@@ -156,7 +156,8 @@ class FloatingWidgetNotificationScheduler {
             if (currentBucket != null) {
                 val currentBucketTriggers = triggersByBucket[currentBucket]
                 if (!currentBucketTriggers.isNullOrEmpty()) {
-                    return currentBucketTriggers.maxByOrNull { it.validFrom }
+                    return currentBucketTriggers.filter { it.status != NotificationTriggerStatus.Answered }
+                        .maxByOrNull { it.validFrom }
                 }
             }
 

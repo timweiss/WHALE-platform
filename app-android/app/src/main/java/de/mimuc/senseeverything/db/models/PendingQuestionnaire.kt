@@ -2,6 +2,8 @@ package de.mimuc.senseeverything.db.models
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.ForeignKey.Companion.SET_NULL
 import androidx.room.PrimaryKey
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
@@ -18,7 +20,19 @@ enum class PendingQuestionnaireStatus {
     COMPLETED
 }
 
-@Entity(tableName = "pending_questionnaire")
+enum class PendingQuestionnaireDisplayType {
+    INBOX,
+    NOTIFICATION_TRIGGER
+}
+
+@Entity(tableName = "pending_questionnaire", foreignKeys = [
+    ForeignKey(
+        entity = NotificationTrigger::class,
+        parentColumns = arrayOf("uid"),
+        childColumns = arrayOf("notification_trigger_uid"),
+        onDelete = SET_NULL
+    )
+])
 data class PendingQuestionnaire(
     @PrimaryKey() var uid: UUID,
     @ColumnInfo(name = "added_at") val addedAt: Long,
@@ -29,14 +43,17 @@ data class PendingQuestionnaire(
     @ColumnInfo(name = "updated_at") var updatedAt: Long,
     @ColumnInfo(name = "opened_page") var openedPage: Int? = null,
     @ColumnInfo(name = "status") var status: PendingQuestionnaireStatus,
-    @ColumnInfo(name = "finished_at") var finishedAt: Long? = null
+    @ColumnInfo(name = "finished_at") var finishedAt: Long? = null,
+    @ColumnInfo(name = "notification_trigger_uid") var notificationTriggerUid: UUID? = null,
+    @ColumnInfo(name = "display_type") val displayType: PendingQuestionnaireDisplayType = PendingQuestionnaireDisplayType.INBOX
 ) {
 
     companion object {
         suspend fun createEntry(
             database: AppDatabase,
             dataStoreManager: DataStoreManager,
-            trigger: QuestionnaireTrigger
+            trigger: QuestionnaireTrigger,
+            notificationTriggerUid: UUID? = null
         ): UUID? {
             val questionnaire = dataStoreManager.questionnairesFlow.first()
                 .find { q -> q.questionnaire.id == trigger.questionnaireId }
@@ -44,6 +61,9 @@ data class PendingQuestionnaire(
 
             val validUntil =
                 if (trigger.validDuration != -1L) System.currentTimeMillis() + trigger.validDuration * 1000L * 60L else -1L
+
+            val displayType =
+                if (notificationTriggerUid != null) PendingQuestionnaireDisplayType.NOTIFICATION_TRIGGER else PendingQuestionnaireDisplayType.INBOX
 
             val pendingQuestionnaire = PendingQuestionnaire(
                 uid = UUID.randomUUID(),
@@ -55,7 +75,9 @@ data class PendingQuestionnaire(
                 System.currentTimeMillis(),
                 -1,
                 PendingQuestionnaireStatus.NOTIFIED,
-                null
+                null,
+                notificationTriggerUid,
+                displayType
             )
 
             database.pendingQuestionnaireDao().insert(pendingQuestionnaire)

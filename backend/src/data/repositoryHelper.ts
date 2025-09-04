@@ -1,8 +1,12 @@
 import { IStudyRepository, StudyRepository } from './studyRepository';
 import {
-  ExperienceSamplingRepository,
-  IExperienceSamplingRepository,
-} from './experienceSamplingRepository';
+  ESMConfigRepository,
+  IESMConfigRepository,
+} from './esmConfigRepository';
+import {
+  ESMResponseRepository,
+  IESMAnswerRepository,
+} from './esmAnswerRepository';
 import {
   ISensorReadingRepository,
   SensorReadingRepository,
@@ -20,7 +24,8 @@ import { Observability } from '../o11y';
 
 export interface Repositories {
   study: IStudyRepository;
-  experienceSampling: IExperienceSamplingRepository;
+  esmConfig: IESMConfigRepository;
+  esmAnswer: IESMAnswerRepository;
   sensorReading: ISensorReadingRepository;
   enrolment: IEnrolmentRepository;
   completion: ICompletionRepository;
@@ -32,7 +37,8 @@ export function initializeRepositories(
 ): Repositories {
   return {
     study: new StudyRepository(pool, observability),
-    experienceSampling: new ExperienceSamplingRepository(pool, observability),
+    esmConfig: new ESMConfigRepository(pool, observability),
+    esmAnswer: new ESMResponseRepository(pool, observability),
     sensorReading: new SensorReadingRepository(pool, observability),
     enrolment: new EnrolmentRepository(pool, observability),
     completion: new CompletionRepository(pool, observability),

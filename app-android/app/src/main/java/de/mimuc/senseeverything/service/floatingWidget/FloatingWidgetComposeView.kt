@@ -76,6 +76,8 @@ class FloatingWidgetComposeView(
         }
     }
 
+    fun getAttachedView(): ComposeView? = composeView
+
     fun dispose() {
         viewModelStore.clear()
         composeView = null
