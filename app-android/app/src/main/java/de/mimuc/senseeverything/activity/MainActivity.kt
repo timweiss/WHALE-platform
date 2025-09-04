@@ -80,8 +80,9 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
-import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
-import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
@@ -97,7 +98,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -192,7 +192,7 @@ class StudyHomeViewModel @Inject constructor(
     }
 
     fun openPendingQuestionnaire(context: Context, pending: QuestionnaireInboxItem) {
-        val trigger = makeTriggerFromJson(JSONObject(pending.pendingQuestionnaire.triggerJson))
+        val trigger = fullQuestionnaireJson.decodeFromString<QuestionnaireTrigger>(pending.pendingQuestionnaire.triggerJson)
 
         val intent = Intent(context, QuestionnaireActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -249,8 +249,7 @@ class StudyHomeViewModel @Inject constructor(
                     database.pendingQuestionnaireDao().getAllNotExpired(System.currentTimeMillis())
                 _pendingQuestionnaires.value = pendingQuestionnaires
                     .map { pq ->
-                        val fullQuestionnaire =
-                            makeFullQuestionnaireFromJson(JSONObject(pq.questionnaireJson))
+                        val fullQuestionnaire = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pq.questionnaireJson)
                         QuestionnaireInboxItem(
                             fullQuestionnaire.questionnaire.name,
                             pq.validUntil,

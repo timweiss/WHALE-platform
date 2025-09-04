@@ -1,22 +1,26 @@
 package de.mimuc.senseeverything.api.model.ema
 
-import android.util.Log
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
+@Serializable
 enum class QuestionnaireElementType(val apiName: String) {
-    MALFORMED("malformed"),
-    TEXT_VIEW("text_view"),
-    RADIO_GROUP("radio_group"),
-    CHECKBOX_GROUP("checkbox_group"),
-    SLIDER("slider"),
-    TEXT_ENTRY("text_entry"),
-    EXTERNAL_QUESTIONNAIRE_LINK("external_questionnaire_link"),
-    SOCIAL_NETWORK_ENTRY("social_network_entry"),
-    SOCIAL_NETWORK_RATING("social_network_rating"),
-    CIRCUMPLEX("circumplex"),
-    LIKERT_SCALE_LABEL("likert_scale_label"),
-    BUTTON_GROUP("button_group");
+    @SerialName("malformed") MALFORMED("malformed"),
+    @SerialName("text_view") TEXT_VIEW("text_view"),
+    @SerialName("radio_group") RADIO_GROUP("radio_group"),
+    @SerialName("checkbox_group") CHECKBOX_GROUP("checkbox_group"),
+    @SerialName("slider") SLIDER("slider"),
+    @SerialName("text_entry") TEXT_ENTRY("text_entry"),
+    @SerialName("external_questionnaire_link") EXTERNAL_QUESTIONNAIRE_LINK("external_questionnaire_link"),
+    @SerialName("social_network_entry") SOCIAL_NETWORK_ENTRY("social_network_entry"),
+    @SerialName("social_network_rating") SOCIAL_NETWORK_RATING("social_network_rating"),
+    @SerialName("circumplex") CIRCUMPLEX("circumplex"),
+    @SerialName("likert_scale_label") LIKERT_SCALE_LABEL("likert_scale_label"),
+    @SerialName("button_group") BUTTON_GROUP("button_group");
 
     companion object {
         fun fromApiName(apiName: String): QuestionnaireElementType? {
@@ -26,525 +30,292 @@ enum class QuestionnaireElementType(val apiName: String) {
     }
 }
 
-open class QuestionnaireElement(
-    val id: Int,
-    val questionnaireId: Int,
-    val name: String,
-    val type: QuestionnaireElementType,
-    val step: Int,
-    val position: Int,
-    private val configuration: Any
-) {
-    open fun toJson(): JSONObject {
-        val json = JSONObject()
-        json.put("id", id)
-        json.put("questionnaireId", questionnaireId)
-        json.put("name", name)
-        json.put("type", type.apiName)
-        json.put("step", step)
-        json.put("position", position)
-        json.put("configuration", JSONObject())
-        return json
-    }
-}
-
-fun getAlignmentValue(alignmentString: String): GroupAlignment {
-    var alignmentEnum: GroupAlignment = GroupAlignment.Vertical
-    when (alignmentString) {
-        "horizontal" -> alignmentEnum = GroupAlignment.Horizontal
-        "vertical" -> alignmentEnum = GroupAlignment.Vertical
-        else -> Log.e("QuestionnaireElement", "Unknown alignment: $alignmentString")
-    }
-
-    return alignmentEnum
-}
-
-fun makeElementFromJson(json: JSONObject): QuestionnaireElement? {
-    val config = json.getJSONObject("configuration")
-    val id = json.getInt("id")
-    val questionnaireId = json.getInt("questionnaireId")
-    val type = QuestionnaireElementType.fromApiName(json.getString("type"))
-    val step = json.getInt("step")
-    val position = json.getInt("position")
-    val configuration = json.getJSONObject("configuration")
-    val name = json.getString("name")
-
-    when (type) {
-        QuestionnaireElementType.TEXT_VIEW -> {
-            return TextViewElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                config.getString("text")
-            )
-        }
-
-        QuestionnaireElementType.RADIO_GROUP -> {
-            val options = mutableListOf<String>()
-            val optionsJson = config.getJSONArray("options")
-            val alignment = getAlignmentValue(config.getString("alignment"))
-
-            for (i in 0 until optionsJson.length()) {
-                options.add(optionsJson.getString(i))
-            }
-            return RadioGroupElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                options,
-                alignment = alignment
-            )
-        }
-
-        QuestionnaireElementType.CHECKBOX_GROUP -> {
-            val options = mutableListOf<String>()
-            val optionsJson = config.getJSONArray("options")
-            val alignment = getAlignmentValue(config.getString("alignment"))
-
-            for (i in 0 until optionsJson.length()) {
-                options.add(optionsJson.getString(i))
-            }
-            return CheckboxGroupElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                options,
-                alignment = alignment
-            )
-        }
-
-        QuestionnaireElementType.SLIDER -> {
-            return SliderElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                config.getInt("min"),
-                config.getInt("max"),
-                config.getDouble("stepSize")
-            )
-        }
-
-        QuestionnaireElementType.TEXT_ENTRY -> {
-            return TextEntryElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                config.getString("hint")
-            )
-        }
-
-        QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK -> {
-            val urlParams = mutableMapOf<String, String>()
-            val urlParamsJson = config.getJSONArray("urlParams")
-            for (i in 0 until urlParamsJson.length()) {
-                val param = urlParamsJson.getJSONObject(i)
-                urlParams[param.getString("key")] = param.getString("value")
-            }
-            return ExternalQuestionnaireLinkElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                config.getString("externalUrl"),
-                config.getString("actionText"),
-                urlParams
-            )
-        }
-
-        QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> {
-            return SocialNetworkEntryElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration
-            )
-        }
-
-        QuestionnaireElementType.SOCIAL_NETWORK_RATING -> {
-            return SocialNetworkRatingElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                config.getInt("ratingQuestionnaireId")
-            )
-        }
-
-        QuestionnaireElementType.CIRCUMPLEX -> {
-            var clipTop = 0
-            var clipBottom = 0
-            var clipLeft = 0
-            var clipRight = 0
-            if (config.has("clip")) {
-                clipTop = config.getJSONObject("clip").getInt("top")
-                clipBottom = config.getJSONObject("clip").getInt("bottom")
-                clipLeft = config.getJSONObject("clip").getInt("left")
-                clipRight = config.getJSONObject("clip").getInt("right")
-            }
-
-            return CircumplexElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                config.getString("imageUrl"),
-                clipTop,
-                clipBottom,
-                clipLeft,
-                clipRight
-            )
-        }
-
-        QuestionnaireElementType.LIKERT_SCALE_LABEL -> {
-            val options = mutableListOf<String>()
-            val optionsJson = config.getJSONArray("options")
-
-            for (i in 0 until optionsJson.length()) {
-                options.add(optionsJson.getString(i))
-            }
-            return LikertScaleLabelElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                options
-            )
-        }
-
-        QuestionnaireElementType.BUTTON_GROUP -> {
-            val buttons = mutableMapOf<String, Int?>()
-            val buttonsJson = config.getJSONArray("options")
-
-            for (i in 0 until buttonsJson.length()) {
-                val buttonConfig = buttonsJson.getJSONObject(i)
-                val label = buttonConfig.getString("label")
-                val nextStep = if (buttonConfig.has("nextStep") && !buttonConfig.isNull("nextStep")) {
-                    buttonConfig.getInt("nextStep")
-                } else {
-                    null // null means final step
-                }
-                buttons[label] = nextStep
-            }
-
-            val alignment = if (config.has("alignment")) {
-                getAlignmentValue(config.getString("alignment"))
-            } else {
-                GroupAlignment.Horizontal
-            }
-
-            return ButtonGroupElement(
-                id,
-                questionnaireId,
-                name,
-                step,
-                position,
-                configuration,
-                buttons,
-                alignment
-            )
-        }
-
-        QuestionnaireElementType.MALFORMED -> {
-            // show nothing
-        }
-
-        null -> {
-            throw IllegalArgumentException("Unknown QuestionnaireElementType: ${json.getString("type")}")
-        }
-    }
-
-    return null
-}
-
-class TextViewElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
-    val textContent: String
-) : QuestionnaireElement(
-    id, questionnaireId, name,
-    QuestionnaireElementType.TEXT_VIEW, step, position, configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("text", textContent)
-        return json
-    }
-}
-
+@Serializable
 enum class GroupAlignment {
-    Horizontal,
-    Vertical
+    @SerialName("horizontal") Horizontal,
+    @SerialName("vertical") Vertical
 }
 
-class RadioGroupElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
+@Serializable
+sealed class QuestionnaireElement {
+    abstract val id: Int
+    abstract val questionnaireId: Int
+    abstract val name: String
+    abstract val step: Int
+    abstract val position: Int
+    
+    // Computed property that derives type from the actual class
+    val type: QuestionnaireElementType
+        get() = when (this) {
+            is TextViewElement -> QuestionnaireElementType.TEXT_VIEW
+            is RadioGroupElement -> QuestionnaireElementType.RADIO_GROUP
+            is CheckboxGroupElement -> QuestionnaireElementType.CHECKBOX_GROUP
+            is SliderElement -> QuestionnaireElementType.SLIDER
+            is TextEntryElement -> QuestionnaireElementType.TEXT_ENTRY
+            is ExternalQuestionnaireLinkElement -> QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK
+            is SocialNetworkEntryElement -> QuestionnaireElementType.SOCIAL_NETWORK_ENTRY
+            is SocialNetworkRatingElement -> QuestionnaireElementType.SOCIAL_NETWORK_RATING
+            is CircumplexElement -> QuestionnaireElementType.CIRCUMPLEX
+            is LikertScaleLabelElement -> QuestionnaireElementType.LIKERT_SCALE_LABEL
+            is ButtonGroupElement -> QuestionnaireElementType.BUTTON_GROUP
+            is MalformedElement -> QuestionnaireElementType.MALFORMED
+        }
+}
+
+@Serializable
+@SerialName("text_view")
+data class TextViewElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: TextViewConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class TextViewConfiguration(
+    val text: String
+)
+
+@Serializable
+@SerialName("radio_group")
+data class RadioGroupElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: RadioGroupConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class RadioGroupConfiguration(
     val options: List<String>,
     val alignment: GroupAlignment = GroupAlignment.Vertical
-) : QuestionnaireElement(
-    id, questionnaireId, name,
-    QuestionnaireElementType.RADIO_GROUP, step, position, configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("options", JSONArray(options))
-        json.getJSONObject("configuration").put("alignment", alignment.toString().lowercase())
-        return json
-    }
-}
+)
 
-class CheckboxGroupElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
+@Serializable
+@SerialName("checkbox_group")
+data class CheckboxGroupElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: CheckboxGroupConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class CheckboxGroupConfiguration(
     val options: List<String>,
     val alignment: GroupAlignment = GroupAlignment.Vertical
-) : QuestionnaireElement(
-    id, questionnaireId, name,
-    QuestionnaireElementType.CHECKBOX_GROUP, step, position, configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("options", JSONArray(options))
-        json.getJSONObject("configuration").put("alignment", alignment.toString().lowercase())
-        return json
-    }
-}
+)
 
-class SliderElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
+@Serializable
+@SerialName("slider")
+data class SliderElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: SliderConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class SliderConfiguration(
     val min: Int,
     val max: Int,
     val stepSize: Double
-) : QuestionnaireElement(id, questionnaireId, name,
-    QuestionnaireElementType.SLIDER, step, position, configuration) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("min", min)
-        json.getJSONObject("configuration").put("max", max)
-        json.getJSONObject("configuration").put("stepSize", stepSize)
-        return json
-    }
-}
+)
 
-class TextEntryElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
+@Serializable
+@SerialName("text_entry")
+data class TextEntryElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: TextEntryConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class TextEntryConfiguration(
     val hint: String
-) : QuestionnaireElement(id, questionnaireId, name,
-    QuestionnaireElementType.TEXT_ENTRY, step, position, configuration) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("hint", hint)
-        return json
-    }
-}
+)
 
-class ExternalQuestionnaireLinkElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
+@Serializable
+@SerialName("external_questionnaire_link")
+data class ExternalQuestionnaireLinkElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: ExternalQuestionnaireLinkConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class ExternalQuestionnaireLinkConfiguration(
     val externalUrl: String,
     val actionText: String,
-    val urlParams: Map<String, String>
-) : QuestionnaireElement(
-    id,
-    questionnaireId,
-    name,
-    QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK,
-    step,
-    position,
-    configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("externalUrl", externalUrl)
-        json.getJSONObject("configuration").put("actionText", actionText)
-        val paramsJson = JSONArray()
-        for ((key, value) in urlParams) {
-            val param = JSONObject()
-            param.put("key", key)
-            param.put("value", value)
-            paramsJson.put(param)
-        }
-        json.getJSONObject("configuration").put("urlParams", paramsJson)
-        return json
-    }
-}
+    val urlParams: List<UrlParameter>
+)
 
-class SocialNetworkEntryElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
-) : QuestionnaireElement(
-    id,
-    questionnaireId,
-    name,
-    QuestionnaireElementType.SOCIAL_NETWORK_ENTRY,
-    step,
-    position,
-    configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        return json
-    }
-}
+@Serializable
+data class UrlParameter(
+    val key: String,
+    val value: String
+)
 
-class SocialNetworkRatingElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
-    val ratingQuestionnaireId: Int,
-) : QuestionnaireElement(
-    id,
-    questionnaireId,
-    name,
-    QuestionnaireElementType.SOCIAL_NETWORK_RATING,
-    step,
-    position,
-    configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("ratingQuestionnaireId", ratingQuestionnaireId)
-        return json
-    }
-}
+@Serializable
+@SerialName("social_network_entry")
+data class SocialNetworkEntryElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: SocialNetworkEntryConfiguration = SocialNetworkEntryConfiguration()
+) : QuestionnaireElement()
 
-class CircumplexElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
+@Serializable
+data class SocialNetworkEntryConfiguration(
+    val placeholder: String = ""
+)
+
+@Serializable
+@SerialName("social_network_rating")
+data class SocialNetworkRatingElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: SocialNetworkRatingConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class SocialNetworkRatingConfiguration(
+    val ratingQuestionnaireId: Int
+)
+
+@Serializable
+@SerialName("circumplex")
+data class CircumplexElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: CircumplexConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class CircumplexConfiguration(
     val imageUrl: String,
-    val clipTop: Int = 0,
-    val clipBottom: Int = 0,
-    val clipLeft: Int = 0,
-    val clipRight: Int = 0
-) : QuestionnaireElement(
-    id,
-    questionnaireId,
-    name,
-    QuestionnaireElementType.CIRCUMPLEX,
-    step,
-    position,
-    configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("imageUrl", imageUrl)
-        val clipJson = JSONObject()
-        clipJson.put("top", clipTop)
-        clipJson.put("bottom", clipBottom)
-        clipJson.put("left", clipLeft)
-        clipJson.put("right", clipRight)
-        json.getJSONObject("configuration").put("clip", clipJson)
-        return json
-    }
-}
+    val clip: CircumplexClip = CircumplexClip()
+)
 
-class LikertScaleLabelElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
+@Serializable
+data class CircumplexClip(
+    val top: Int = 0,
+    val bottom: Int = 0,
+    val left: Int = 0,
+    val right: Int = 0
+)
+
+@Serializable
+@SerialName("likert_scale_label")
+data class LikertScaleLabelElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: LikertScaleLabelConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class LikertScaleLabelConfiguration(
     val options: List<String>
-) : QuestionnaireElement(
-    id, questionnaireId, name,
-    QuestionnaireElementType.LIKERT_SCALE_LABEL, step, position, configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        json.getJSONObject("configuration").put("options", JSONArray(options))
-        return json
+)
+
+@Serializable
+@SerialName("button_group")
+data class ButtonGroupElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: ButtonGroupConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class ButtonGroupConfiguration(
+    val options: List<ButtonOption>,
+    val alignment: GroupAlignment = GroupAlignment.Horizontal
+)
+
+@Serializable
+data class ButtonOption(
+    val label: String,
+    val nextStep: Int? = null
+)
+
+@Serializable
+@SerialName("malformed")
+data class MalformedElement(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val name: String,
+    override val step: Int,
+    override val position: Int,
+    val configuration: MalformedConfiguration = MalformedConfiguration()
+) : QuestionnaireElement()
+
+@Serializable
+data class MalformedConfiguration(
+    val error: String = "Malformed element"
+)
+
+// Serializers module for polymorphic serialization
+val questionnaireElementModule = SerializersModule {
+    polymorphic(QuestionnaireElement::class) {
+        subclass(TextViewElement::class)
+        subclass(RadioGroupElement::class)
+        subclass(CheckboxGroupElement::class)
+        subclass(SliderElement::class)
+        subclass(TextEntryElement::class)
+        subclass(ExternalQuestionnaireLinkElement::class)
+        subclass(SocialNetworkEntryElement::class)
+        subclass(SocialNetworkRatingElement::class)
+        subclass(CircumplexElement::class)
+        subclass(LikertScaleLabelElement::class)
+        subclass(ButtonGroupElement::class)
+        subclass(MalformedElement::class)
     }
 }
 
-class ButtonGroupElement(
-    id: Int,
-    questionnaireId: Int,
-    name: String,
-    step: Int,
-    position: Int,
-    configuration: Any,
-    val buttons: Map<String, Int?>,
-    val alignment: GroupAlignment = GroupAlignment.Horizontal
-) : QuestionnaireElement(
-    id, questionnaireId, name,
-    QuestionnaireElementType.BUTTON_GROUP, step, position, configuration
-) {
-    override fun toJson(): JSONObject {
-        val json = super.toJson()
-        val buttonsJson = JSONArray()
-        for ((label, nextStep) in buttons) {
-            val buttonConfig = JSONObject()
-            buttonConfig.put("label", label)
-            if (nextStep != null) {
-                buttonConfig.put("nextStep", nextStep)
-            }
-            buttonsJson.put(buttonConfig)
-        }
-        json.getJSONObject("configuration").put("options", buttonsJson)
-        json.getJSONObject("configuration").put("alignment", alignment.toString().lowercase())
-        return json
-    }
+val questionnaireJson = Json {
+    serializersModule = questionnaireElementModule
+    ignoreUnknownKeys = true
+    isLenient = true
+    classDiscriminator = "type"
+}
+
+// Combined serializers module for both QuestionnaireElement and QuestionnaireTrigger
+val fullQuestionnaireModule = SerializersModule {
+    include(questionnaireElementModule)
+    include(questionnaireTriggerModule)
+}
+
+val fullQuestionnaireJson = Json {
+    serializersModule = fullQuestionnaireModule
+    ignoreUnknownKeys = true
+    isLenient = true
+    classDiscriminator = "type"
 }

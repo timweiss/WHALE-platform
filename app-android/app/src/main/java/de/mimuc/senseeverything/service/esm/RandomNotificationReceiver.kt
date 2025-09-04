@@ -5,13 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
-import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
-import org.json.JSONObject
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -32,7 +32,7 @@ class RandomNotificationReceiver: BroadcastReceiver() {
         val title = intent.getStringExtra(EsmHandler.INTENT_TITLE)
         val triggerId = intent.getIntExtra(EsmHandler.INTENT_TRIGGER_ID, 0)
         val triggerJson = intent.getStringExtra(EsmHandler.INTENT_TRIGGER_JSON)
-        val trigger = triggerJson?.let { makeTriggerFromJson(JSONObject(it)) as RandomEMAQuestionnaireTrigger }
+        val trigger = triggerJson?.let { fullQuestionnaireJson.decodeFromString<QuestionnaireTrigger>(it) as RandomEMAQuestionnaireTrigger }
         val questionnaireName = intent.getStringExtra(EsmHandler.INTENT_QUESTIONNAIRE_NAME)
         val untilTimestamp = intent.getLongExtra(EsmHandler.INTENT_NOTIFY_PHASE_UNTIL_TIMESTAMP, 0)
 

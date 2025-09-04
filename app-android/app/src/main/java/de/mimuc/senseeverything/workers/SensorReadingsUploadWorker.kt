@@ -20,18 +20,21 @@ import com.google.firebase.ktx.Firebase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
+import kotlinx.serialization.Serializable
 import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
+
+@Serializable
+data class SensorReading(
+    val sensorType: String,
+    val timestamp: Long,
+    val data: String
+)
 
 @HiltWorker
 class SensorReadingsUploadWorker @AssistedInject constructor(
@@ -87,31 +90,23 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
 
         setProgress(workDataOf("progress" to (totalSynced / remaining)))
 
-        val jsonReadings = JSONArray()
-        data.forEach {
-            val o = JSONObject()
-            o.put("sensorType", it.sensorName)
-            o.put("timestamp", it.timestamp)
-            o.put("data", it.data)
-            jsonReadings.put(o)
+        val sensorReadings = data.map { logData ->
+            SensorReading(
+                sensorType = logData.sensorName,
+                timestamp = logData.timestamp,
+                data = logData.data
+            )
         }
 
         val client = ApiClient.getInstance(context)
         val headers = mapOf("Authorization" to "Bearer $token")
 
         try {
-            val response = suspendCoroutine { continuation ->
-                client.postArray(
-                    ApiResources.sensorReadingsBatched(),
-                    jsonReadings,
-                    headers,
-                    { response ->
-                        continuation.resume(response)
-                    },
-                    { error ->
-                        continuation.resumeWithException(error)
-                    })
-            }
+            client.postSerialized<List<SensorReading>, Unit>(
+                url = ApiResources.sensorReadingsBatched(),
+                requestData = sensorReadings,
+                headers = headers
+            )
 
             db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
             Log.i(TAG, "batch synced successful, removed ${data.size} entries")

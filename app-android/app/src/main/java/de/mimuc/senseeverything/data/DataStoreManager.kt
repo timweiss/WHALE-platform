@@ -10,10 +10,10 @@ import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
-import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.Study
-import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -23,7 +23,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.json.JSONArray
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -242,14 +241,11 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     suspend fun saveQuestionnaires(fullQuestionnaires: List<FullQuestionnaire>) {
-        val json = JSONArray()
-        for (fullQuestionnaire in fullQuestionnaires) {
-            json.put(fullQuestionnaire.toJson())
-        }
+        val json = fullQuestionnaireJson.encodeToString(fullQuestionnaires)
         dataStore.updateData {
             it.copy(
                 lastUpdate = System.currentTimeMillis(),
-                questionnaires = json.toString()
+                questionnaires = json
             )
         }
     }
@@ -257,15 +253,10 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     val questionnairesFlow = dataStore.data.map { preferences ->
         val json = preferences.questionnaires ?: "[]"
         if (json.length < 2) {
-            return@map emptyList<FullQuestionnaire>()
+            return@map emptyList()
         }
-        val jsonArray = JSONArray(json)
-        val fullQuestionnaires = mutableListOf<FullQuestionnaire>()
-        for (i in 0 until jsonArray.length()) {
-            val fullQuestionnaire = makeFullQuestionnaireFromJson(jsonArray.getJSONObject(i))
-            fullQuestionnaires.add(fullQuestionnaire)
-        }
-        fullQuestionnaires.toList()
+        val parsed = fullQuestionnaireJson.decodeFromString<List<FullQuestionnaire>>(json)
+        return@map parsed
     }
 
     fun getQuestionnairesSync(callback: (List<FullQuestionnaire>) -> Unit) {

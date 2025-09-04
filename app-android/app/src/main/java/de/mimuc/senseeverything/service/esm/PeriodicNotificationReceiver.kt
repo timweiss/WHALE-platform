@@ -6,12 +6,12 @@ import android.content.Intent
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.api.model.ema.PeriodicQuestionnaireTrigger
-import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
-import org.json.JSONObject
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -31,7 +31,7 @@ class PeriodicNotificationReceiver: BroadcastReceiver() {
         val title = intent.getStringExtra(EsmHandler.INTENT_TITLE)
         val id = intent.getIntExtra(EsmHandler.INTENT_TRIGGER_ID, 0)
         val triggerJson = intent.getStringExtra(EsmHandler.INTENT_TRIGGER_JSON)
-        val trigger = triggerJson?.let { makeTriggerFromJson(JSONObject(it)) as PeriodicQuestionnaireTrigger }
+        val trigger = triggerJson?.let { fullQuestionnaireJson.decodeFromString<QuestionnaireTrigger>(it) as PeriodicQuestionnaireTrigger }
         val questionnaireName = intent.getStringExtra(EsmHandler.INTENT_QUESTIONNAIRE_NAME)
         val remainingDays = intent.getIntExtra(EsmHandler.INTENT_REMAINING_STUDY_DAYS, 0)
         val totalDays = intent.getIntExtra(EsmHandler.INTENT_TOTAL_STUDY_DAYS, 0)

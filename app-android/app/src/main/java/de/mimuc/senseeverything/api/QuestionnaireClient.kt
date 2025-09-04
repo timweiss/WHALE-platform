@@ -2,11 +2,8 @@ package de.mimuc.senseeverything.api
 
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.Questionnaire
-import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
-import de.mimuc.senseeverything.api.model.ema.makeQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 suspend fun fetchAndPersistQuestionnaires(studyId: Int, dataStoreManager: DataStoreManager, client: ApiClient): List<FullQuestionnaire> {
     val questionnaires = fetchQuestionnairesForStudy(studyId, client)
@@ -14,22 +11,16 @@ suspend fun fetchAndPersistQuestionnaires(studyId: Int, dataStoreManager: DataSt
     // load full questionnaires
     val fullQuestionnaires = mutableListOf<FullQuestionnaire>()
     for (questionnaire in questionnaires) {
-        val json = suspendCoroutine { continuation ->
-            client.getJson(ApiResources.questionnaire(studyId, questionnaire.id),
-                { response ->
-                    continuation.resume(response)
-                }, { error ->
-                    continuation.resume(null)
-                })
-        }
-
-        if (json == null) {
+        try {
+            val fullQuestionnaire = client.getSerialized<FullQuestionnaire>(
+                url = ApiResources.questionnaire(studyId, questionnaire.id),
+                json = fullQuestionnaireJson
+            )
+            fullQuestionnaires.add(fullQuestionnaire)
+        } catch (e: Exception) {
             // could not load full questionnaire
             return emptyList()
         }
-
-        val fullQuestionnaire = makeFullQuestionnaireFromJson(json)
-        fullQuestionnaires.add(fullQuestionnaire)
     }
 
     // persist questionnaires
@@ -39,27 +30,13 @@ suspend fun fetchAndPersistQuestionnaires(studyId: Int, dataStoreManager: DataSt
 }
 
 suspend fun fetchQuestionnairesForStudy(studyId: Int, client: ApiClient): List<Questionnaire> {
-    val response = suspendCoroutine { continuation ->
-        client.getJsonArray(ApiResources.questionnaires(studyId),
-            { response ->
-                continuation.resume(response)
-            }, { error ->
-                continuation.resume(null)
-            })
-    }
-
-    // could not load questionnaires for study, for example study not found
-    if (response == null) {
+    return try {
+        client.getSerialized<List<Questionnaire>>(
+            url = ApiResources.questionnaires(studyId),
+            json = fullQuestionnaireJson
+        )
+    } catch (e: Exception) {
         // todo: we should fail here
-        return emptyList()
+        emptyList()
     }
-
-    // parse questionnaires
-    val questionnaires = mutableListOf<Questionnaire>()
-    for (i in 0 until response.length()) {
-        val questionnaire = response.getJSONObject(i)
-        questionnaires.add(makeQuestionnaireFromJson(questionnaire))
-    }
-
-    return questionnaires.toList()
 }

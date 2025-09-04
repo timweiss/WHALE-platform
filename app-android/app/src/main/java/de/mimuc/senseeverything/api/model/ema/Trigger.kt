@@ -1,67 +1,104 @@
 package de.mimuc.senseeverything.api.model.ema
 
+import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
-import org.json.JSONObject
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
-open class QuestionnaireTrigger(
-    val id: Int,
-    val questionnaireId: Int,
-    val type: String,
-    val validDuration: Long,
-    val configuration: Any
-) {
-    fun toJson(): JSONObject {
-        val json = JSONObject()
-        json.put("id", id)
-        json.put("questionnaireId", questionnaireId)
-        json.put("type", type)
-        json.put("validDuration", validDuration)
-        json.put("configuration", configuration)
-        return json
-    }
-}
-
-class EventQuestionnaireTrigger(
-    id: Int,
-    questionnaireId: Int,
-    validUntil: Long,
-    configuration: Any,
-    val eventName: String,
-) : QuestionnaireTrigger(id, questionnaireId, "event", validUntil, configuration)
-
+@Serializable
 enum class PeriodicQuestionnaireTriggerInterval {
-    DAILY,
-    WEEKLY,
-    MONTHLY
+    @SerialName("daily") DAILY,
+    @SerialName("weekly") WEEKLY,
+    @SerialName("monthly") MONTHLY
 }
 
-class PeriodicQuestionnaireTrigger(
-    id: Int,
-    questionnaireId: Int,
-    validUntil: Long,
-    configuration: Any,
-    val interval: PeriodicQuestionnaireTriggerInterval,
-    val time: String): QuestionnaireTrigger(id, questionnaireId, "periodic", validUntil, configuration)
+@Serializable
+sealed class QuestionnaireTrigger {
+    abstract val id: Int
+    abstract val questionnaireId: Int
+    abstract val validDuration: Long
+    abstract val enabled: Boolean
+    
+    // Computed property that derives type from the actual class
+    val type: String
+        get() = when (this) {
+            is EventQuestionnaireTrigger -> "event"
+            is PeriodicQuestionnaireTrigger -> "periodic"
+            is RandomEMAQuestionnaireTrigger -> "random_ema"
+            is EMAFloatingWidgetNotificationTrigger -> "ema_floating_widget_notification"
+            is OneTimeQuestionnaireTrigger -> "one_time"
+            is UnknownQuestionnaireTrigger -> this.originalType // For unknown types, use the actual type from the data
+        }
+}
 
-class RandomEMAQuestionnaireTrigger(
-    id: Int,
-    questionnaireId: Int,
-    validUntil: Long,
-    configuration: Any,
+@Serializable
+@SerialName("event")
+data class EventQuestionnaireTrigger(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val validDuration: Long,
+    override val enabled: Boolean,
+    val configuration: EventTriggerConfiguration
+) : QuestionnaireTrigger()
+
+@Serializable
+data class EventTriggerConfiguration(
+    val eventName: String,
+    val displayStrategy: InteractionWidgetDisplayStrategy
+)
+
+@Serializable
+@SerialName("periodic")
+data class PeriodicQuestionnaireTrigger(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val validDuration: Long,
+    override val enabled: Boolean,
+    val configuration: PeriodicTriggerConfiguration
+) : QuestionnaireTrigger()
+
+@Serializable
+data class PeriodicTriggerConfiguration(
+    val interval: PeriodicQuestionnaireTriggerInterval,
+    val time: String
+)
+
+@Serializable
+@SerialName("random_ema")
+data class RandomEMAQuestionnaireTrigger(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val validDuration: Long,
+    override val enabled: Boolean,
+    val configuration: RandomEMATriggerConfiguration
+) : QuestionnaireTrigger()
+
+@Serializable
+data class RandomEMATriggerConfiguration(
     val distanceMinutes: Int,
     val randomToleranceMinutes: Int,
     val delayMinutes: Int,
     val timeBucket: String,
     val phaseName: String
-): QuestionnaireTrigger(id, questionnaireId, "random_ema", validUntil, configuration)
+)
 
-class EMAFloatingWidgetNotificationTrigger(
-    id: Int,
-    questionnaireId: Int,
-    validUntil: Long,
-    configuration: Any,
+@Serializable
+@SerialName("ema_floating_widget_notification")
+data class EMAFloatingWidgetNotificationTrigger(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val validDuration: Long,
+    override val enabled: Boolean,
+    val configuration: EMAFloatingWidgetTriggerConfiguration
+) : QuestionnaireTrigger()
+
+@Serializable
+data class EMAFloatingWidgetTriggerConfiguration(
     val name: String,
     val phaseName: String,
     /** Defines the time buckets in which at least one notification should be scheduled. */
@@ -78,108 +115,50 @@ class EMAFloatingWidgetNotificationTrigger(
      * Due to the study design, there is a need to define a different questionnaire to be shown after the timeout.
      * The timeout notification trigger will use the same bucket, but adds the delayMinutes as additional delay.
      * */
-    val timeoutNotificationTriggerId: Int?
-): QuestionnaireTrigger(id, questionnaireId, "ema_floating_widget_notification", validUntil, configuration)
+    val timeoutNotificationTriggerId: Int? = null
+)
 
-class OneTimeQuestionnaireTrigger(
-    id: Int,
-    questionnaireId: Int,
-    validUntil: Long,
-    configuration: Any,
+@Serializable
+@SerialName("one_time")
+data class OneTimeQuestionnaireTrigger(
+    override val id: Int,
+    override val questionnaireId: Int,
+    override val validDuration: Long,
+    override val enabled: Boolean,
+    val configuration: OneTimeTriggerConfiguration
+) : QuestionnaireTrigger()
+
+@Serializable
+data class OneTimeTriggerConfiguration(
     val studyDay: Int,
     val time: String,
     val randomToleranceMinutes: Int
-): QuestionnaireTrigger(id, questionnaireId, "one_time", validUntil, configuration)
+)
 
-fun makeTriggerFromJson(json: JSONObject): QuestionnaireTrigger {
-    val id = json.getInt("id")
-    val questionnaireId = json.getInt("questionnaireId")
-    val type = json.getString("type")
-    val validDuration = json.getLong("validDuration")
-    val configuration = json.getJSONObject("configuration")
+@Serializable
+@SerialName("unknown")
+data class UnknownQuestionnaireTrigger(
+    override val id: Int,
+    override val questionnaireId: Int,
+    val originalType: String,
+    override val validDuration: Long,
+    override val enabled: Boolean = false,
+    val configuration: UnknownTriggerConfiguration = UnknownTriggerConfiguration()
+) : QuestionnaireTrigger()
 
-    when (type) {
-        "event" -> {
-            return EventQuestionnaireTrigger(
-                id,
-                questionnaireId,
-                validDuration,
-                configuration,
-                configuration.getString("eventName"),
-            )
-        }
+@Serializable
+data class UnknownTriggerConfiguration(
+    val error: String = "Unknown trigger type"
+)
 
-        "periodic" -> {
-            return PeriodicQuestionnaireTrigger(
-                id,
-                questionnaireId,
-                validDuration,
-                configuration,
-                PeriodicQuestionnaireTriggerInterval.valueOf(configuration.getString("interval").uppercase()),
-                configuration.getString("time")
-            )
-        }
-
-        "random_ema" -> {
-            return RandomEMAQuestionnaireTrigger(
-                id,
-                questionnaireId,
-                validDuration,
-                configuration,
-                configuration.getInt("distanceMinutes"),
-                configuration.getInt("randomToleranceMinutes"),
-                configuration.getInt("delayMinutes"),
-                configuration.getString("timeBucket"),
-                configuration.getString("phaseName")
-            )
-        }
-
-        "one_time" -> {
-            return OneTimeQuestionnaireTrigger(
-                id,
-                questionnaireId,
-                validDuration,
-                configuration,
-                configuration.getInt("studyDay"),
-                configuration.getString("time"),
-                configuration.getInt("randomToleranceMinutes")
-            )
-        }
-
-        "ema_floating_widget_notification" -> {
-            val timeoutTriggerId = if (configuration.has("timeoutNotificationTriggerId") && !configuration.isNull("timeoutNotificationTriggerId")) {
-                configuration.getInt("timeoutNotificationTriggerId")
-            } else {
-                null
-            }
-
-            val timeBucketsJson = configuration.getJSONArray("timeBuckets")
-            val timeBuckets = mutableListOf<String>()
-            for (i in 0 until timeBucketsJson.length()) {
-                timeBuckets.add(timeBucketsJson.getString(i))
-            }
-
-            return EMAFloatingWidgetNotificationTrigger(
-                id,
-                questionnaireId,
-                validDuration,
-                configuration,
-                configuration.getString("name"),
-                configuration.getString("phaseName"),
-                timeBuckets,
-                configuration.getInt("distanceMinutes"),
-                configuration.getInt("delayMinutes"),
-                configuration.getInt("randomToleranceMinutes"),
-                NotificationTriggerModality.valueOf(configuration.getString("modality").replace(" ", "_")),
-                NotificationTriggerPriority.valueOf(configuration.getString("priority").replace(" ", "_")),
-                NotificationTriggerSource.valueOf(configuration.getString("source").replace(" ", "_")),
-                configuration.getString("notificationText"),
-                timeoutTriggerId
-            )
-        }
-
-        else -> {
-            return QuestionnaireTrigger(id, questionnaireId, type, validDuration, configuration)
-        }
+// Serializers module for polymorphic serialization
+val questionnaireTriggerModule = SerializersModule {
+    polymorphic(QuestionnaireTrigger::class) {
+        subclass(EventQuestionnaireTrigger::class)
+        subclass(PeriodicQuestionnaireTrigger::class)
+        subclass(RandomEMAQuestionnaireTrigger::class)
+        subclass(EMAFloatingWidgetNotificationTrigger::class)
+        subclass(OneTimeQuestionnaireTrigger::class)
+        subclass(UnknownQuestionnaireTrigger::class)
     }
 }

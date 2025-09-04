@@ -34,7 +34,9 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
+import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetTriggerConfiguration
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.getCurrentStudyPhase
@@ -54,7 +56,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import kotlinx.serialization.encodeToString
 import java.util.UUID
 import javax.inject.Inject
 
@@ -94,7 +96,7 @@ class StudyDebugInfoViewModel @Inject constructor(
     private val dataStoreManager: DataStoreManager,
     private val database: AppDatabase
 ) : AndroidViewModel(application) {
-    private val _currentStudyPhase = MutableStateFlow<ExperimentalGroupPhase?>(ExperimentalGroupPhase("", 0,0,InteractionWidgetDisplayStrategy.DEFAULT))
+    private val _currentStudyPhase = MutableStateFlow<ExperimentalGroupPhase?>(ExperimentalGroupPhase(0, "", 0,0,InteractionWidgetDisplayStrategy.DEFAULT))
     val currentStudyPhase: StateFlow<ExperimentalGroupPhase?> get() = _currentStudyPhase
 
     private val _unsyncedLogDataCount = MutableStateFlow(0L)
@@ -173,35 +175,24 @@ class StudyDebugInfoViewModel @Inject constructor(
             priority = NotificationTriggerPriority.Default,
             source = NotificationTriggerSource.Scheduled,
             status = NotificationTriggerStatus.Planned,
-            triggerJson = EMAFloatingWidgetNotificationTrigger(
+            triggerJson = fullQuestionnaireJson.encodeToString(EMAFloatingWidgetNotificationTrigger(
                 1,
                 8,
                 0,
-                JSONObject("{\n" +
-                        "    \"name\": \"Debug Trigger\",\n" +
-                        "    \"phaseName\": \"Debug\",\n" +
-                        "    \"timeBuckets\": [],\n" +
-                        "    \"distanceMinutes\": 0,\n" +
-                        "    \"delayMinutes\": 0,\n" +
-                        "    \"randomToleranceMinutes\": 0,\n" +
-                        "    \"modality\": \"EventContingent\",\n" +
-                        "    \"priority\": \"Default\",\n" +
-                        "    \"source\": \"Scheduled\",\n" +
-                        "    \"notificationText\": \"Debug\",\n" +
-                        "    \"timeoutNotificationTriggerId\": null\n" +
-                        "  }"),
-                "Debug Trigger",
-                "Debug",
-                emptyList(),
-                0,
-                0,
-                0,
-                NotificationTriggerModality.EventContingent,
-                NotificationTriggerPriority.Default,
-                NotificationTriggerSource.Scheduled,
-                "Debug",
-                -1
-            ).toJson().toString(),
+                true,
+                EMAFloatingWidgetTriggerConfiguration(
+                    "Debug Trigger",
+                    "Debug",
+                    emptyList(),
+                    0,
+                    0,
+                    0,
+                    NotificationTriggerModality.EventContingent,
+                    NotificationTriggerPriority.Default,
+                    NotificationTriggerSource.Scheduled,
+                    "Debug",
+                    -1)
+            )),
             timeBucket = getCurrentTimeBucket(),
             updatedAt = System.currentTimeMillis()
         )

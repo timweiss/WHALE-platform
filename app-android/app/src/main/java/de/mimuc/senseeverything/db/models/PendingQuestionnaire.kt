@@ -7,9 +7,11 @@ import androidx.room.ForeignKey.Companion.SET_NULL
 import androidx.room.PrimaryKey
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.encodeToString
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -69,8 +71,8 @@ data class PendingQuestionnaire(
                 uid = UUID.randomUUID(),
                 System.currentTimeMillis(),
                 validUntil,
-                questionnaire.toJson().toString(),
-                trigger.toJson().toString(),
+                fullQuestionnaireJson.encodeToString(questionnaire),
+                fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger),
                 null,
                 System.currentTimeMillis(),
                 -1,

@@ -15,8 +15,10 @@ import com.android.volley.TimeoutError
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
-import de.mimuc.senseeverything.api.model.ema.makeQuestionnaireFromJson
-import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.Questionnaire
+import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
+import de.mimuc.senseeverything.api.model.ema.questionnaireJson
 import de.mimuc.senseeverything.api.model.ema.uploadQuestionnaireAnswer
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
@@ -24,7 +26,6 @@ import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -60,7 +61,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
 
                 for (pendingQuestionnaire in pendingQuestionnaires) {
                     Log.i("PendingQuestionnaireUploadWorker", "Uploading pending questionnaire: ${pendingQuestionnaire.uid}")
-                    val questionnaire = makeQuestionnaireFromJson(JSONObject(pendingQuestionnaire.questionnaireJson))
+                    val questionnaire = fullQuestionnaireJson.decodeFromString<Questionnaire>(pendingQuestionnaire.questionnaireJson)
                     uploadQuestionnaireAnswer(
                         apiClient,
                         pendingQuestionnaire.elementValuesJson ?: "[]",
@@ -106,7 +107,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
             val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
                 database,
                 dataStoreManager,
-                trigger = makeTriggerFromJson(JSONObject(trigger.triggerJson)),
+                trigger = questionnaireJson.decodeFromString<QuestionnaireTrigger>(trigger.triggerJson),
                 notificationTriggerUid = trigger.uid
             )
 
@@ -121,7 +122,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 continue
             }
 
-            val questionnaire = makeQuestionnaireFromJson(JSONObject(pendingQuestionnaire.questionnaireJson))
+            val questionnaire = fullQuestionnaireJson.decodeFromString<Questionnaire>(pendingQuestionnaire.questionnaireJson)
             uploadQuestionnaireAnswer(
                 ApiClient.getInstance(applicationContext),
                 "[]",

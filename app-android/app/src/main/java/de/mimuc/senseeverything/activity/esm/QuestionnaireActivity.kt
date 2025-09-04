@@ -34,7 +34,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.emptyQuestionnaire
-import de.mimuc.senseeverything.api.model.ema.makeFullQuestionnaireFromJson
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
@@ -46,7 +46,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
-import org.json.JSONObject
 import java.util.UUID
 import javax.inject.Inject
 
@@ -103,7 +102,7 @@ class QuestionnaireViewModel @Inject constructor(
     private fun loadFromIntent(intent: Intent) {
         val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
         if (json != null) {
-            val loaded = makeFullQuestionnaireFromJson(JSONObject(json))
+            val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
             _questionnaire.value = loaded
             _isLoading.value = false
             Log.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")

@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.api.model
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 @Serializable
 data class Study(
@@ -11,3 +12,8 @@ data class Study(
     val contactEmail: String,
     val durationDays: Int
 )
+
+val studyJson = Json {
+    serializersModule = Json.serializersModule
+    ignoreUnknownKeys = true
+}

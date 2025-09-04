@@ -3,11 +3,10 @@ package de.mimuc.senseeverything.api
 import android.util.Log
 import com.android.volley.VolleyError
 import de.mimuc.senseeverything.api.model.Study
+import de.mimuc.senseeverything.api.model.studyJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
-import kotlin.coroutines.resume
 
 
 data class ApiError(val httpCode: Int, val appCode: String, val message: String)
@@ -34,31 +33,13 @@ suspend fun loadStudy(apiClient: ApiClient, studyId: Int): Study? {
         return null
     }
 
-    val response = suspendCancellableCoroutine { continuation ->
+    return try {
         Log.d("Api", "Loading study $studyId")
-        apiClient.getJson(ApiResources.studyById(studyId),
-            { response ->
-                continuation.resume(response)
-            },
-            { error ->
-                continuation.resume(null)
-            })
+        apiClient.getSerialized<Study>(ApiResources.studyById(studyId), emptyMap(), studyJson)
+    } catch (e: Exception) {
+        Log.e("Api", "Error loading study: ${e.message}")
+        null
     }
-
-    if (response != null) {
-        val study = Study(
-            response.getString("name"),
-            response.getInt("id"),
-            response.getString("enrolmentKey"),
-            response.getString("description"),
-            response.getString("contactEmail"),
-            response.getInt("durationDays")
-        )
-
-        return study
-    }
-
-    return null
 }
 
 suspend fun fetchCompletionStatus(apiClient: ApiClient, dataStoreManager: DataStoreManager): Map<String, Boolean> {
@@ -69,28 +50,16 @@ suspend fun fetchCompletionStatus(apiClient: ApiClient, dataStoreManager: DataSt
 
     val headers = mapOf("Authorization" to "Bearer $token")
 
-    val response = suspendCancellableCoroutine { continuation ->
+    return try {
         Log.d("Api", "Fetching completion status")
-        apiClient.getJson(ApiResources.completionStatus(), headers,
-            { response ->
-                Log.d("Api", "Received completion status: $response")
-                continuation.resume(response)
-            },
-            { error ->
-                Log.d("Api", "Error fetching completion status: $error")
-                continuation.resume(null)
-            })
+        val status = apiClient.getSerialized<Map<String, Boolean>>(
+            url = ApiResources.completionStatus(),
+            headers = headers
+        )
+        Log.d("Api", "Received completion status: $status")
+        status
+    } catch (e: Exception) {
+        Log.e("Api", "Error fetching completion status: ${e.message}")
+        emptyMap()
     }
-
-    if (response != null) {
-        val completionStatus = mutableMapOf<String, Boolean>()
-        val keys = response.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            completionStatus[key] = response.getBoolean(key)
-        }
-        return completionStatus
-    }
-
-    return emptyMap()
 }

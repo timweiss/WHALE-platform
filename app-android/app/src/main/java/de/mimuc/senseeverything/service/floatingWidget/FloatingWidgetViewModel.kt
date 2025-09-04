@@ -51,7 +51,7 @@ class FloatingWidgetViewModel() : ViewModel() {
         _elementValues.value = newValues
 
         // Navigate to next step or complete
-        val nextStep = buttonElement.buttons[selectedButton]
+        val nextStep = buttonElement.configuration.options.firstOrNull { it.label == selectedButton }?.nextStep
         if (nextStep != null) {
             navigateToStep(nextStep)
         } else {

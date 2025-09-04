@@ -8,6 +8,7 @@ import android.content.Intent
 import android.util.Log
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerModality
@@ -19,6 +20,7 @@ import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_NOTIFICATION_ID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import java.util.Calendar
 import java.util.UUID
 import kotlin.random.Random
@@ -54,13 +56,13 @@ class FloatingWidgetNotificationScheduler {
             return NotificationTrigger(
                 uid = UUID.randomUUID(),
                 addedAt = notification.addedAt,
-                name = timeoutTrigger.name,
+                name = timeoutTrigger.configuration.name,
                 status = notification.status,
-                validFrom = notification.validFrom + timeoutTrigger.delayMinutes * 60 * 1000L,
-                priority = timeoutTrigger.priority,
+                validFrom = notification.validFrom + timeoutTrigger.configuration.delayMinutes * 60 * 1000L,
+                priority = timeoutTrigger.configuration.priority,
                 timeBucket = notification.timeBucket,
-                modality = timeoutTrigger.modality,
-                source = timeoutTrigger.source,
+                modality = timeoutTrigger.configuration.modality,
+                source = timeoutTrigger.configuration.source,
                 questionnaireId = timeoutTrigger.questionnaireId.toLong(),
                 triggerJson = jsonForTrigger(timeoutTrigger),
                 updatedAt = System.currentTimeMillis()
@@ -70,7 +72,7 @@ class FloatingWidgetNotificationScheduler {
         // fixme: this is so the test does not fail
         private fun jsonForTrigger(trigger: QuestionnaireTrigger): String {
             return try {
-                trigger.toJson().toString()
+                fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger)
             } catch (e: Exception) {
                 "{}"
             }
@@ -218,14 +220,14 @@ class FloatingWidgetNotificationScheduler {
     ): List<NotificationTrigger> {
         val allNotifications = mutableListOf<NotificationTrigger>()
         val triggersToBeScheduled = triggers
-            .filter { it.phaseName == phaseName }
-            .filter { it.source == NotificationTriggerSource.Scheduled }
+            .filter { it.configuration.phaseName == phaseName }
+            .filter { it.configuration.source == NotificationTriggerSource.Scheduled }
 
         for (trigger in triggersToBeScheduled) {
             val plannedNotifications = planNotificationsForTrigger(trigger, startDay, endDay)
             allNotifications.addAll(plannedNotifications)
 
-            val timeoutTrigger = triggers.find { it.id == trigger.timeoutNotificationTriggerId }
+            val timeoutTrigger = triggers.find { it.id == trigger.configuration.timeoutNotificationTriggerId }
             if (timeoutTrigger != null) {
                 for (notification in plannedNotifications) {
                     val timeoutNotification = applyTimeoutTrigger(notification, timeoutTrigger)
@@ -257,7 +259,7 @@ class FloatingWidgetNotificationScheduler {
     ): List<NotificationTrigger> {
         val notifications = mutableListOf<NotificationTrigger>()
 
-        val sortedBuckets = trigger.timeBuckets.map { bucket ->
+        val sortedBuckets = trigger.configuration.timeBuckets.map { bucket ->
             val times = parseTimebucket(bucket, day.clone() as Calendar)
 
             Triple(bucket, times.first.timeInMillis, times.second.timeInMillis)
@@ -272,7 +274,7 @@ class FloatingWidgetNotificationScheduler {
             val earliestTime = if (lastNotificationTime == 0L) {
                 bucketStart
             } else {
-                maxOf(bucketStart, lastNotificationTime + trigger.distanceMinutes * 60 * 1000)
+                maxOf(bucketStart, lastNotificationTime + trigger.configuration.distanceMinutes * 60 * 1000)
             }
 
             // If we can't fit a notification in this bucket due to distance constraints, skip it
@@ -280,7 +282,7 @@ class FloatingWidgetNotificationScheduler {
                 continue
             }
 
-            val notificationTime = if (trigger.randomToleranceMinutes == 0) {
+            val notificationTime = if (trigger.configuration.randomToleranceMinutes == 0) {
                 //  start at the beginning of the available window
                 earliestTime
             } else {
@@ -291,7 +293,7 @@ class FloatingWidgetNotificationScheduler {
                 } else {
                     val maxRandomOffset = minOf(
                         availableWindow,
-                        trigger.randomToleranceMinutes * 60 * 1000L
+                        trigger.configuration.randomToleranceMinutes * 60 * 1000L
                     )
                     earliestTime + Random.nextLong(0, maxRandomOffset + 1)
                 }
@@ -303,13 +305,13 @@ class FloatingWidgetNotificationScheduler {
             val notificationTrigger = NotificationTrigger(
                 uid = UUID.randomUUID(),
                 addedAt = System.currentTimeMillis(),
-                name = trigger.name,
+                name = trigger.configuration.name,
                 status = NotificationTriggerStatus.Planned,
                 validFrom = finalNotificationTime,
-                priority = trigger.priority,
+                priority = trigger.configuration.priority,
                 timeBucket = bucketName,
-                modality = trigger.modality,
-                source = trigger.source,
+                modality = trigger.configuration.modality,
+                source = trigger.configuration.source,
                 questionnaireId = trigger.questionnaireId.toLong(),
                 triggerJson = jsonForTrigger(trigger),
                 updatedAt = System.currentTimeMillis()

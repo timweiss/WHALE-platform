@@ -53,9 +53,11 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.api.decodeError
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
+import de.mimuc.senseeverything.api.model.EnrolmentRequest
 import de.mimuc.senseeverything.api.model.EnrolmentResponse
-import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.Study
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
@@ -66,10 +68,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import kotlinx.serialization.encodeToString
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @AndroidEntryPoint
 class StudyEnrolment : ComponentActivity() {
@@ -147,29 +147,13 @@ class EnrolmentViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             val client = ApiClient.getInstance(context)
-            val body = JSONObject()
-            body.put("enrolmentKey", text)
+            val request = EnrolmentRequest(text)
 
-            val response = suspendCoroutine { continuation ->
-                client.post(ApiResources.enrolment(), body, emptyMap(),
-                    { response ->
-                        continuation.resume(response)
-                    },
-                    { error ->
-                        continuation.resume(error)
-                    })
-            }
-
-            if (response is VolleyError) {
-                _isEnrolled.value = false
-                _isLoading.value = false
-
-                val error = decodeError(response)
-                Log.e("Enrolment", "Error: ${error.httpCode} ${error.appCode} ${error.message}")
-                _errorCode.value = error.appCode
-                _showErrorDialog.value = true
-            } else if (response is JSONObject) {
-                val enrolmentResponse = EnrolmentResponse.fromJson(response)
+            try {
+                val enrolmentResponse = client.postSerialized<EnrolmentRequest, EnrolmentResponse>(
+                    url = ApiResources.enrolment(),
+                    requestData = request
+                )
 
                 val participantId = enrolmentResponse.participantId
                 val studyId = enrolmentResponse.studyId
@@ -185,6 +169,20 @@ class EnrolmentViewModel @Inject constructor(
                     enrolmentResponse.phases
                 )
                 finishedEnrolment()
+            } catch (error: Exception) {
+                _isEnrolled.value = false
+                _isLoading.value = false
+
+                val volleyError = error as? VolleyError
+                if (volleyError != null) {
+                    val decodedError = decodeError(volleyError)
+                    Log.e("Enrolment", "Error: ${decodedError.httpCode} ${decodedError.appCode} ${decodedError.message}")
+                    _errorCode.value = decodedError.appCode
+                } else {
+                    Log.e("Enrolment", "Error: ${error.message}")
+                    _errorCode.value = "unknown"
+                }
+                _showErrorDialog.value = true
             }
         }
     }
@@ -249,7 +247,7 @@ class EnrolmentViewModel @Inject constructor(
             }
 
             val activity = Intent(context, QuestionnaireActivity::class.java)
-            activity.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, questionnaire.toJson().toString())
+            activity.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, fullQuestionnaireJson.encodeToString(questionnaire))
             activity.putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID, pendingQuestionnaireId.toString())
             context.startActivity(activity)
         }

@@ -54,7 +54,7 @@ fun CachedCircumplexImage(element: CircumplexElement, initialValue: Pair<Double,
     var tapped by remember { mutableStateOf(false) }
 
     fun isInClipArea(x: Float, y: Float): Boolean {
-        return x < element.clipLeft || x > element.clipRight || y < element.clipTop || y > element.clipBottom
+        return x < element.configuration.clip.left || x > element.configuration.clip.right || y < element.configuration.clip.top || y > element.configuration.clip.bottom
     }
 
     fun handleTap(offset: Offset) {

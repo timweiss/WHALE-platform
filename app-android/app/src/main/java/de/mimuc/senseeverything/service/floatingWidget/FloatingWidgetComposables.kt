@@ -129,7 +129,7 @@ fun FloatingElementRenderer(
             val sliderValue = value as? SliderValue
             FloatingSlider(
                 element = sliderElement,
-                value = sliderValue?.value ?: sliderElement.min.toDouble(),
+                value = sliderValue?.value ?: sliderElement.configuration.min.toDouble(),
                 onValueChange = { newValue ->
                     onValueChange(SliderValue(element.id, element.name, newValue))
                 },
@@ -163,7 +163,7 @@ fun FloatingTextView(
     modifier: Modifier = Modifier
 ) {
     Text(
-        text = element.textContent,
+        text = element.configuration.text,
         style = MaterialTheme.typography.bodyMedium,
         modifier = modifier
     )
@@ -175,13 +175,14 @@ fun FloatingButtonGroup(
     onButtonClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    when (element.alignment) {
+    when (element.configuration.alignment) {
         GroupAlignment.Horizontal -> {
             Row(
                 modifier = modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                element.buttons.keys.forEach { buttonText ->
+                element.configuration.options.forEach { buttonOption ->
+                    val buttonText = buttonOption.label
                     Button(
                         onClick = { onButtonClick(buttonText) },
                         modifier = Modifier.weight(1f)
@@ -197,7 +198,8 @@ fun FloatingButtonGroup(
                 modifier = modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                element.buttons.keys.forEach { buttonText ->
+                element.configuration.options.forEach { buttonOption ->
+                    val buttonText = buttonOption.label
                     Button(
                         onClick = { onButtonClick(buttonText) },
                         modifier = Modifier.fillMaxWidth()
@@ -221,7 +223,7 @@ fun FloatingRadioGroup(
         modifier = modifier.selectableGroup(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        element.options.forEachIndexed { index, option ->
+        element.configuration.options.forEachIndexed { index, option ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -256,7 +258,7 @@ fun FloatingTextEntry(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(element.hint) },
+        label = { Text(element.configuration.hint) },
         modifier = modifier.fillMaxWidth(),
         singleLine = true
     )
@@ -277,9 +279,9 @@ fun FloatingSlider(
         Slider(
             value = value.toFloat(),
             onValueChange = { onValueChange(it.toDouble()) },
-            valueRange = element.min.toFloat()..element.max.toFloat(),
-            steps = if (element.stepSize > 0) {
-                ((element.max - element.min) / element.stepSize).toInt() - 1
+            valueRange = element.configuration.min.toFloat()..element.configuration.max.toFloat(),
+            steps = if (element.configuration.stepSize > 0) {
+                ((element.configuration.max - element.configuration.min) / element.configuration.stepSize).toInt() - 1
             } else 0
         )
         Row(
@@ -287,11 +289,11 @@ fun FloatingSlider(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = element.min.toString(),
+                text = element.configuration.min.toString(),
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = element.max.toString(),
+                text = element.configuration.max.toString(),
                 style = MaterialTheme.typography.bodySmall
             )
         }

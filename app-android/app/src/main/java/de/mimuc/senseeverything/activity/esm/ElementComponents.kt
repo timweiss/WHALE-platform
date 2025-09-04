@@ -56,7 +56,7 @@ import javax.inject.Inject
 
 @Composable
 fun TextViewElementComponent(element: TextViewElement) {
-    Text(AnnotatedString.fromHtml(element.textContent))
+    Text(AnnotatedString.fromHtml(element.configuration.text))
 }
 
 @Composable
@@ -72,9 +72,9 @@ fun RadioGroupElementComponent(
         onValueChange(index)
     }
 
-    if (element.alignment == GroupAlignment.Horizontal) {
+    if (element.configuration.alignment == GroupAlignment.Horizontal) {
         Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-            element.options.forEachIndexed { index, option ->
+            element.configuration.options.forEachIndexed { index, option ->
                 val rowModifier = if (option.isEmpty()) {
                     Modifier
                         .padding(bottom = 10.dp)
@@ -106,7 +106,7 @@ fun RadioGroupElementComponent(
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            element.options.forEachIndexed { index, option ->
+            element.configuration.options.forEachIndexed { index, option ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically, modifier = Modifier
@@ -145,9 +145,9 @@ fun CheckboxGroupElementComponent(
         }
     }
 
-    if (element.alignment == GroupAlignment.Horizontal) {
+    if (element.configuration.alignment == GroupAlignment.Horizontal) {
         Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-            element.options.forEach { option ->
+            element.configuration.options.forEach { option ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.clickable {
@@ -162,7 +162,7 @@ fun CheckboxGroupElementComponent(
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            element.options.forEach { option ->
+            element.configuration.options.forEach { option ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -182,12 +182,12 @@ fun CheckboxGroupElementComponent(
 
 @Composable
 fun SliderElementComponent(element: SliderElement, value: Double, onValueChange: (Double) -> Unit) {
-    val stepSize = (element.max - element.min / element.stepSize).toInt()
+    val stepSize = (element.configuration.max - element.configuration.min / element.configuration.stepSize).toInt()
 
     Slider(
         value = value.toFloat(),
         onValueChange = { onValueChange(it.toDouble()) },
-        valueRange = element.min.toFloat()..element.max.toFloat(),
+        valueRange = element.configuration.min.toFloat()..element.configuration.max.toFloat(),
         steps = stepSize
     )
 }
@@ -201,7 +201,7 @@ fun TextEntryElementComponent(
     TextField(
         value = value,
         onValueChange = { onValueChange(it) },
-        label = { Text(element.hint) },
+        label = { Text(element.configuration.hint) },
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -221,18 +221,19 @@ class ExternalQuestionnaireLinkElementComponentViewModel @Inject constructor(
 
             val apiClient = ApiClient.getInstance(context)
 
+            val urlParamsMap = element.configuration.urlParams.associate { it.key to it.value }
             val urlParams = withContext(Dispatchers.IO) {
                 fetchExternalQuestionnaireParams(
-                    element.urlParams,
+                    urlParamsMap,
                     dataStoreManager,
                     database,
                     apiClient
                 )
             }
-            if (!element.externalUrl.startsWith("https://")) return@launch
+            if (!element.configuration.externalUrl.startsWith("https://")) return@launch
 
             val url =
-                element.externalUrl + "?" + urlParams.entries.joinToString("&") { "${it.key}=${it.value}" }
+                element.configuration.externalUrl + "?" + urlParams.entries.joinToString("&") { "${it.key}=${it.value}" }
 
             val intent = Intent(Intent.ACTION_VIEW, url.toUri())
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -261,7 +262,7 @@ fun ExternalQuestionnaireLinkElementComponent(
     val context = LocalContext.current
     Button(onClick = { viewModel.openQuestionnaire(context, element) }) {
         Text(
-            element.actionText,
+            element.configuration.actionText,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
@@ -280,7 +281,7 @@ fun LikertScaleLabelElementComponent(
     ) {
         // First label - left aligned
         Text(
-            text = element.options.first(),
+            text = element.configuration.options.first(),
             textAlign = TextAlign.Start,
             fontSize = 12.sp,
             lineHeight = 12.sp,
@@ -291,7 +292,7 @@ fun LikertScaleLabelElementComponent(
 
         // Last label - right aligned
         Text(
-            text = element.options.last(),
+            text = element.configuration.options.last(),
             textAlign = TextAlign.End,
             fontSize = 12.sp,
             lineHeight = 12.sp,

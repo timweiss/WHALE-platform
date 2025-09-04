@@ -99,7 +99,7 @@ class SocialNetworkRatingViewModel @AssistedInject constructor(
 
     fun loadRatingQuestionnaire() {
         viewModelScope.launch {
-            val questionnaire = dataStoreManager.getQuestionnaireById(element.ratingQuestionnaireId)
+            val questionnaire = dataStoreManager.getQuestionnaireById(element.configuration.ratingQuestionnaireId)
             if (questionnaire != null) {
                 _ratingQuestionnaire.value = questionnaire
             } else {

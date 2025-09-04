@@ -20,7 +20,7 @@ import de.mimuc.senseeverything.api.model.ema.OneTimeQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
-import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
@@ -30,7 +30,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.invoke
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import kotlinx.serialization.encodeToString
 import java.util.Calendar
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -70,7 +70,7 @@ class EsmHandler {
         if (eventTriggers.isNotEmpty()) {
             // Handle event
             val matching =
-                eventTriggers.find { (it as EventQuestionnaireTrigger).eventName == eventName }
+                eventTriggers.find { (it as EventQuestionnaireTrigger).configuration.eventName == eventName }
             if (matching != null) {
                 val trigger = matching as EventQuestionnaireTrigger
                 val questionnaires = dataStoreManager.questionnairesFlow.first()
@@ -116,7 +116,7 @@ class EsmHandler {
 
         // open questionnaire
         val intent = Intent(context, QuestionnaireActivity::class.java)
-        intent.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, questionnaire.toJson().toString())
+        intent.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, fullQuestionnaireJson.encodeToString(questionnaire))
         intent.putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID, pendingId.toString())
 
         // this will make it appear but not go back to the MainActivity afterwards
@@ -159,11 +159,11 @@ class EsmHandler {
         val triggers = dataStoreManager.questionnairesFlow.first().flatMap { it.triggers }
         val emaTriggers =
             triggers.filter { it.type == "random_ema" } as List<RandomEMAQuestionnaireTrigger>
-        val phaseTriggers = emaTriggers.filter { it.phaseName == phase.name }
+        val phaseTriggers = emaTriggers.filter { it.configuration.phaseName == phase.name }
 
         for (trigger in phaseTriggers) {
             val initialCalendar = Calendar.getInstance()
-            initialCalendar.add(Calendar.MINUTE, trigger.delayMinutes)
+            initialCalendar.add(Calendar.MINUTE, trigger.configuration.delayMinutes)
 
             val questionnaire = dataStoreManager.questionnairesFlow.first()
                 .find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire
@@ -196,7 +196,7 @@ class EsmHandler {
         intent.apply {
             putExtra(INTENT_TITLE, "Es ist Zeit für $questionnaireName")
             putExtra(INTENT_TRIGGER_ID, trigger.id)
-            putExtra(INTENT_TRIGGER_JSON, trigger.toJson().toString())
+            putExtra(INTENT_TRIGGER_JSON, fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger))
             putExtra(INTENT_QUESTIONNAIRE_NAME, questionnaireName)
             putExtra(INTENT_NOTIFY_PHASE_UNTIL_TIMESTAMP, untilTimestamp)
         }
@@ -234,8 +234,8 @@ class EsmHandler {
         currentTime: Calendar
     ): Calendar {
         val randomMinutes =
-            (-(trigger.randomToleranceMinutes / 2)..(trigger.randomToleranceMinutes / 2)).random()
-        val distanceMinutes = trigger.distanceMinutes
+            (-(trigger.configuration.randomToleranceMinutes / 2)..(trigger.configuration.randomToleranceMinutes / 2)).random()
+        val distanceMinutes = trigger.configuration.distanceMinutes
 
         val timeToAdd = distanceMinutes + randomMinutes
 
@@ -244,15 +244,15 @@ class EsmHandler {
         nextNotificationTime.add(Calendar.MINUTE, timeToAdd)
 
         // check if the notification is in the correct time bucket
-        if (!isInTimeBucket(nextNotificationTime, trigger.timeBucket)) {
+        if (!isInTimeBucket(nextNotificationTime, trigger.configuration.timeBucket)) {
             // remove the minutes and try again
             nextNotificationTime.add(Calendar.MINUTE, -(timeToAdd))
             // calculate the next notification time starting from the next day
             nextNotificationTime.add(Calendar.DATE, 1)
-            nextNotificationTime.set(Calendar.HOUR_OF_DAY, trigger.timeBucket.split(":")[0].toInt())
+            nextNotificationTime.set(Calendar.HOUR_OF_DAY, trigger.configuration.timeBucket.split(":")[0].toInt())
             nextNotificationTime.set(
                 Calendar.MINUTE,
-                trigger.timeBucket.split(":")[1].split("-")[0].toInt()
+                trigger.configuration.timeBucket.split(":")[1].split("-")[0].toInt()
             )
             return getCalendarForNextRandomNotification(trigger, nextNotificationTime)
         }
@@ -286,8 +286,8 @@ class EsmHandler {
 
                 if (questionnaire == null) return@coroutineScope
 
-                val scheduleHour = trigger.time.split(":")[0].toInt()
-                val scheduleMinute = trigger.time.split(":")[1].toInt()
+                val scheduleHour = trigger.configuration.time.split(":")[0].toInt()
+                val scheduleMinute = trigger.configuration.time.split(":")[1].toInt()
 
                 val studyStart =
                     (Dispatchers.IO) { dataStoreManager.timestampStudyStartedFlow.first() }
@@ -300,14 +300,14 @@ class EsmHandler {
                     add(Calendar.MINUTE, 1)
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
-                    add(Calendar.DATE, trigger.studyDay - 1)
+                    add(Calendar.DATE, trigger.configuration.studyDay - 1)
                 }
 
                 val intent = Intent(context.applicationContext, OneTimeNotificationReceiver::class.java)
                 intent.apply {
                     putExtra(INTENT_TITLE, "Es ist Zeit für ${questionnaire.name}")
                     putExtra(INTENT_TRIGGER_ID, trigger.id)
-                    putExtra(INTENT_TRIGGER_JSON, trigger.toJson().toString())
+                    putExtra(INTENT_TRIGGER_JSON, fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger))
                     putExtra(INTENT_QUESTIONNAIRE_NAME, questionnaire.name)
                 }
 
@@ -328,7 +328,7 @@ class EsmHandler {
 
                 Log.d(
                     "EsmHandler",
-                    "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.studyDay} at ${calendar.timeInMillis}"
+                    "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.configuration.studyDay} at ${calendar.timeInMillis}"
                 )
             }
         }
@@ -383,8 +383,8 @@ class EsmHandler {
             return
         }
 
-        val scheduleHour = trigger.time.split(":")[0].toInt()
-        val scheduleMinute = trigger.time.split(":")[1].toInt()
+        val scheduleHour = trigger.configuration.time.split(":")[0].toInt()
+        val scheduleMinute = trigger.configuration.time.split(":")[1].toInt()
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
@@ -400,7 +400,7 @@ class EsmHandler {
         intent.apply {
             putExtra(INTENT_TITLE, "Es ist Zeit für ${title}")
             putExtra(INTENT_TRIGGER_ID, trigger.id)
-            putExtra(INTENT_TRIGGER_JSON, trigger.toJson().toString())
+            putExtra(INTENT_TRIGGER_JSON, fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger))
             putExtra(INTENT_QUESTIONNAIRE_NAME, title)
             putExtra(INTENT_REMAINING_STUDY_DAYS, nextNotification.remainingDays)
             putExtra(INTENT_TOTAL_STUDY_DAYS, totalDays)
@@ -510,9 +510,9 @@ class NotificationPushHelper(private val context: Context) {
     fun pushNotificationTrigger(notificationTrigger: NotificationTrigger) {
         try {
             val trigger: EMAFloatingWidgetNotificationTrigger =
-                notificationTrigger.triggerJson.let { makeTriggerFromJson(JSONObject(it)) as EMAFloatingWidgetNotificationTrigger }
+                notificationTrigger.triggerJson.let { fullQuestionnaireJson.decodeFromString<EMAFloatingWidgetNotificationTrigger>(it) }
 
-            val notification = buildNotification(trigger.notificationText, Intent())
+            val notification = buildNotification(trigger.configuration.notificationText, Intent())
 
             notificationManager.notify(notificationTrigger.uid.hashCode(), notification)
         } catch (e: Exception) {

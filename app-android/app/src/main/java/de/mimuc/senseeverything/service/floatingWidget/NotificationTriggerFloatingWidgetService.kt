@@ -20,7 +20,7 @@ import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
-import de.mimuc.senseeverything.api.model.ema.makeTriggerFromJson
+import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
@@ -36,7 +36,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -106,6 +105,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                     Calendar.getInstance(), database
                 )
 
+                val currentNotificationTrigger = currentNotificationTrigger
                 if (currentNotificationTrigger == null) {
                     Log.i(TAG, "No valid trigger found for this unlock, stopping service")
                     stopSelf()
@@ -113,28 +113,28 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                 }
 
                 try {
-                    currentQuestionnaireTrigger = makeTriggerFromJson(JSONObject(currentNotificationTrigger!!.triggerJson)) as EMAFloatingWidgetNotificationTrigger?
+                    currentQuestionnaireTrigger = fullQuestionnaireJson.decodeFromString(currentNotificationTrigger.triggerJson) as EMAFloatingWidgetNotificationTrigger?
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to parse questionnaire trigger JSON: ${currentNotificationTrigger!!.triggerJson}", e)
+                    Log.e(TAG, "Failed to parse questionnaire trigger JSON: ${currentNotificationTrigger.triggerJson}", e)
                 }
 
                 // Load questionnaire from DataStoreManager
                 val questionnaires = dataStore.questionnairesFlow.first()
-                currentQuestionnaire = questionnaires.find { it.questionnaire.id.toLong() == currentNotificationTrigger!!.questionnaireId }
+                currentQuestionnaire = questionnaires.find { it.questionnaire.id.toLong() == currentNotificationTrigger.questionnaireId }
 
-                if (currentQuestionnaire != null && currentNotificationTrigger != null) {
+                if (currentQuestionnaire != null) {
                     // Update trigger status to displayed
-                    currentNotificationTrigger?.displayedAt = System.currentTimeMillis()
-                    currentNotificationTrigger?.updatedAt = System.currentTimeMillis()
-                    currentNotificationTrigger?.status = NotificationTriggerStatus.Displayed
+                    currentNotificationTrigger.displayedAt = System.currentTimeMillis()
+                    currentNotificationTrigger.updatedAt = System.currentTimeMillis()
+                    currentNotificationTrigger.status = NotificationTriggerStatus.Displayed
                     withContext(Dispatchers.IO) {
-                        database.notificationTriggerDao()?.update(currentNotificationTrigger!!)
+                        database.notificationTriggerDao()?.update(currentNotificationTrigger)
 
                         val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
                             database,
                             dataStore,
                             currentQuestionnaireTrigger as QuestionnaireTrigger,
-                            currentNotificationTrigger?.uid
+                            currentNotificationTrigger.uid
                         )
                         pendingQuestionnaire =
                             database.pendingQuestionnaireDao().getById(pendingQuestionnaireId!!)
@@ -145,7 +145,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
                     Log.i(TAG, "Displaying questionnaire: ${currentQuestionnaire!!.questionnaire.name}")
                 } else {
-                    Log.e(TAG, "Failed to load questionnaire for trigger ${currentNotificationTrigger?.name}: ${currentNotificationTrigger?.questionnaireId}")
+                    Log.e(TAG, "Failed to load questionnaire for trigger ${currentNotificationTrigger.name}: ${currentNotificationTrigger.questionnaireId}")
                     stopSelf()
                 }
             } catch (e: Exception) {

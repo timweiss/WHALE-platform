@@ -27,7 +27,7 @@ suspend fun persistQuestionnaireElementContent(context: Context, questionnaires:
             when (element.type) {
                 QuestionnaireElementType.CIRCUMPLEX -> {
                     val circumplexElement = element as CircumplexElement
-                    val imageUrl = circumplexElement.imageUrl
+                    val imageUrl = circumplexElement.configuration.imageUrl
 
                     val bytes = ApiClient.getInstance(context).getRawBytes(imageUrl)
                     if (bytes != null) {
@@ -81,7 +81,7 @@ suspend fun getCircumplexImageBitmap(context: Context, element: CircumplexElemen
 
     // file not found, try downloading it
     if (bitmap == null) {
-        val bytes = ApiClient.getInstance(context).getRawBytes(element.imageUrl)
+        val bytes = ApiClient.getInstance(context).getRawBytes(element.configuration.imageUrl)
         if (bytes != null) {
             saveImageToFile(context, bytes, getCircumplexFilename(element))
             bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
