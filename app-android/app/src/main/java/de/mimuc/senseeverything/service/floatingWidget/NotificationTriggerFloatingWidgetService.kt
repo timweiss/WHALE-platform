@@ -125,6 +125,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                 if (currentQuestionnaire != null && currentNotificationTrigger != null) {
                     // Update trigger status to displayed
                     currentNotificationTrigger?.displayedAt = System.currentTimeMillis()
+                    currentNotificationTrigger?.updatedAt = System.currentTimeMillis()
                     currentNotificationTrigger?.status = NotificationTriggerStatus.Displayed
                     withContext(Dispatchers.IO) {
                         database.notificationTriggerDao()?.update(currentNotificationTrigger!!)
@@ -196,6 +197,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
             try {
                 // Update trigger status
                 currentNotificationTrigger?.answeredAt = System.currentTimeMillis()
+                currentNotificationTrigger?.updatedAt = System.currentTimeMillis()
                 currentNotificationTrigger?.status = NotificationTriggerStatus.Answered
 
                 withContext (Dispatchers.IO) {

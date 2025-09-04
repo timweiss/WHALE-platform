@@ -62,7 +62,8 @@ class FloatingWidgetNotificationScheduler {
                 modality = timeoutTrigger.modality,
                 source = timeoutTrigger.source,
                 questionnaireId = timeoutTrigger.questionnaireId.toLong(),
-                triggerJson = jsonForTrigger(timeoutTrigger)
+                triggerJson = jsonForTrigger(timeoutTrigger),
+                updatedAt = System.currentTimeMillis()
             )
         }
 
@@ -310,7 +311,8 @@ class FloatingWidgetNotificationScheduler {
                 modality = trigger.modality,
                 source = trigger.source,
                 questionnaireId = trigger.questionnaireId.toLong(),
-                triggerJson = jsonForTrigger(trigger)
+                triggerJson = jsonForTrigger(trigger),
+                updatedAt = System.currentTimeMillis()
             )
 
             notifications.add(notificationTrigger)

@@ -21,7 +21,7 @@ import de.mimuc.senseeverything.db.models.SocialNetworkContactDao;
         GeneratedKey.class,
         SocialNetworkContact.class,
         NotificationTrigger.class
-}, version = 13, autoMigrations = {@AutoMigration(from = 1, to = 13)}, exportSchema = true)
+}, version = 14, autoMigrations = {@AutoMigration(from = 1, to = 14)}, exportSchema = true)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract LogDataDao logDataDao();
 

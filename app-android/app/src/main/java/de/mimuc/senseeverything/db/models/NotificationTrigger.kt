@@ -23,7 +23,8 @@ data class NotificationTrigger(
     @ColumnInfo(name = "planned_at") var plannedAt: Long? = null,
     @ColumnInfo(name = "pushed_at") var pushedAt: Long? = null,
     @ColumnInfo(name = "displayed_at") var displayedAt: Long? = null,
-    @ColumnInfo(name = "answered_at") var answeredAt: Long? = null
+    @ColumnInfo(name = "answered_at") var answeredAt: Long? = null,
+    @ColumnInfo(name = "updated_at") var updatedAt: Long
 ) {
     fun toJson(): JSONObject {
         val jsonObject = JSONObject()
@@ -42,6 +43,7 @@ data class NotificationTrigger(
         jsonObject.put("pushedAt", pushedAt)
         jsonObject.put("displayedAt", displayedAt)
         jsonObject.put("answeredAt", answeredAt)
+        jsonObject.put("updatedAt", updatedAt)
         return jsonObject
     }
 }

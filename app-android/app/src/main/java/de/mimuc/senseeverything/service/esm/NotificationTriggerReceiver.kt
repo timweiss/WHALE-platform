@@ -42,6 +42,7 @@ class NotificationTriggerReceiver: BroadcastReceiver() {
     private fun setPushed(trigger: NotificationTrigger) {
         trigger.status = NotificationTriggerStatus.Pushed
         trigger.pushedAt = System.currentTimeMillis()
+        trigger.updatedAt = System.currentTimeMillis()
         database.notificationTriggerDao().update(trigger)
     }
 

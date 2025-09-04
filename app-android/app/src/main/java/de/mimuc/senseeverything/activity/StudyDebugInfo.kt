@@ -202,7 +202,8 @@ class StudyDebugInfoViewModel @Inject constructor(
                 "Debug",
                 -1
             ).toJson().toString(),
-            timeBucket = getCurrentTimeBucket()
+            timeBucket = getCurrentTimeBucket(),
+            updatedAt = System.currentTimeMillis()
         )
 
         viewModelScope.launch {
