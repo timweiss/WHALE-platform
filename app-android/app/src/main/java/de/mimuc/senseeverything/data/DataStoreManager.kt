@@ -133,13 +133,15 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
 @Singleton
 class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
 
+    private val json = Json { ignoreUnknownKeys = true }
     override val defaultValue = DEFAULT_APP_SETTINGS
 
     override suspend fun readFrom(input: InputStream): AppSettings =
         try {
+            val string = input.readBytes().decodeToString()
             recoverFromOptionalOrUseDefault(
-                Json { ignoreUnknownKeys = true }.decodeFromStringJson<OptionalAppSettings>(
-                    input.readBytes().decodeToString()
+                json.decodeFromStringJson<OptionalAppSettings>(
+                    string
                 )
             )
         } catch (serialization: SerializationException) {
@@ -148,8 +150,9 @@ class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
 
     override suspend fun writeTo(t: AppSettings, output: OutputStream) {
         withContext(Dispatchers.IO) {
+            val encoded = json.encodeToString(t)
             output.write(
-                Json.encodeToString(t)
+                encoded
                     .encodeToByteArray()
             )
         }
