@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.service.esm
 
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
+import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetTriggerConfiguration
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
@@ -15,20 +16,23 @@ class FloatingWidgetNotificationSchedulerTest {
     private fun triggerWithBuckets(buckets: List<String>, distanceMinutes: Int, randomTolerance: Int) = EMAFloatingWidgetNotificationTrigger(
         id = 1,
         questionnaireId = 1,
-        validUntil = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000,
-        distanceMinutes = distanceMinutes,
-        randomToleranceMinutes = randomTolerance,
-        delayMinutes = 0,
-        timeBuckets = buckets,
-        phaseName = "test",
-        configuration = emptyMap<String, String>(),
-        name = "T1",
-        priority = NotificationTriggerPriority.Default,
-        notificationText = "Test",
-        timeoutNotificationTriggerId = 0,
-        source = NotificationTriggerSource.Scheduled,
-        modality = NotificationTriggerModality.Push
-    )
+        validDuration = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000,
+        enabled = true,
+        configuration = EMAFloatingWidgetTriggerConfiguration(
+            distanceMinutes = distanceMinutes,
+            randomToleranceMinutes = randomTolerance,
+            delayMinutes = 0,
+            timeBuckets = buckets,
+            phaseName = "test",
+            name = "T1",
+            priority = NotificationTriggerPriority.Default,
+            notificationText = "Test",
+            timeoutNotificationTriggerId = 0,
+            source = NotificationTriggerSource.Scheduled,
+            modality = NotificationTriggerModality.Push
+        )
+        )
+
 
     private val defaultStudyTrigger = triggerWithBuckets(
         buckets = listOf("9:00-11:29", "11:30-13:59", "14:00-16:29", "16:30-18:59", "19:00-21:29"),
@@ -42,11 +46,11 @@ class FloatingWidgetNotificationSchedulerTest {
 
         val scheduler = FloatingWidgetNotificationScheduler()
         val notifications = scheduler.planNotificationsForDay(trigger, Calendar.getInstance())
-        assert(notifications.size == defaultStudyTrigger.timeBuckets.size)
+        assert(notifications.size == defaultStudyTrigger.configuration.timeBuckets.size)
         print(FloatingWidgetNotificationScheduler.schedulePrint(notifications))
 
         val scheduledBuckets = notifications.map { it.timeBucket }.toSet()
-        assert(scheduledBuckets.containsAll(trigger.timeBuckets))
+        assert(scheduledBuckets.containsAll(trigger.configuration.timeBuckets))
 
         // check if timestamp is in bucket time, including minutes
         for (notification in notifications) {
@@ -63,7 +67,7 @@ class FloatingWidgetNotificationSchedulerTest {
 
         val scheduler = FloatingWidgetNotificationScheduler()
         val notifications = scheduler.planNotificationsForDay(trigger, Calendar.getInstance())
-        assert(notifications.size == defaultStudyTrigger.timeBuckets.size)
+        assert(notifications.size == defaultStudyTrigger.configuration.timeBuckets.size)
 
         println(FloatingWidgetNotificationScheduler.schedulePrint(notifications))
         println("----")
@@ -72,7 +76,7 @@ class FloatingWidgetNotificationSchedulerTest {
         val sortedNotifications = notifications.sortedBy { it.validFrom }
         for (i in 1 until sortedNotifications.size) {
             val diff = (sortedNotifications[i].validFrom - sortedNotifications[i - 1].validFrom) / (60 * 1000)
-            assert(diff >= trigger.distanceMinutes) { "Distance between notifications is $diff minutes, but should be at least ${trigger.distanceMinutes} minutes" }
+            assert(diff >= trigger.configuration.distanceMinutes) { "Distance between notifications is $diff minutes, but should be at least ${trigger.configuration.distanceMinutes} minutes" }
         }
     }
 
@@ -99,8 +103,8 @@ class FloatingWidgetNotificationSchedulerTest {
         }
         assert(days.size == 15) { "Expected 15 days of notifications, but got ${days.size}" }
         for ((day, notifs) in days) {
-            assert(notifs.size == trigger.timeBuckets.size) {
-                "Expected ${trigger.timeBuckets.size} notifications on $day, but got ${notifs.size}"
+            assert(notifs.size == trigger.configuration.timeBuckets.size) {
+                "Expected ${trigger.configuration.timeBuckets.size} notifications on $day, but got ${notifs.size}"
             }
         }
     }
@@ -110,36 +114,40 @@ class FloatingWidgetNotificationSchedulerTest {
         val trigger = EMAFloatingWidgetNotificationTrigger(
             id = 1,
             questionnaireId = 1,
-            validUntil = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000,
-            distanceMinutes = 0,
-            randomToleranceMinutes = 0,
-            delayMinutes = 15,
-            timeBuckets = listOf("00:00-23:59"),
-            phaseName = "test",
-            configuration = emptyMap<String, String>(),
-            name = "Test",
-            priority = NotificationTriggerPriority.Default,
-            notificationText = "Test",
-            timeoutNotificationTriggerId = 2,
-            source = NotificationTriggerSource.Scheduled,
-            modality = NotificationTriggerModality.Push
+            validDuration = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000,
+            enabled = true,
+            configuration = EMAFloatingWidgetTriggerConfiguration(
+                distanceMinutes = 0,
+                randomToleranceMinutes = 0,
+                delayMinutes = 15,
+                timeBuckets = listOf("00:00-23:59"),
+                phaseName = "test",
+                name = "Test",
+                priority = NotificationTriggerPriority.Default,
+                notificationText = "Test",
+                timeoutNotificationTriggerId = 2,
+                source = NotificationTriggerSource.Scheduled,
+                modality = NotificationTriggerModality.Push
+            )
         )
         val timeoutTrigger = EMAFloatingWidgetNotificationTrigger(
             id = 2,
             questionnaireId = 1,
-            validUntil = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000,
-            distanceMinutes = 0,
-            randomToleranceMinutes = 0,
-            delayMinutes = 15,
-            timeBuckets = listOf(),
-            phaseName = "test",
-            configuration = emptyMap<String, String>(),
-            name = "Timeout",
-            priority = NotificationTriggerPriority.Default,
-            notificationText = "Timeout",
-            timeoutNotificationTriggerId = null,
-            source = NotificationTriggerSource.Scheduled,
-            modality = NotificationTriggerModality.EventContingent
+            validDuration = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000,
+            enabled = true,
+            configuration = EMAFloatingWidgetTriggerConfiguration(
+                distanceMinutes = 0,
+                randomToleranceMinutes = 0,
+                delayMinutes = 15,
+                timeBuckets = listOf(),
+                phaseName = "test",
+                name = "Timeout",
+                priority = NotificationTriggerPriority.Default,
+                notificationText = "Timeout",
+                timeoutNotificationTriggerId = null,
+                source = NotificationTriggerSource.Scheduled,
+                modality = NotificationTriggerModality.EventContingent
+            )
         )
 
         val scheduler = FloatingWidgetNotificationScheduler()
@@ -152,7 +160,7 @@ class FloatingWidgetNotificationSchedulerTest {
         assert(timeout != null) { "Timeout notification not found" }
         if (original != null && timeout != null) {
             val diff = (timeout.validFrom - original.validFrom) / (60 * 1000)
-            assert(diff == trigger.delayMinutes.toLong()) { "Timeout notification is scheduled $diff minutes after original, but should be ${trigger.delayMinutes} minutes" }
+            assert(diff == trigger.configuration.delayMinutes.toLong()) { "Timeout notification is scheduled $diff minutes after original, but should be ${trigger.configuration.delayMinutes} minutes" }
         }
     }
 
@@ -186,7 +194,8 @@ class FloatingWidgetNotificationSchedulerTest {
             modality = NotificationTriggerModality.Push,
             source = NotificationTriggerSource.Scheduled,
             questionnaireId = 1,
-            triggerJson = "{}"
+            triggerJson = "{}",
+            updatedAt = System.currentTimeMillis()
         ), NotificationTrigger(
             uid = java.util.UUID.randomUUID(),
             addedAt = System.currentTimeMillis(),
@@ -198,7 +207,8 @@ class FloatingWidgetNotificationSchedulerTest {
             modality = NotificationTriggerModality.Push,
             source = NotificationTriggerSource.Scheduled,
             questionnaireId = 1,
-            triggerJson = "{}"
+            triggerJson = "{}",
+            updatedAt = System.currentTimeMillis()
         ), NotificationTrigger(
             uid = java.util.UUID.randomUUID(),
             addedAt = System.currentTimeMillis(),
@@ -210,7 +220,8 @@ class FloatingWidgetNotificationSchedulerTest {
             modality = NotificationTriggerModality.Push,
             source = NotificationTriggerSource.Scheduled,
             questionnaireId = 1,
-            triggerJson = "{}"
+            triggerJson = "{}",
+            updatedAt = System.currentTimeMillis()
         ))
     }
 
@@ -251,7 +262,8 @@ class FloatingWidgetNotificationSchedulerTest {
                 modality = NotificationTriggerModality.Push,
                 source = NotificationTriggerSource.Scheduled,
                 questionnaireId = 1,
-                triggerJson = "{}"
+                triggerJson = "{}",
+                updatedAt = System.currentTimeMillis()
             ),
             NotificationTrigger(
             uid = java.util.UUID.randomUUID(),
@@ -264,7 +276,8 @@ class FloatingWidgetNotificationSchedulerTest {
             modality = NotificationTriggerModality.Push,
             source = NotificationTriggerSource.Scheduled,
             questionnaireId = 1,
-            triggerJson = "{}"
+            triggerJson = "{}",
+            updatedAt = System.currentTimeMillis()
         ), NotificationTrigger(
             uid = java.util.UUID.randomUUID(),
             addedAt = System.currentTimeMillis(),
@@ -276,7 +289,8 @@ class FloatingWidgetNotificationSchedulerTest {
             modality = NotificationTriggerModality.Push,
             source = NotificationTriggerSource.Scheduled,
             questionnaireId = 1,
-            triggerJson = "{}"
+            triggerJson = "{}",
+            updatedAt = System.currentTimeMillis()
         ), NotificationTrigger(
             uid = java.util.UUID.randomUUID(),
             addedAt = System.currentTimeMillis(),
@@ -288,7 +302,8 @@ class FloatingWidgetNotificationSchedulerTest {
             modality = NotificationTriggerModality.Push,
             source = NotificationTriggerSource.Scheduled,
             questionnaireId = 1,
-            triggerJson = "{}"
+            triggerJson = "{}",
+            updatedAt = System.currentTimeMillis()
         ))
     }
 

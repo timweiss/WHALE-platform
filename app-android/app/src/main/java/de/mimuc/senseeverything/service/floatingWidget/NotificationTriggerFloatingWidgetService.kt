@@ -26,6 +26,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.esm.FloatingWidgetNotificationScheduler
@@ -205,7 +206,9 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                     Log.i(TAG, "Trigger marked as answered in database")
                 }
 
-                scheduleAnswerUpload(elementValues)
+                val answers = elementValues.filter { it.value.isAnswer }
+                scheduleAnswerUpload(answers)
+                evaluateRules(answers)
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling questionnaire completion", e)
             }
@@ -215,7 +218,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
         }
     }
 
-    private suspend fun scheduleAnswerUpload(elementValues: Map<Int, ElementValue>) {
+    private suspend fun scheduleAnswerUpload(answers: Map<Int, ElementValue>) {
         withContext(Dispatchers.IO) {
             val pendingQuestionnaire = pendingQuestionnaire
             if (pendingQuestionnaire == null) {
@@ -229,7 +232,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                 return@withContext
             }
 
-            val answers = elementValues.filter { it.value.isAnswer }
             pendingQuestionnaire.markCompleted(database, answers)
 
             Log.d(TAG, "Pending questionnaire marked as completed with answers: ${pendingQuestionnaire.elementValuesJson}")
@@ -247,6 +249,22 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
             Log.i(TAG, "Scheduled questionnaire upload with pending ID: ${pendingQuestionnaire.uid}")
         }
+    }
+
+    private suspend fun evaluateRules(answers: Map<Int, ElementValue>) {
+        val currentQuestionnaire = currentQuestionnaire
+        if (currentQuestionnaire == null) {
+            Log.e(TAG, "Cannot evaluate rules: currentQuestionnaire is null")
+            return
+        }
+
+        if (currentQuestionnaire.questionnaire.rules.isNullOrEmpty()) {
+            Log.i(TAG, "No rules to evaluate for this questionnaire")
+            return
+        }
+
+        val evaluator = QuestionnaireRuleEvaluator(currentQuestionnaire.questionnaire.rules)
+        val actions = evaluator.evaluate(answers)
     }
 
     private fun handleQuestionnaireDismiss() {

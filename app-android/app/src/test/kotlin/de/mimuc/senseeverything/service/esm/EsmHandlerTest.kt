@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.service.esm
 
 import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.RandomEMATriggerConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -243,7 +244,7 @@ class EsmHandlerTest {
 
     @Test
     fun testNextRandomNotificationOnSameDayNoRandomTolerance() {
-        val trigger = RandomEMAQuestionnaireTrigger(0,0,  15,"", 60, 0, 0, "08:00-23:00", "Phase 1")
+        val trigger = RandomEMAQuestionnaireTrigger(0,0,  15, true, RandomEMATriggerConfiguration(60, 0, 0, "08:00-23:00", "Phase 1"))
 
         val startCalendar = Calendar.getInstance()
         startCalendar.apply {
@@ -261,7 +262,7 @@ class EsmHandlerTest {
 
     @Test
     fun testNextRandomNotificationOnNextDayNoRandomTolerance() {
-        val trigger = RandomEMAQuestionnaireTrigger(0,0, 15, "", 60, 0, 0, "08:00-23:00", "Phase 1")
+        val trigger = RandomEMAQuestionnaireTrigger(0,0, 15, true, RandomEMATriggerConfiguration(60, 0, 0, "08:00-23:00", "Phase 1"))
 
         val startCalendar = Calendar.getInstance()
         startCalendar.apply {
@@ -279,7 +280,7 @@ class EsmHandlerTest {
 
     @RepeatedTest(10)
     fun testNextRandomNotificationOnSameDayWithRandomTolerance() {
-        val trigger = RandomEMAQuestionnaireTrigger(0,0, 15, "", 60, 10, 0, "08:00-23:00", "Phase 1")
+        val trigger = RandomEMAQuestionnaireTrigger(0,0, 15, true, RandomEMATriggerConfiguration(60, 10, 0, "08:00-23:00", "Phase 1"))
 
         val startCalendar = Calendar.getInstance()
         startCalendar.apply {
@@ -291,8 +292,8 @@ class EsmHandlerTest {
         val nextNotification = handler.getCalendarForNextRandomNotification(trigger, startCalendar)
 
         assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextNotification.get(Calendar.DAY_OF_MONTH))
-        val minimumTimeInMilis = startCalendar.timeInMillis + (trigger.distanceMinutes * 60 * 1000 - (trigger.randomToleranceMinutes/2) * 60 * 1000)
-        val maximumTimeInMilis = startCalendar.timeInMillis + (trigger.distanceMinutes * 60 * 1000 + (trigger.randomToleranceMinutes/2) * 60 * 1000)
+        val minimumTimeInMilis = startCalendar.timeInMillis + (trigger.configuration.distanceMinutes * 60 * 1000 - (trigger.configuration.randomToleranceMinutes/2) * 60 * 1000)
+        val maximumTimeInMilis = startCalendar.timeInMillis + (trigger.configuration.distanceMinutes * 60 * 1000 + (trigger.configuration.randomToleranceMinutes/2) * 60 * 1000)
         assertTrue(nextNotification.timeInMillis in minimumTimeInMilis..maximumTimeInMilis)
     }
 }

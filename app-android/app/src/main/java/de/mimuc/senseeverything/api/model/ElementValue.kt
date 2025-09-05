@@ -29,9 +29,13 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
         return true
     }
 
-    val isAnswer: Boolean get() {
-        return elementType != QuestionnaireElementType.TEXT_VIEW
-    }
+    val isAnswer: Boolean
+        get() {
+            return listOf(
+                QuestionnaireElementType.TEXT_VIEW,
+                QuestionnaireElementType.LIKERT_SCALE_LABEL
+            ).contains(elementType).not()
+        }
 
     companion object {
         fun valueMapToJson(values: Map<Int, ElementValue>): JSONArray {

@@ -8,7 +8,8 @@ data class Questionnaire(
     val id: Int,
     val version: Int,
     val studyId: Int,
-    val enabled: Boolean
+    val enabled: Boolean,
+    val rules: List<QuestionnaireRule>?
 )
 
 @Serializable
@@ -20,7 +21,7 @@ data class FullQuestionnaire(
 
 fun emptyQuestionnaire(): FullQuestionnaire {
     return FullQuestionnaire(
-        Questionnaire("", 0, 0, 0, false),
+        Questionnaire("", 0, 0, 0, false, null),
         emptyList(),
         emptyList()
     )
