@@ -1,13 +1,7 @@
 package de.mimuc.senseeverything.service.floatingWidget
 
-import android.content.ComponentName
 import android.content.Intent
-import android.content.ServiceConnection
-import android.os.Bundle
 import android.os.IBinder
-import android.os.Message
-import android.os.Messenger
-import android.os.RemoteException
 import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
@@ -27,8 +21,6 @@ import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
-import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor
-import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.esm.FloatingWidgetNotificationScheduler
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.CoroutineScope
@@ -45,18 +37,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.Main + job)
 
-    internal enum class InteractionLogType {
-        Asked,
-        Start,
-        End,
-        Confirm,
-        ConfirmAnotherInteraction,
-        ConfirmSameInteraction,
-        NoInteraction,
-        NotAskedAlreadyDisplayedInBucket,
-        NotAskedNotDisplayedInBucket
-    }
-
     private var windowManager: WindowManager? = null
     private var floatingWidgetComposeView: FloatingWidgetComposeView? = null
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -69,8 +49,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
     private var pendingQuestionnaire: PendingQuestionnaire? = null
 
     private val TAG = "NotificationTriggerFloatingWidgetService"
-
-    private var logServiceMessenger: Messenger? = null
 
     @Inject
     lateinit var dataStore: DataStoreManager
@@ -88,10 +66,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
         savedStateRegistryController.performAttach()
         savedStateRegistryController.performRestore(null)
-
-        // bind to LogService
-        val intent = Intent(this, LogService::class.java)
-        bindService(intent, connection, BIND_AUTO_CREATE)
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
     }
@@ -279,7 +253,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
     private fun handleQuestionnaireDismiss() {
         Log.i(TAG, "Questionnaire dismissed")
-        logInteractionMessage(InteractionLogType.NoInteraction)
         stopSelf()
     }
 
@@ -300,54 +273,8 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
             composeView.dispose()
         }
 
-        // Clean up service connections
-        if (logServiceMessenger != null) {
-            unbindService(connection)
-        }
-
         job.cancel()
 
         Log.d(TAG, "Service destroyed")
-    }
-
-    private fun logInteractionMessage(type: InteractionLogType) {
-        when (type) {
-            InteractionLogType.Asked -> sendDataToLogService("asked")
-            InteractionLogType.Start -> sendDataToLogService("start")
-            InteractionLogType.End -> sendDataToLogService("end")
-            InteractionLogType.Confirm -> sendDataToLogService("confirm")
-            InteractionLogType.ConfirmAnotherInteraction -> sendDataToLogService("confirmAnotherInteraction")
-            InteractionLogType.ConfirmSameInteraction -> sendDataToLogService("confirmSameInteraction")
-            InteractionLogType.NoInteraction -> sendDataToLogService("noInteraction")
-            InteractionLogType.NotAskedAlreadyDisplayedInBucket -> sendDataToLogService("notAskedAlreadyDisplayedInBucket")
-            InteractionLogType.NotAskedNotDisplayedInBucket -> sendDataToLogService("notAskedNotDisplayedInBucket")
-        }
-    }
-
-    private val connection: ServiceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            logServiceMessenger = Messenger(service)
-            logInteractionMessage(InteractionLogType.Asked) // needs to be logged here because otherwise we have a race condition
-        }
-
-        override fun onServiceDisconnected(name: ComponentName) {
-            logServiceMessenger = null
-        }
-    }
-
-    private fun sendDataToLogService(message: String) {
-        if (logServiceMessenger != null) {
-            val msg = Message.obtain(null, LogService.SEND_SENSOR_LOG_DATA)
-            val bundle = Bundle()
-            bundle.putString("sensorData", message)
-            bundle.putString("sensorName", InteractionLogSensor::class.java.name)
-            msg.data = bundle
-
-            try {
-                logServiceMessenger!!.send(msg)
-            } catch (e: RemoteException) {
-                Log.e(TAG, "Failed to send message to LogService", e)
-            }
-        }
     }
 }
