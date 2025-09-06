@@ -251,7 +251,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
         }
     }
 
-    private suspend fun evaluateRules(answers: Map<Int, ElementValue>) {
+    private fun evaluateRules(answers: Map<Int, ElementValue>) {
         val currentQuestionnaire = currentQuestionnaire
         if (currentQuestionnaire == null) {
             Log.e(TAG, "Cannot evaluate rules: currentQuestionnaire is null")
@@ -263,8 +263,18 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
             return
         }
 
+        val pendingQuestionnaire = pendingQuestionnaire
+        if (pendingQuestionnaire == null) {
+            Log.e(TAG, "Cannot evaluate rules: pendingQuestionnaire is null")
+            return
+        }
+
         val evaluator = QuestionnaireRuleEvaluator(currentQuestionnaire.questionnaire.rules)
         val actions = evaluator.evaluate(answers)
+
+        Log.i(TAG, "Evaluated rules, got actions: $actions")
+
+        QuestionnaireRuleEvaluator.handleActions(this, actions.flatMap { it.value }, pendingQuestionnaire)
     }
 
     private fun handleQuestionnaireDismiss() {

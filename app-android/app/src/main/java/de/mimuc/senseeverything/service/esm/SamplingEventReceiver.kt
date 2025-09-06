@@ -8,8 +8,10 @@ import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.service.SEApplicationController
+import java.util.UUID
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -33,9 +35,16 @@ class SamplingEventReceiver : BroadcastReceiver() {
             return@goAsync
         }
 
+        val sourceId = intent.getStringExtra("sourceId")
+        val triggerId = intent.getIntExtra("triggerId", -1)
+
+        val sourceUuid = if (sourceId != null) UUID.fromString(sourceId) else null
+
         // handle Event
         SEApplicationController.getInstance().esmHandler.handleEvent(
             eventName,
+            sourceUuid,
+            if (triggerId != -1) triggerId else null,
             context.applicationContext,
             dataStoreManager,
             database
@@ -43,10 +52,16 @@ class SamplingEventReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        fun sendBroadcast(context: Context, eventName: String) {
+        fun sendBroadcast(context: Context, eventName: String, source: PendingQuestionnaire?, triggerId: Int? = null) {
             val intent = Intent(context.applicationContext, SamplingEventReceiver::class.java)
             intent.apply {
                 putExtra("eventName", eventName)
+                if (source != null) {
+                    putExtra("sourceId", source.uid)
+                }
+                if (triggerId != null) {
+                    putExtra("triggerId", triggerId)
+                }
             }
 
             val pendingIntent = PendingIntent.getBroadcast(

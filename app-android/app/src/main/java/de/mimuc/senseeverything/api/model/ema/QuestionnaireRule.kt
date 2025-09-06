@@ -54,7 +54,7 @@ sealed class Action {
 @Serializable
 @SerialName("put_notification_trigger")
 data class PutNotificationTrigger(
-    val notificationTriggerId: Int,
+    val triggerId: Int,
     override val type: ActionType = ActionType.PUT_NOTIFICATION_TRIGGER,
 ) : Action()
 

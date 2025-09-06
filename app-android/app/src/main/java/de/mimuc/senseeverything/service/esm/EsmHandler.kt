@@ -24,6 +24,9 @@ import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
+import de.mimuc.senseeverything.db.models.NotificationTriggerModality
+import de.mimuc.senseeverything.db.models.NotificationTriggerSource
+import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -62,17 +65,25 @@ class EsmHandler {
 
     suspend fun handleEvent(
         eventName: String,
+        sourceId: UUID?,
+        triggerId: Int?,
         context: Context,
         dataStoreManager: DataStoreManager,
         database: AppDatabase
     ) {
-        val eventTriggers = triggers.filter { it.type == "event" }
+        // Handle event triggers
+        val eventTriggers = triggers.filterIsInstance<EventQuestionnaireTrigger>()
         if (eventTriggers.isNotEmpty()) {
-            // Handle event
-            val matching =
-                eventTriggers.find { (it as EventQuestionnaireTrigger).configuration.eventName == eventName }
+            val matching = if (eventName == "open_questionnaire" && triggerId != null) {
+                // For open_questionnaire events, find by specific trigger ID
+                eventTriggers.find { it.id == triggerId }
+            } else {
+                // For other events, find by event name as before
+                eventTriggers.find { it.configuration.eventName == eventName }
+            }
+            
             if (matching != null) {
-                val trigger = matching as EventQuestionnaireTrigger
+                val trigger = matching
                 val questionnaires = dataStoreManager.questionnairesFlow.first()
 
                 val matchingQuestionnaire =
@@ -86,6 +97,22 @@ class EsmHandler {
                         database
                     )
                 }
+            }
+        }
+
+        // Handle notification triggers 
+        if (eventName == "put_notification_trigger" && triggerId != null) {
+            val floatingWidgetTriggers = triggers.filterIsInstance<EMAFloatingWidgetNotificationTrigger>()
+            val matchingTrigger = floatingWidgetTriggers.find { it.id == triggerId }
+            
+            if (matchingTrigger != null) {
+                handleEventPushedNotificationTrigger(
+                    matchingTrigger,
+                    sourceId,
+                    context,
+                    dataStoreManager,
+                    database
+                )
             }
         }
     }
@@ -124,6 +151,63 @@ class EsmHandler {
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
 
         context.startActivity(intent)
+    }
+
+    suspend fun handleEventPushedNotificationTrigger(
+        trigger: EMAFloatingWidgetNotificationTrigger,
+        pendingQuestionnaireId: UUID?,
+        context: Context,
+        dataStoreManager: DataStoreManager,
+        database: AppDatabase
+    ) {
+        val pendingQuestionnaireId = pendingQuestionnaireId
+        if (pendingQuestionnaireId == null) {
+            return
+        }
+
+        coroutineScope {
+            withContext(Dispatchers.IO) {
+                val sourcePendingQuestionnaire = database.pendingQuestionnaireDao().getById(pendingQuestionnaireId)
+
+                val sourceNotificationTriggerId = sourcePendingQuestionnaire?.notificationTriggerUid
+                if (sourceNotificationTriggerId == null) {
+                    Log.e("EsmHandler", "Pending questionnaire does not have a notification trigger UID")
+                    return@withContext
+                }
+
+                val sourceNotificationTrigger = database.notificationTriggerDao().getById(sourceNotificationTriggerId)
+
+                if (sourceNotificationTrigger == null) {
+                    Log.e("EsmHandler", "Source notification trigger not found in database")
+                    return@withContext
+                }
+
+                val notificationTrigger = NotificationTrigger(
+                    uid = UUID.randomUUID(),
+                    addedAt = System.currentTimeMillis(),
+                    name = trigger.configuration.name,
+                    status = NotificationTriggerStatus.Planned,
+                    validFrom = System.currentTimeMillis(),
+                    priority = trigger.configuration.priority,
+                    timeBucket = sourceNotificationTrigger.timeBucket,
+                    modality = trigger.configuration.modality,
+                    source = NotificationTriggerSource.RuleBased,
+                    questionnaireId = trigger.questionnaireId.toLong(),
+                    triggerJson = fullQuestionnaireJson.encodeToString(trigger),
+                    updatedAt = System.currentTimeMillis()
+                )
+                
+                database.notificationTriggerDao().insert(notificationTrigger)
+                
+                // If it's a push notification, push it immediately; otherwise it will be handled by EventContingent modality
+                if (trigger.configuration.modality == NotificationTriggerModality.Push) {
+                    val notificationHelper = NotificationPushHelper(context)
+                    notificationHelper.pushNotificationTrigger(notificationTrigger)
+                }
+                
+                Log.d("EsmHandler", "Created notification trigger for trigger ${trigger.id} with modality ${trigger.configuration.modality}")
+            }
+        }
     }
 
     suspend fun scheduleFloatingWidgetNotifications(

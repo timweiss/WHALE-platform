@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.helpers
 
+import android.content.Context
 import de.mimuc.senseeverything.api.model.ButtonGroupValue
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
 import de.mimuc.senseeverything.api.model.ElementValue
@@ -8,8 +9,12 @@ import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
 import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.ema.Action
+import de.mimuc.senseeverything.api.model.ema.OpenQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.PutNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireRule
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 
 class QuestionnaireRuleEvaluator(var rules: List<QuestionnaireRule>) {
     fun evaluate(elementValues: Map<Int, ElementValue>): Map<String, List<Action>> {
@@ -61,6 +66,37 @@ class QuestionnaireRuleEvaluator(var rules: List<QuestionnaireRule>) {
             QuestionnaireElementType.LIKERT_SCALE_LABEL -> null
             QuestionnaireElementType.MALFORMED -> null
             QuestionnaireElementType.TEXT_VIEW -> null
+        }
+    }
+
+    companion object {
+        fun handleOpenQuestionnaireAction(context: Context, action: OpenQuestionnaire, source: PendingQuestionnaire) {
+            SamplingEventReceiver.sendBroadcast(
+                context = context,
+                eventName = "open_questionnaire",
+                source = source,
+                triggerId = action.eventQuestionnaireTriggerId
+            )
+        }
+
+        fun handlePutNotificationTriggerAction(context: Context, action: PutNotificationTrigger, source: PendingQuestionnaire) {
+            SamplingEventReceiver.sendBroadcast(
+                context = context,
+                eventName = "put_notification_trigger",
+                source = source,
+                triggerId = action.triggerId
+            )
+        }
+
+        fun handleActions(context: Context, actions: List<Action>, source: PendingQuestionnaire) {
+            if (actions.isEmpty()) return
+
+            for (action in actions) {
+                when (action) {
+                    is OpenQuestionnaire -> handleOpenQuestionnaireAction(context, action, source)
+                    is PutNotificationTrigger -> handlePutNotificationTriggerAction(context, action, source)
+                }
+            }
         }
     }
 }
