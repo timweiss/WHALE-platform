@@ -1,5 +1,6 @@
 import { Repository } from './repository';
 import { DatabaseError } from '../config/errors';
+import { Rule } from '../model/questionnaire-rules';
 
 export interface ExperienceSamplingQuestionnaire {
   id: number;
@@ -7,6 +8,7 @@ export interface ExperienceSamplingQuestionnaire {
   name: string;
   enabled: boolean;
   version: number;
+  rules: Rule[] | null;
 }
 
 type ElementType = string;
@@ -113,6 +115,7 @@ export class ESMConfigRepository
         name: row.name,
         enabled: row.enabled,
         version: row.version,
+        rules: row.rules,
       }));
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -137,6 +140,7 @@ export class ESMConfigRepository
         name: res.rows[0].name,
         enabled: res.rows[0].enabled,
         version: res.rows[0].version,
+        rules: res.rows[0].rules,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -158,6 +162,7 @@ export class ESMConfigRepository
         name: questionnaire.rows[0].name,
         enabled: questionnaire.rows[0].enabled,
         version: questionnaire.rows[0].version,
+        rules: questionnaire.rows[0].rules,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -176,8 +181,13 @@ export class ESMConfigRepository
           : questionnaire.version;
 
       const updated = await this.pool.query(
-        'UPDATE esm_questionnaires SET name = $1, enabled = $2 WHERE id = $3 RETURNING *',
-        [questionnaire.name, questionnaire.enabled, questionnaire.id],
+        'UPDATE esm_questionnaires SET name = $1, enabled = $2, rules=$3 WHERE id = $4 RETURNING *',
+        [
+          questionnaire.name,
+          questionnaire.enabled,
+          questionnaire.rules,
+          questionnaire.id,
+        ],
       );
 
       return {
@@ -186,6 +196,7 @@ export class ESMConfigRepository
         name: updated.rows[0].name,
         enabled: updated.rows[0].enabled,
         version: newVersion,
+        rules: updated.rows[0].rules,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());

@@ -1,0 +1,1 @@
+alter table esm_questionnaires add column rules jsonb null;
