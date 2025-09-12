@@ -1,5 +1,40 @@
 # Android App
 
+## ESM Components
+
+### NotificationTrigger
+The NotificationTrigger is used to conditionally display the interaction bubble (floating widget) based on study phase and previous EMA answers.
+To display any questionnaire in the interaction bubble on unlock or through push notifications, the NotificationTriggers are planned on enrolment, depending on the study phase.
+
+A questionnaire trigger, the `EMAFloatingWidgetNotificationTrigger`, is used to create NotificationTriggers for the respective questionnaire.
+* defines if the questionnaire should only be shown after unlocking the phone, or also to push a notification proactively
+* defines the phase in which the NotificationTrigger should be created
+* defines the time intervals in which any NotificationTrigger should be created
+* it also defines if the NotificationTrigger is planned or only created conditionally, e.g. after answering a previous questionnaire with a rule prompting to create a new NotificationTrigger
+
+To decide if and which NotificationTrigger is shown on unlock (or through a push notification), the widget (or push BroadcastReceiver) checks if either
+* the latest NotificationTrigger of the current time interval (called Time Bucket) is unanswered
+* the last time interval contains an unanswered **wave-breaking** NotificationTrigger, which makes the time interval "virtually" expand to the current one
+In both cases, the floating widget will show the questionnaire defined in the questionnaire trigger of the NotificationTrigger. If it is configured to be pushed, an additional push notification is created.
+
+### Questionnaire Rules
+todo
+
+### String Interpolation
+The text view components support string interpolation to include dynamic content in the questionnaire. Currently, the dynamic content is limited to the timestamps of NotificationTriggers.
+It can be used in any `text_view` ESM element and the questionnaire shown needs to have a NotificationTrigger associated with its PendingNotification.
+The format for the string interpolation for NotificationTrigger timestamps is
+
+| Format                   | Description                                | Example |
+|--------------------------|--------------------------------------------|---------|
+| `{triggerName_pushed}`   | Time when NotificationTrigger was pushed   | 11:25   |
+| `{triggerName_answered}` | Time when NotificationTrigger was answered | 11:30   |
+
+where `triggerName` is the name of the NotificationTrigger, so for example the text of a TextViewElement could be `What did you do on {{Trigger1_pushed}}?`, which will replace to `What did you do on 11:25?` when the questionnaire is shown.
+
+### PendingNotification
+todo
+
 ## Lifecycle
 [LogService](app/src/main/java/de/mimuc/senseeverything/service/LogService.java) is responsible for starting the [Sensors](app/src/main/java/de/mimuc/senseeverything/sensor).
 

@@ -8,42 +8,21 @@ Social Sensing environment with Experience Sampling capabilities.
 > [!NOTE]  
 > See the component's respective READMEs for more information.
 
-### Interaction Bubble
+### Interaction Bubble & NotificationTriggers
 We want to track if an interaction is happening and relying on sensors alone would not be sufficient. We use the following approach:
-- a sticky and unobtrusive widget flows around the screen
-- when no interaction was marked, we ask the user on unlock, if they are in an interaction
-- on each unlock, we ask if this interaction is still ongoing
-- if they mark the interaction as ended, an experience sampling form is triggered
-
-```mermaid
----
-title: Interaction Bubble State
----
-stateDiagram-v2
-    state "No Interaction" as NoInteraction
-    state "In Interaction" as InInteraction
-    state "Ask on Unlock" as AskOnUnlock
-    state "Ask if Ongoing" as AskIfOngoing
-    state "Trigger ESM Form" as TriggerForm
-    
-    [*] --> NoInteraction
-    NoInteraction --> AskOnUnlock: Unlock
-    AskOnUnlock --> InInteraction: Yes Interaction
-    AskOnUnlock --> NoInteraction: No interaction
-    
-    InInteraction --> AskIfOngoing: Unlock
-    AskIfOngoing --> InInteraction: Still ongoing
-    AskIfOngoing --> TriggerForm: Ended
-    TriggerForm --> NoInteraction: Form completed
-```
+- a sticky and unobtrusive widget flows around the screen based on conditions defined as a [NotificationTrigger](app-android/README.md)
+  - the widget shows questions from a questionnaire (see [Experience Sampling](#experience-sampling))
+- rules defined in the displayed questionnaire determine if a new NotificationTrigger is added, or another full questionnaire is shown
+- this setup allows for conditional EMAs based on what the participant answered in a previous EMA
 
 ### Experience Sampling
 We want to trigger an experience sampling form when specific events happen:
-- important: **user marks an interaction ended** (triggered by `event` trigger)
+- rule from interaction bubble evaluates to show a new full questionnaire (triggered by `event` trigger)
 - in a specific interval
   - every day at the same time (triggered by `periodic` trigger)
   - EMA: across the day, with a minimum time between samples (triggered by `random_ema` trigger)
 - once, for example for the takeout questionnaire at the end of a study (triggered by `one_time` trigger)
+- for displaying the questionnaire inside the floating widget (triggered by `ema_floating_widget_notification` trigger)
 
 A sampling could include the following:
 - content separated in steps (title, position)
@@ -61,8 +40,8 @@ A sampling could include the following:
     - social network
       - entry: possibility to list people in sampling
       - rating: possibility to answer questions about a person
+    - button list (only available for floating widget)
   - link to external questionnaire (is embedded in questionnaire to instruct the participant)
-  - 
 
 ```mermaid
 ---
@@ -74,6 +53,7 @@ erDiagram
         bool enabled
         string name
         number version
+        list rules
     }
     Trigger {
         string eventType
