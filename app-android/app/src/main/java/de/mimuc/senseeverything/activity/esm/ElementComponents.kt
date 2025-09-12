@@ -54,9 +54,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+fun renderTextWithReplacements(text: String, textReplacements: Map<String, String>): String {
+    if (textReplacements.isEmpty()) return text
+
+    var tempText = text
+    for ((key, value) in textReplacements) {
+        tempText = tempText.replace("{{${key}}}", value)
+    }
+    return tempText
+}
+
 @Composable
-fun TextViewElementComponent(element: TextViewElement) {
-    Text(AnnotatedString.fromHtml(element.configuration.text))
+fun TextViewElementComponent(element: TextViewElement, textReplacements: Map<String, String>) {
+    val displayText = renderTextWithReplacements(element.configuration.text, textReplacements)
+
+    Text(AnnotatedString.fromHtml(displayText))
 }
 
 @Composable

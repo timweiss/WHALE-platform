@@ -316,6 +316,7 @@ val fullQuestionnaireModule = SerializersModule {
 val fullQuestionnaireJson = Json {
     serializersModule = fullQuestionnaireModule
     ignoreUnknownKeys = true
+    explicitNulls = false
     isLenient = true
     classDiscriminator = "type"
 }

@@ -158,6 +158,7 @@ fun SocialNetworkRatingElementComponent(
                 ) {
                     Column {
                         QuestionnaireHost(questionnaire = questionnaire!!,
+                            emptyMap(), // todo: replacements in ratings component not supported for now
                             onSave = { newValues ->
                                 viewModel.setContactValue(contactId, newValues)
                             },

@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import de.mimuc.senseeverything.activity.esm.CircumplexElementComponent
+import de.mimuc.senseeverything.activity.esm.renderTextWithReplacements
 import de.mimuc.senseeverything.api.model.CircumplexValue
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.RadioGroupValue
@@ -42,6 +43,7 @@ import de.mimuc.senseeverything.api.model.ema.TextViewElement
 @Composable
 fun FloatingQuestionStep(
     elements: List<QuestionnaireElement>,
+    textReplacements: Map<String, String>,
     elementValues: Map<Int, ElementValue>,
     onElementValueChange: (Int, ElementValue) -> Unit,
     onButtonSelection: (ButtonGroupElement, String) -> Unit,
@@ -60,6 +62,7 @@ fun FloatingQuestionStep(
             elements.sortedBy { it.position }.forEach { element ->
                 FloatingElementRenderer(
                     element = element,
+                    textReplacements = textReplacements,
                     value = elementValues[element.id],
                     onValueChange = { newValue ->
                         onElementValueChange(element.id, newValue)
@@ -78,6 +81,7 @@ fun FloatingQuestionStep(
 @Composable
 fun FloatingElementRenderer(
     element: QuestionnaireElement,
+    textReplacements: Map<String, String>,
     value: ElementValue?,
     onValueChange: (ElementValue) -> Unit,
     onButtonSelection: (String) -> Unit,
@@ -86,7 +90,7 @@ fun FloatingElementRenderer(
     when (element.type) {
         QuestionnaireElementType.TEXT_VIEW -> {
             val textElement = element as TextViewElement
-            FloatingTextView(textElement, modifier)
+            FloatingTextView(textElement, textReplacements, modifier)
         }
 
         QuestionnaireElementType.BUTTON_GROUP -> {
@@ -160,10 +164,13 @@ fun FloatingElementRenderer(
 @Composable
 fun FloatingTextView(
     element: TextViewElement,
+    textReplacements: Map<String, String>,
     modifier: Modifier = Modifier
 ) {
+    val displayText = renderTextWithReplacements(element.configuration.text, textReplacements)
+
     Text(
-        text = element.configuration.text,
+        text = displayText,
         style = MaterialTheme.typography.bodyMedium,
         modifier = modifier
     )

@@ -142,6 +142,7 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 @Composable
 fun QuestionnaireHost(
     questionnaire: FullQuestionnaire,
+    textReplacements: Map<String, String>,
     onSave: (Map<Int, ElementValue>) -> Unit,
     onStepChanged: (Int, Map<Int, ElementValue>) -> Unit = { _, _ -> },
     initialValues: Map<Int, ElementValue> = emptyMap(),
@@ -169,7 +170,7 @@ fun QuestionnaireHost(
             Column {
                 for (element in currentElements) {
                     val elementValue = answerValues.value[element.id]
-                    QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
+                    QuestionnaireElement(element, elementValue, textReplacements, onValueChange = { id, value ->
                         viewModel.setElementValue(id, value)
                     })
                 }
@@ -214,7 +215,7 @@ fun QuestionnaireHost(
                 ) {
                     items(items = currentElements, key = { item -> item.id }) { element ->
                         val elementValue = answerValues.value[element.id]
-                        QuestionnaireElement(element, elementValue, onValueChange = { id, value ->
+                        QuestionnaireElement(element, elementValue, textReplacements, onValueChange = { id, value ->
                             viewModel.setElementValue(id, value)
                         })
                     }
@@ -267,11 +268,12 @@ fun QuestionnaireHost(
 fun QuestionnaireElement(
     element: QuestionnaireElement,
     elementValue: ElementValue?,
+    textReplacements: Map<String, String>,
     onValueChange: (Int, ElementValue) -> Unit
 ) {
     when (element.type) {
         QuestionnaireElementType.TEXT_VIEW -> {
-            TextViewElementComponent(element = element as TextViewElement)
+            TextViewElementComponent(element = element as TextViewElement, textReplacements)
         }
 
         QuestionnaireElementType.RADIO_GROUP -> {

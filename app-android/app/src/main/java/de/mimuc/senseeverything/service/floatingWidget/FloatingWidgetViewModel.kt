@@ -20,13 +20,16 @@ class FloatingWidgetViewModel() : ViewModel() {
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
     val elementValues: StateFlow<Map<Int, ElementValue>> = _elementValues.asStateFlow()
 
+    private val _textReplacements = MutableStateFlow<Map<String, String>>(emptyMap())
+    val textReplacements: StateFlow<Map<String, String>> = _textReplacements.asStateFlow()
+
     private val _isCompleted = MutableStateFlow(false)
     val isCompleted: StateFlow<Boolean> = _isCompleted.asStateFlow()
 
     private var questionnaire: FullQuestionnaire? = null
     private var pendingQuestionnaireId: UUID? = null
 
-    fun initialize(questionnaire: FullQuestionnaire, triggerUid: UUID?) {
+    fun initialize(questionnaire: FullQuestionnaire, triggerUid: UUID?, replacements: Map<String, String>) {
         this.questionnaire = questionnaire
         this.pendingQuestionnaireId = triggerUid // Use triggerUid as the pending questionnaire ID for simplicity
 
@@ -36,6 +39,8 @@ class FloatingWidgetViewModel() : ViewModel() {
             initialValues[element.id] = emptyValueForElement(element)
         }
         _elementValues.value = initialValues
+
+        _textReplacements.value = replacements
 
         Log.i("FloatingWidgetViewModel", "Initialized with questionnaire: ${questionnaire.questionnaire.name}")
     }

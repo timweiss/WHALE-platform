@@ -16,6 +16,7 @@ import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.QuestionnaireDataRepository
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
@@ -47,6 +48,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
     private var currentNotificationTrigger: NotificationTrigger? = null
     private var currentQuestionnaireTrigger: EMAFloatingWidgetNotificationTrigger? = null
     private var pendingQuestionnaire: PendingQuestionnaire? = null
+    private var textReplacements = emptyMap<String, String>()
 
     private val TAG = "NotificationTriggerFloatingWidgetService"
 
@@ -55,6 +57,9 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
     @Inject
     lateinit var database: AppDatabase
+
+    @Inject
+    lateinit var questionnaireData: QuestionnaireDataRepository
 
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
@@ -113,6 +118,8 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                         )
                         pendingQuestionnaire =
                             database.pendingQuestionnaireDao().getById(pendingQuestionnaireId!!)
+
+                        textReplacements = questionnaireData.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId)
                     }
 
                     // Render the dynamic questionnaire widget
@@ -142,7 +149,8 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
             floatingWidgetComposeView = FloatingWidgetComposeView(
                 context = this,
                 questionnaire = currentQuestionnaire!!,
-                triggerUid = currentNotificationTrigger?.uid,
+                notificationTriggerId = currentNotificationTrigger?.uid,
+                textReplacements = textReplacements,
                 onComplete = { handleQuestionnaireComplete(it) },
                 onDismiss = { handleQuestionnaireDismiss() }
             )

@@ -41,7 +41,8 @@ import java.util.UUID
 class FloatingWidgetComposeView(
     private val context: Context,
     private val questionnaire: FullQuestionnaire,
-    private val triggerUid: UUID?,
+    private val notificationTriggerId: UUID?,
+    private val textReplacements: Map<String, String>,
     private val onComplete: (Map<Int, ElementValue>) -> Unit,
     private val onDismiss: () -> Unit
 ) : ViewModelStoreOwner {
@@ -61,7 +62,8 @@ class FloatingWidgetComposeView(
                 AppandroidTheme {
                     FloatingQuestionnaireHost(
                         questionnaire = questionnaire,
-                        triggerUid = triggerUid,
+                        triggerUid = notificationTriggerId,
+                        textReplacements = textReplacements,
                         onComplete = onComplete,
                         onDismiss = onDismiss,
                         viewModel = floatingWidgetViewModel
@@ -103,6 +105,7 @@ class FloatingWidgetComposeView(
 fun FloatingQuestionnaireHost(
     questionnaire: FullQuestionnaire,
     triggerUid: UUID?,
+    textReplacements: Map<String, String>,
     onComplete: (Map<Int, ElementValue>) -> Unit,
     onDismiss: () -> Unit,
     viewModel: FloatingWidgetViewModel,
@@ -111,11 +114,13 @@ fun FloatingQuestionnaireHost(
     val currentStep by viewModel.currentStep.collectAsState()
     val elementValues by viewModel.elementValues.collectAsState()
     val isCompleted by viewModel.isCompleted.collectAsState()
+    val replacements by viewModel.textReplacements.collectAsState()
 
     // Initialize the ViewModel with questionnaire data
     LaunchedEffect(questionnaire) {
-        viewModel.initialize(questionnaire, triggerUid) // triggerUid will be passed from service
+        viewModel.initialize(questionnaire, triggerUid, textReplacements) // triggerUid will be passed from service
     }
+
 
     // Handle completion
     LaunchedEffect(isCompleted) {
@@ -163,6 +168,7 @@ fun FloatingQuestionnaireHost(
         // Show current step
         FloatingQuestionStep(
             elements = currentStepElements,
+            textReplacements = replacements,
             elementValues = elementValues,
             onElementValueChange = { elementId, value ->
                 viewModel.updateElementValue(elementId, value)

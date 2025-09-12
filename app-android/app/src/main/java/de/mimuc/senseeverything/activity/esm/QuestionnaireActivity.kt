@@ -36,12 +36,14 @@ import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.QuestionnaireDataRepository
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,7 +74,8 @@ class QuestionnaireActivity : ComponentActivity() {
 class QuestionnaireViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val dataRepository: QuestionnaireDataRepository
 ) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> get() = _isLoading
@@ -82,6 +85,9 @@ class QuestionnaireViewModel @Inject constructor(
 
     private val _elementValues = MutableStateFlow<Map<Int, ElementValue>>(emptyMap())
     val elementValues: StateFlow<Map<Int, ElementValue>> get() = _elementValues
+
+    private val _textReplacements = MutableStateFlow<Map<String, String>>(emptyMap())
+    val textReplacements: StateFlow<Map<String, String>> = _textReplacements.asStateFlow()
 
     private var pendingQuestionnaireId: UUID? = null
 
@@ -140,6 +146,7 @@ class QuestionnaireViewModel @Inject constructor(
                     pendingQuestionnaireId!!
                 )
                 loadFromPendingQuestionnaire()
+                _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId!!)
             }
         }
     }
@@ -228,6 +235,7 @@ fun QuestionnaireView(
     val isLoading = viewModel.isLoading.collectAsState()
     val questionnaire = viewModel.questionnaire.collectAsState()
     val initialValues = viewModel.elementValues.collectAsState()
+    val replacements = viewModel.textReplacements.collectAsState()
 
     val context = LocalContext.current
 
@@ -253,7 +261,7 @@ fun QuestionnaireView(
             if (isLoading.value) {
                 Text("Loading...")
             } else {
-                QuestionnaireHost(questionnaire.value, onSave = { items ->
+                QuestionnaireHost(questionnaire.value, replacements.value, onSave = { items ->
                     viewModel.saveFromHost(items, context)
                 }, onStepChanged = { page, values ->
                     viewModel.stepChanged(page, values, context)

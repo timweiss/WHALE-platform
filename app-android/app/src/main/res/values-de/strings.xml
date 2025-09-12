@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WHALE</string>
+    <string name="notif_ticker">WHALE ist aktiv</string>
+    <string name="welcome_to_whale">Willkommen bei</string>
+    <string name="title_activity_main">WHALE</string>
+    <string name="day_of">Tag %1$s von %2$s in %3$s</string>
+    <string name="dataprotection_email">whale@charlotte-fresenius-uni.de</string>
+    <string name="service_not_running_resume_study">Studie starten</string>
+    <string name="is_same_interaction">Einstellungen</string>
+    <string name="main_questionnaire_inbox">Aktuelle Fragebögen</string>
+    <string name="main_questionnaire_inbox_completion_hint">Beantworten Sie die Fragebögen sobald wie möglich</string>
+    <string name="main_questionnaire_inbox_element_duration_validitiy">In den nächsten %1$s Minuten</string>
+    <string name="main_questionnaire_inbox_element_duration_indefinite">Antworten Sie, wenn es Ihnen passt</string>
+    <string name="study_is_running">Studie ist aktiv</string>
+    <string name="study_not_running">Studie ist aktuell inaktiv</string>
+    <string name="study_settings">Einstellungen</string>
+</resources>
