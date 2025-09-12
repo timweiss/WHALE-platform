@@ -25,10 +25,10 @@ The text view components support string interpolation to include dynamic content
 It can be used in any `text_view` ESM element and the questionnaire shown needs to have a NotificationTrigger associated with its PendingNotification.
 The format for the string interpolation for NotificationTrigger timestamps is
 
-| Format                   | Description                                | Example |
-|--------------------------|--------------------------------------------|---------|
-| `{triggerName_pushed}`   | Time when NotificationTrigger was pushed   | 11:25   |
-| `{triggerName_answered}` | Time when NotificationTrigger was answered | 11:30   |
+| Format                     | Description                                | Example |
+|----------------------------|--------------------------------------------|---------|
+| `{{triggerName_pushed}}`   | Time when NotificationTrigger was pushed   | 11:25   |
+| `{{triggerName_answered}}` | Time when NotificationTrigger was answered | 11:30   |
 
 where `triggerName` is the name of the NotificationTrigger, so for example the text of a TextViewElement could be `What did you do on {{Trigger1_pushed}}?`, which will replace to `What did you do on 11:25?` when the questionnaire is shown.
 
