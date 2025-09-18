@@ -18,7 +18,71 @@ To decide if and which NotificationTrigger is shown on unlock (or through a push
 In both cases, the floating widget will show the questionnaire defined in the questionnaire trigger of the NotificationTrigger. If it is configured to be pushed, an additional push notification is created.
 
 ### Questionnaire Rules
-todo
+Questionnaire rules enable conditional logic within questionnaires, allowing dynamic responses based on participant answers. When a questionnaire is completed, the rules are evaluated against the provided answers, and matching rules trigger specific actions.
+
+#### Rule Structure
+Each questionnaire can have an optional `rules` field containing a list of `QuestionnaireRule` objects. Each rule consists of:
+
+- **name**: A unique identifier for the rule
+- **conditions**: A `ConditionGroup` that defines when the rule should trigger
+- **actions**: A list of actions to execute when conditions are met
+
+#### Conditions
+Conditions are evaluated against questionnaire element values using:
+
+- **fieldName**: The name of the questionnaire element to check (must match the element's `name` property)
+- **comparator**: Either `equals` or `not_equals`
+- **expectedValue**: The value to compare against (supports any JSON type)
+
+Multiple conditions can be combined using logical operators:
+- **and**: All conditions must be true
+- **or**: At least one condition must be true
+
+#### Actions
+Two types of actions are supported:
+
+1. **put_notification_trigger**: Creates a new notification trigger
+   - `triggerId`: The ID of the trigger to create
+
+2. **open_questionnaire**: Immediately opens another questionnaire
+   - `eventQuestionnaireTriggerId`: The ID of the questionnaire trigger to open
+
+#### Example Rule Configuration
+```json
+{
+  "name": "Follow-up Rule",
+  "conditions": {
+    "operator": "and",
+    "conditions": [
+      {
+        "fieldName": "mood_rating",
+        "comparator": "equals",
+        "expectedValue": "low"
+      },
+      {
+        "fieldName": "needs_support",
+        "comparator": "not_equals",
+        "expectedValue": "no"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "type": "put_notification_trigger",
+      "triggerId": 123
+    },
+    {
+      "type": "open_questionnaire",
+      "eventQuestionnaireTriggerId": 456
+    }
+  ]
+}
+```
+
+This rule would trigger if the participant rated their mood as "low" AND didn't answer "no" to needing support, then both create a notification trigger and open another questionnaire.
+
+#### Implementation Details
+Rules are evaluated in `QuestionnaireRuleEvaluator.kt:20` after questionnaire completion. The evaluator supports various element types including radio groups, checkboxes, sliders, text entries, button groups, and social network entries. If any condition references a non-existent field or the field has no value, that condition evaluates to false.
 
 ### String Interpolation
 The text view components support string interpolation to include dynamic content in the questionnaire. Currently, the dynamic content is limited to the timestamps of NotificationTriggers.
@@ -32,8 +96,51 @@ The format for the string interpolation for NotificationTrigger timestamps is
 
 where `triggerName` is the name of the NotificationTrigger, so for example the text of a TextViewElement could be `What did you do on {{Trigger1_pushed}}?`, which will replace to `What did you do on 11:25?` when the questionnaire is shown.
 
-### PendingNotification
-todo
+### PendingQuestionnaire
+The PendingQuestionnaire is the central data model for managing questionnaire lifecycle, from creation to completion and upload. It serves as a persistent storage container that tracks questionnaire state, participant answers, and metadata throughout the entire ESM process.
+
+#### Core Functionality
+PendingQuestionnaire acts as a bridge between questionnaire definitions and participant responses, providing:
+
+- **State Management**: Tracks questionnaire status from notification through completion
+- **Answer Storage**: Persists participant responses as JSON during and after completion
+- **Upload Coordination**: Manages data synchronization with the backend
+
+#### Database Schema
+The PendingQuestionnaire entity in `PendingQuestionnaire.kt:38` contains:
+
+| Field                    | Type                            | Description                                                  |
+|--------------------------|---------------------------------|--------------------------------------------------------------|
+| `uid`                    | UUID                            | Unique identifier for the questionnaire instance             |
+| `addedAt`                | Long                            | Timestamp when questionnaire was created                     |
+| `validUntil`             | Long                            | Expiration timestamp (-1 for no expiration)                  |
+| `questionnaireJson`      | String                          | Serialized questionnaire definition and elements             |
+| `triggerJson`            | String                          | Serialized trigger configuration that created this instance  |
+| `elementValuesJson`      | String?                         | JSON-encoded participant answers                             |
+| `updatedAt`              | Long                            | Last modification timestamp                                  |
+| `openedPage`             | Int?                            | Current/last viewed page (for multi-page questionnaires)     |
+| `status`                 | PendingQuestionnaireStatus      | Current state (NOTIFIED, PENDING, COMPLETED)                 |
+| `finishedAt`             | Long?                           | Completion timestamp                                         |
+| `notificationTriggerUid` | UUID?                           | Reference to associated NotificationTrigger (if any)         |
+| `displayType`            | PendingQuestionnaireDisplayType | How questionnaire is presented (INBOX, NOTIFICATION_TRIGGER) |
+
+#### Status Lifecycle
+PendingQuestionnaire progresses through three states:
+
+1. **NOTIFIED**: Initial state when questionnaire is created and ready for display
+2. **PENDING**: Participant has opened questionnaire and is actively answering
+3. **COMPLETED**: All responses submitted and questionnaire finished
+
+#### Creation and Display Types
+Questionnaires can be created through two pathways:
+
+- **INBOX**: Manual questionnaires added directly to participant's inbox
+- **NOTIFICATION_TRIGGER**: Automatic questionnaires triggered by NotificationTrigger events
+
+When created via NotificationTrigger, the `notificationTriggerUid` field links to the triggering event, enabling string interpolation and contextual data access.
+
+#### Answer Management
+Participant responses are stored in `elementValuesJson` as a serialized map of element IDs to ElementValue objects.
 
 ## Lifecycle
 [LogService](app/src/main/java/de/mimuc/senseeverything/service/LogService.java) is responsible for starting the [Sensors](app/src/main/java/de/mimuc/senseeverything/sensor).
