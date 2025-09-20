@@ -52,7 +52,7 @@ class SamplingEventReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        fun sendBroadcast(context: Context, eventName: String, source: PendingQuestionnaire?, triggerId: Int? = null) {
+        fun sendBroadcast(context: Context, eventName: String, source: PendingQuestionnaire? = null, triggerId: Int? = null) {
             val intent = Intent(context.applicationContext, SamplingEventReceiver::class.java)
             intent.apply {
                 putExtra("eventName", eventName)

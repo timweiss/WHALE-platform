@@ -81,6 +81,7 @@ import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 import de.mimuc.senseeverything.study.schedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
 import de.mimuc.senseeverything.workers.enqueueClearInteractionWidgetTimeBucketsWorker
@@ -715,6 +716,8 @@ class StartStudyViewModel @Inject constructor(
                 if (!isServiceRunning(LogService::class.java)) {
                     SEApplicationController.getInstance().samplingManager.startSampling(context.applicationContext)
                 }
+
+                SamplingEventReceiver.sendBroadcast(context, "setupComplete")
             } else {
                 Log.e("StartStudyViewModel", "Could not load study")
             }

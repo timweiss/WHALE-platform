@@ -243,7 +243,7 @@ class InteractionFloatingWidgetService : Service() {
                     logInteractionMessage(InteractionLogType.End)
                     SEApplicationController.getInstance().esmHandler.initializeTriggers(dataStore)
 
-                    sendBroadcast(this, "interactionEnd", null)
+                    sendBroadcast(this, "interactionEnd")
                 }
             } else {
                 logInteractionMessage(InteractionLogType.NoInteraction)
