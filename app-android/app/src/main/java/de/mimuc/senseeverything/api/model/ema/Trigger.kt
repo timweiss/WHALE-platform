@@ -132,7 +132,8 @@ data class OneTimeQuestionnaireTrigger(
 data class OneTimeTriggerConfiguration(
     val studyDay: Int,
     val time: String,
-    val randomToleranceMinutes: Int
+    val randomToleranceMinutes: Int,
+    val notificationText: String
 )
 
 @Serializable

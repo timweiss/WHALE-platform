@@ -379,17 +379,16 @@ class EsmHandler {
                 val calendar = Calendar.getInstance()
                 calendar.timeInMillis = studyStart
                 calendar.apply {
-                    // set(Calendar.HOUR_OF_DAY, scheduleHour)
-                    // set(Calendar.MINUTE, scheduleMinute)
-                    add(Calendar.MINUTE, 1)
+                    set(Calendar.HOUR_OF_DAY, scheduleHour)
+                    set(Calendar.MINUTE, scheduleMinute)
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
-                    add(Calendar.DATE, trigger.configuration.studyDay - 1)
+                    add(Calendar.DATE, trigger.configuration.studyDay)
                 }
 
                 val intent = Intent(context.applicationContext, OneTimeNotificationReceiver::class.java)
                 intent.apply {
-                    putExtra(INTENT_TITLE, "Es ist Zeit für ${questionnaire.name}")
+                    putExtra(INTENT_TITLE, trigger.configuration.notificationText)
                     putExtra(INTENT_TRIGGER_ID, trigger.id)
                     putExtra(INTENT_TRIGGER_JSON, fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger))
                     putExtra(INTENT_QUESTIONNAIRE_NAME, questionnaire.name)
