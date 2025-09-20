@@ -22,7 +22,7 @@ const QuestionnaireAnswerBody = z.object({
   createdTimestamp: z.number(),
   lastUpdatedTimestamp: z.number(),
   finishedTimestamp: z.number().nullable(),
-  notificationTrigger: NotificationTriggerValidation,
+  notificationTrigger: NotificationTriggerValidation.nullable(),
   answers: z.array(
     z.object({
       elementId: z.number(),

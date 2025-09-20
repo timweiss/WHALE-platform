@@ -1,6 +1,12 @@
 import { Repository } from './repository';
 import { DatabaseError } from '../config/errors';
-import { NotificationTrigger, NotificationTriggerStatus, NotificationTriggerPriority, NotificationTriggerModality, NotificationTriggerSource } from '../model/notification-trigger';
+import {
+  NotificationTrigger,
+  NotificationTriggerModality,
+  NotificationTriggerPriority,
+  NotificationTriggerSource,
+  NotificationTriggerStatus,
+} from '../model/notification-trigger';
 
 export enum ExperienceSamplingAnswerStatus {
   Notified = 'notified',
