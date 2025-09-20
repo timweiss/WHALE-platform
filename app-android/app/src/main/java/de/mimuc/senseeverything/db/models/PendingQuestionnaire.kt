@@ -11,20 +11,24 @@ import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
+@Serializable
 enum class PendingQuestionnaireStatus {
-    NOTIFIED,
-    PENDING,
-    COMPLETED
+    @SerialName("notified") NOTIFIED,
+    @SerialName("pending") PENDING,
+    @SerialName("completed") COMPLETED
 }
 
+@Serializable
 enum class PendingQuestionnaireDisplayType {
-    INBOX,
-    NOTIFICATION_TRIGGER
+    @SerialName("inbox") INBOX,
+    @SerialName("notification_trigger") NOTIFICATION_TRIGGER
 }
 
 @Entity(tableName = "pending_questionnaire", foreignKeys = [

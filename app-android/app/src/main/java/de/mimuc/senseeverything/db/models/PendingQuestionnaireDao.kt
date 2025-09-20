@@ -32,4 +32,7 @@ interface PendingQuestionnaireDao {
 
     @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now")
     fun deleteExpired(now: Long)
+
+    @Query("DELETE FROM pending_questionnaire")
+    fun deleteAll()
 }

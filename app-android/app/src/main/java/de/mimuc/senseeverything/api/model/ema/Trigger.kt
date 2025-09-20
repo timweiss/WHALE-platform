@@ -52,9 +52,10 @@ data class EventTriggerConfiguration(
     val modality: EventTriggerModality
 )
 
+@Serializable
 enum class EventTriggerModality {
-    Open,
-    Push
+    @SerialName("open") Open,
+    @SerialName("push") Push
 }
 
 @Serializable

@@ -226,6 +226,10 @@ class EnrolmentViewModel @Inject constructor(
 
             withContext(IO) {
                 database.logDataDao().deleteAll()
+                database.pendingQuestionnaireDao().deleteAll()
+                database.notificationTriggerDao().deleteAll()
+                database.generatedKeyDao().deleteAll()
+                database.socialNetworkContactDao().deleteAll()
                 database.close()
             }
 

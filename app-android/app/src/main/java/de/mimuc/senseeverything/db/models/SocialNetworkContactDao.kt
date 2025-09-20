@@ -24,4 +24,7 @@ interface SocialNetworkContactDao {
 
     @Query("DELETE FROM social_network_contacts WHERE uid = :uid")
     fun deleteById(uid: Long)
+
+    @Query("DELETE FROM social_network_contacts")
+    fun deleteAll()
 }

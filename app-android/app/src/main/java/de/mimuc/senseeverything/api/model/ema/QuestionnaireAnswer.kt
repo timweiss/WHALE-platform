@@ -4,6 +4,7 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.db.models.PendingQuestionnaireStatus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -16,7 +17,7 @@ data class QuestionnaireAnswerRequest(
     val lastUpdatedTimestamp: Long,
     val finishedTimestamp: Long,
     val lastOpenedPage: Int,
-    val status: String,
+    val status: PendingQuestionnaireStatus,
     val notificationTrigger: SerializableNotificationTrigger?,
     val answers: JsonArray
 )
@@ -97,7 +98,7 @@ fun makeAnswerRequest(
         lastUpdatedTimestamp = pendingQuestionnaire.updatedAt,
         finishedTimestamp = pendingQuestionnaire.finishedAt ?: -1,
         lastOpenedPage = pendingQuestionnaire.openedPage ?: -1,
-        status = pendingQuestionnaire.status.name,
+        status = pendingQuestionnaire.status,
         notificationTrigger = serializableNotificationTrigger,
         answers = answersJsonArray
     )

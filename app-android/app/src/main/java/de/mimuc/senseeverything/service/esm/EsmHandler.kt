@@ -72,6 +72,7 @@ class EsmHandler {
         dataStoreManager: DataStoreManager,
         database: AppDatabase
     ) {
+        triggers = dataStoreManager.questionnairesFlow.first().flatMap { it.triggers }
         // Handle event triggers
         val eventTriggers = triggers.filterIsInstance<EventQuestionnaireTrigger>()
         if (eventTriggers.isNotEmpty()) {
@@ -596,7 +597,7 @@ class NotificationPushHelper(private val context: Context) {
             )
         }
 
-        val notification = buildNotification("It's time for $questionnaireName", intent)
+        val notification = buildNotification(title ?: "It's time for $questionnaireName", intent)
 
         notificationManager.notify(triggerId, notification)
     }

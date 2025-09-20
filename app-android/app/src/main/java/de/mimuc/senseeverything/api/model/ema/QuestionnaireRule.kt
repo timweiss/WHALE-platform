@@ -39,30 +39,22 @@ enum class Comparator {
     @SerialName("not_equals") NOT_EQUALS
 }
 
-enum class ActionType(val type: String) {
-    PUT_NOTIFICATION_TRIGGER("put_notification_trigger"),
-    OPEN_QUESTIONNAIRE("open_questionnaire")
-}
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("type")
-sealed class Action {
-    abstract val type: ActionType
-}
+sealed class Action
 
 @Serializable
 @SerialName("put_notification_trigger")
 data class PutNotificationTrigger(
-    val triggerId: Int,
-    override val type: ActionType = ActionType.PUT_NOTIFICATION_TRIGGER,
+    val triggerId: Int
 ) : Action()
 
 @Serializable
 @SerialName("open_questionnaire")
 data class OpenQuestionnaire(
-    val eventQuestionnaireTriggerId: Int,
-    override val type: ActionType = ActionType.OPEN_QUESTIONNAIRE,
+    val eventQuestionnaireTriggerId: Int
 ) : Action()
 
 val ruleJson = Json {

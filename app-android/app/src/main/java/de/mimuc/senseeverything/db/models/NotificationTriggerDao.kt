@@ -28,4 +28,7 @@ interface NotificationTriggerDao {
 
     @Update()
     fun update(notificationTrigger: NotificationTrigger)
+
+    @Query("DELETE FROM notification_trigger")
+    fun deleteAll()
 }
