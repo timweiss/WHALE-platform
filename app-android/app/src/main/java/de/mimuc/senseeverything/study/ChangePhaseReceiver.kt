@@ -45,9 +45,6 @@ fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, phases: Li
 
     // schedule an alarm for each phase change so that it can be adapted
     for (phase in phases) {
-        // nothing to do for the first day
-        // if (phase.fromDay == 0) continue
-
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, ChangePhaseReceiver::class.java)
@@ -60,7 +57,12 @@ fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, phases: Li
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
         )
 
-        val triggerTimestamp = studyStartTimestamp + TimeUnit.DAYS.toMillis(phase.fromDay.toLong())
+        // if fromDay is 0, schedule phase change 5 minutes after study start, otherwise on start of the day
+        val triggerTimestamp = if (phase.fromDay == 0) {
+            studyStartTimestamp + TimeUnit.MINUTES.toMillis(5)
+        } else {
+            timestampToNextFullDay(studyStartTimestamp, phase.fromDay)
+        }
 
         Log.d("ChangePhaseReceiver", "Scheduling phase change to ${phase.name} at $triggerTimestamp")
         alarmManager.setExactAndAllowWhileIdle(
@@ -69,4 +71,15 @@ fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, phases: Li
             pendingIntent
         )
     }
+}
+
+fun timestampToNextFullDay(studyStartTimestamp: Long, fromDay: Int): Long {
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = studyStartTimestamp + TimeUnit.DAYS.toMillis(fromDay.toLong())
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    return calendar.timeInMillis
 }
