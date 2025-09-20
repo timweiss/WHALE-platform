@@ -15,6 +15,7 @@ import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.EventQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.EventTriggerModality
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.OneTimeQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.PeriodicQuestionnaireTrigger
@@ -141,16 +142,26 @@ class EsmHandler {
             return
         }
 
-        // open questionnaire
-        val intent = Intent(context, QuestionnaireActivity::class.java)
-        intent.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, fullQuestionnaireJson.encodeToString(questionnaire))
-        intent.putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID, pendingId.toString())
+        if (trigger.configuration.modality == EventTriggerModality.Push) {
+            val notificationHelper = NotificationPushHelper(context)
+            notificationHelper.sendReminderNotification(
+                trigger.id,
+                pendingId,
+                trigger.configuration.notificationText,
+                questionnaire.questionnaire.name
+            )
+        } else if (trigger.configuration.modality == EventTriggerModality.Open) {
+            // open questionnaire
+            val intent = Intent(context, QuestionnaireActivity::class.java)
+            intent.putExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE, fullQuestionnaireJson.encodeToString(questionnaire))
+            intent.putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID, pendingId.toString())
 
-        // this will make it appear but not go back to the MainActivity afterwards
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            // this will make it appear but not go back to the MainActivity afterwards
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
 
-        context.startActivity(intent)
+            context.startActivity(intent)
+        }
     }
 
     suspend fun handleEventPushedNotificationTrigger(

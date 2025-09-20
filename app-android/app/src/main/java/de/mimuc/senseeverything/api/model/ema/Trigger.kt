@@ -1,6 +1,5 @@
 package de.mimuc.senseeverything.api.model.ema
 
-import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
@@ -49,8 +48,14 @@ data class EventQuestionnaireTrigger(
 @Serializable
 data class EventTriggerConfiguration(
     val eventName: String,
-    val displayStrategy: InteractionWidgetDisplayStrategy
+    val notificationText: String,
+    val modality: EventTriggerModality
 )
+
+enum class EventTriggerModality {
+    Open,
+    Push
+}
 
 @Serializable
 @SerialName("periodic")
