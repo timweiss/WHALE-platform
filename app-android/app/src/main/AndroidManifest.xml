@@ -97,6 +97,9 @@
         <receiver
             android:name=".study.ChangePhaseReceiver"
             android:enabled="true" />
+        <receiver
+            android:name=".service.esm.NotificationTriggerReceiver"
+            android:enabled="true" />
 
         <service
             android:name=".service.AccessibilityLogService"

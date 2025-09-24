@@ -5,12 +5,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.util.TypedValue;
-import android.view.View;
-import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.TextView;
 
 import de.mimuc.senseeverything.activity.CONST;
 import de.mimuc.senseeverything.db.AppDatabase;
@@ -49,7 +43,7 @@ public class MyLightSensor extends AbstractSensor implements SensorEventListener
 			return;
 
 		sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
-		sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT), SensorManager.SENSOR_DELAY_FASTEST);
+		sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT), SensorManager.SENSOR_DELAY_NORMAL);
 		m_IsRunning = true;
 		count = 0;
 	}

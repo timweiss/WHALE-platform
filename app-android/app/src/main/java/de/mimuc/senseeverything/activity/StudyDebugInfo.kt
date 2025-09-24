@@ -232,7 +232,7 @@ fun StudyDebugInfoView(
         }
 
         if (currentStudyPhase.value != null) {
-            Text("Current Phase: ${currentStudyPhase.value?.fromDay}-${currentStudyPhase.value?.durationDays} ${currentStudyPhase.value?.interactionWidgetStrategy}")
+            Text("Current Phase: ${currentStudyPhase.value?.fromDay}-${currentStudyPhase.value?.durationDays} ${currentStudyPhase.value?.name}")
         } else {
             Text("No study phase found")
         }

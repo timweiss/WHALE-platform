@@ -84,7 +84,6 @@ import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 import de.mimuc.senseeverything.study.schedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
-import de.mimuc.senseeverything.workers.enqueueClearInteractionWidgetTimeBucketsWorker
 import de.mimuc.senseeverything.workers.enqueuePendingQuestionnaireUploadWorker
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
 import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
@@ -704,7 +703,6 @@ class StartStudyViewModel @Inject constructor(
                 val token = dataStoreManager.tokenFlow.first()
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
-                enqueueClearInteractionWidgetTimeBucketsWorker(context)
                 enqueuePendingQuestionnaireUploadWorker(context, studyId, token)
                 scheduleStudyEndAlarm(context, study.durationDays)
 

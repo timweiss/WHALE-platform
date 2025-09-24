@@ -32,11 +32,17 @@ class ChangePhaseReceiver  : BroadcastReceiver() {
         val phaseJson = intent?.getStringExtra("phaseJson") ?: return@goAsync
         val phase = Json.decodeFromString<ExperimentalGroupPhase>(phaseJson)
 
-        Log.d("ChangePhaseReceiver", "Changing phase to $phase")
+        Log.d("ChangePhaseReceiver", "Changing phase to ${phase.name} (from ${phase.fromDay} for ${phase.durationDays} days)")
 
         val application = context.applicationContext as SEApplicationController
         application.esmHandler.scheduleRandomEMANotificationsForPhase(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager)
         application.esmHandler.scheduleFloatingWidgetNotifications(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager, database)
+    }
+
+    companion object {
+        fun getPendingIntentId(phase: ExperimentalGroupPhase): Int {
+            return 20000 + phase.fromDay
+        }
     }
 }
 
@@ -52,7 +58,7 @@ fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, phases: Li
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            101,
+            ChangePhaseReceiver.getPendingIntentId(phase),
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
         )

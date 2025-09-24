@@ -453,7 +453,7 @@ suspend fun DataStoreManager.currentStudyDay(): Long {
 
 suspend fun DataStoreManager.getCurrentStudyPhase(): ExperimentalGroupPhase? {
     val phases = studyPhasesFlow.first()
-    val currentDay = currentStudyDay()
+    val currentDay = currentStudyDay() - 1
 
     return phases?.firstOrNull { phase ->
         phase.fromDay <= currentDay && phase.fromDay + phase.durationDays > currentDay
