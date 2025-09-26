@@ -16,6 +16,6 @@ interface GeneratedKeyDao {
     @Delete
     fun delete(generatedKey: GeneratedKey)
 
-    @Query("DELETE FROM pending_questionnaire")
+    @Query("DELETE FROM generated_keys")
     fun deleteAll()
 }

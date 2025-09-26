@@ -71,7 +71,8 @@ data class PeriodicQuestionnaireTrigger(
 @Serializable
 data class PeriodicTriggerConfiguration(
     val interval: PeriodicQuestionnaireTriggerInterval,
-    val time: String
+    val time: String,
+    val notificationText: String
 )
 
 @Serializable

@@ -15,6 +15,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.parseTimebucket
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_JSON
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_NOTIFICATION_ID
@@ -191,16 +192,21 @@ class FloatingWidgetNotificationScheduler {
             database.notificationTriggerDao().insert(notification)
 
             if (notification.modality == NotificationTriggerModality.Push) {
-                scheduleAlarmForNotificationTrigger(notification, context)
+                val scheduledAlarm = ScheduledAlarm.createEntry("NotificationTriggerReceiver", notification.uid.toString(), notification.validFrom)
+                database.scheduledAlarmDao().insert(scheduledAlarm)
+
+                scheduleAlarmForNotificationTrigger(notification, context, scheduledAlarm)
             }
         }
     }
 
-    fun schedulePlannedNotificationTriggers(context: Context, database: AppDatabase) {
+    suspend fun schedulePlannedNotificationTriggers(context: Context, database: AppDatabase) {
         val now = System.currentTimeMillis()
-        val plannedNotifications = database.notificationTriggerDao().getNextForModality(
-            NotificationTriggerModality.Push, now
-        )
+        val plannedNotifications = withContext(Dispatchers.IO) {
+            database.notificationTriggerDao().getNextForModality(
+                NotificationTriggerModality.Push, now
+            )
+        }
 
         Log.i(
             TAG,
@@ -208,7 +214,14 @@ class FloatingWidgetNotificationScheduler {
         )
 
         for (notification in plannedNotifications) {
-            scheduleAlarmForNotificationTrigger(notification, context)
+            val scheduledAlarm = ScheduledAlarm.getOrCreateScheduledAlarm(
+                database,
+                "NotificationTriggerReceiver",
+                notification.uid.toString(),
+                notification.validFrom
+            )
+
+            scheduleAlarmForNotificationTrigger(notification, context, scheduledAlarm)
         }
     }
 
@@ -326,7 +339,8 @@ class FloatingWidgetNotificationScheduler {
 
     private fun scheduleAlarmForNotificationTrigger(
         notificationTrigger: NotificationTrigger,
-        context: Context
+        context: Context,
+        scheduledAlarm: ScheduledAlarm
     ) {
         val intent = Intent(context, NotificationTriggerReceiver::class.java)
         intent.apply {
@@ -338,7 +352,7 @@ class FloatingWidgetNotificationScheduler {
 
         val pendingIntent = PendingIntent.getBroadcast(
             context.applicationContext,
-            notificationTrigger.uid.hashCode(), // the best we can do to avoid collisions
+            scheduledAlarm.requestCode,
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
         )
@@ -350,7 +364,7 @@ class FloatingWidgetNotificationScheduler {
 
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            notificationTrigger.validFrom,
+            scheduledAlarm.timestamp,
             pendingIntent
         )
     }

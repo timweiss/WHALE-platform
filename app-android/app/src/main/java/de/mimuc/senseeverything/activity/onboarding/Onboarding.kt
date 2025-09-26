@@ -82,7 +82,7 @@ import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
-import de.mimuc.senseeverything.study.schedulePhaseChanges
+import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
 import de.mimuc.senseeverything.workers.enqueuePendingQuestionnaireUploadWorker
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
@@ -704,11 +704,11 @@ class StartStudyViewModel @Inject constructor(
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
                 enqueuePendingQuestionnaireUploadWorker(context, studyId, token)
-                scheduleStudyEndAlarm(context, study.durationDays)
+                scheduleStudyEndAlarm(context, study.durationDays, database)
 
                 val startedTimestamp = System.currentTimeMillis()
                 dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
-                schedulePhaseChanges(context, startedTimestamp, dataStoreManager.studyPhasesFlow.first())
+                reschedulePhaseChanges(context, database, dataStoreManager)
 
                 // automatically start data collection
                 if (!isServiceRunning(LogService::class.java)) {

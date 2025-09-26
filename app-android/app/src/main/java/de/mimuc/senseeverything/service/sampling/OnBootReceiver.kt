@@ -7,12 +7,17 @@ import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
+import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.service.esm.FloatingWidgetNotificationScheduler
+import de.mimuc.senseeverything.study.reschedulePhaseChanges
+import de.mimuc.senseeverything.study.rescheduleStudyEndAlarm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,6 +25,9 @@ import javax.inject.Inject
 class OnBootReceiver: BroadcastReceiver() {
     @Inject
     lateinit var dataStoreManager: DataStoreManager
+
+    @Inject
+    lateinit var database: AppDatabase
 
     override fun onReceive(context: Context?, intent: Intent?) = goAsync {
         if (context == null) {
@@ -31,28 +39,31 @@ class OnBootReceiver: BroadcastReceiver() {
             Log.d("BootUpReceiver", "Received boot completed intent")
 
             CoroutineScope(Dispatchers.Main).launch {
-                combine(
+                val (studyPaused, studyPausedUntil, studyState) = combine(
                     dataStoreManager.studyPausedFlow,
                     dataStoreManager.studyPausedUntilFlow,
                     dataStoreManager.studyStateFlow
                 ) { studyPaused, studyPausedUntil, studyState ->
                     Triple(studyPaused, studyPausedUntil, studyState)
-                }.collect { (studyPaused, studyPausedUntil, studyState) ->
-                    val currentContext = context.applicationContext
-                    Log.d("BootUpReceiver", "Study paused: $studyPaused, paused until: $studyPausedUntil")
+                }.first()
 
-                    if (studyState == StudyState.RUNNING && (!studyPaused || studyPausedUntil < System.currentTimeMillis() || studyPausedUntil == -1L)) {
-                        // study can start right away
-                        Log.d("BootUpReceiver", "Study is not paused, starting sampling")
-                        startSampling(currentContext)
-                    } else if (studyState == StudyState.RUNNING) {
-                        // study is paused, so we don't start sampling
-                        Log.d("BootUpReceiver", "Study is paused until $studyPausedUntil, starting alarm manager to resume study")
-                        scheduleResumeSamplingAlarm(currentContext, studyPausedUntil)
-                    } else {
-                        Log.d("BootUpReceiver", "Study has ended, not starting sampling")
-                        // todo: disable BootUpReceiver
-                    }
+                val currentContext = context.applicationContext
+                Log.d("BootUpReceiver", "Study paused: $studyPaused, paused until: $studyPausedUntil")
+
+                if (studyState == StudyState.RUNNING && (!studyPaused || studyPausedUntil < System.currentTimeMillis() || studyPausedUntil == -1L)) {
+                    // study can start right away
+                    Log.d("BootUpReceiver", "Study is not paused, starting sampling")
+                    startSampling(currentContext)
+
+                    // all alarms need to be rescheduled after reboot
+                    rescheduleAlarms(currentContext, database, dataStoreManager)
+                } else if (studyState == StudyState.RUNNING) {
+                    // study is paused, so we don't start sampling
+                    Log.d("BootUpReceiver", "Study is paused until $studyPausedUntil, starting alarm manager to resume study")
+                    scheduleResumeSamplingAlarm(currentContext, studyPausedUntil)
+                } else {
+                    Log.d("BootUpReceiver", "Study has ended, not starting sampling")
+                    // todo: disable BootUpReceiver
                 }
             }
         } else {
@@ -66,4 +77,13 @@ class OnBootReceiver: BroadcastReceiver() {
             samplingManager.startSampling(context)
         }
     }
+}
+
+private suspend fun rescheduleAlarms(context: Context, database: AppDatabase, dataStoreManager: DataStoreManager) {
+    rescheduleStudyEndAlarm(context, database)
+
+    val floatingWidgetScheduler = FloatingWidgetNotificationScheduler()
+    floatingWidgetScheduler.schedulePlannedNotificationTriggers(context, database)
+
+    reschedulePhaseChanges(context, database, dataStoreManager)
 }

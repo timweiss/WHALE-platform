@@ -493,7 +493,7 @@ class EsmHandler {
 
         val intent = Intent(context.applicationContext, PeriodicNotificationReceiver::class.java)
         intent.apply {
-            putExtra(INTENT_TITLE, "Es ist Zeit für ${title}")
+            putExtra(INTENT_TITLE, trigger.configuration.notificationText)
             putExtra(INTENT_TRIGGER_ID, trigger.id)
             putExtra(INTENT_TRIGGER_JSON, fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger))
             putExtra(INTENT_QUESTIONNAIRE_NAME, title)

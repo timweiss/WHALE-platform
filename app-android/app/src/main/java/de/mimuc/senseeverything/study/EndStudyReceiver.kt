@@ -10,9 +10,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -40,11 +43,37 @@ class EndStudyReceiver : BroadcastReceiver() {
     }
 }
 
-fun scheduleStudyEndAlarm(context: Context, afterDays: Int) {
+suspend fun scheduleStudyEndAlarm(context: Context, afterDays: Int, database: AppDatabase) {
+    val timestamp = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(afterDays.toLong())
+
+    val scheduledAlarm = ScheduledAlarm.getOrCreateScheduledAlarm(
+        database,
+        "EndStudyReceiver",
+        "End",
+        timestamp
+    )
+
+    setStudyEndAlarm(context, scheduledAlarm)
+}
+
+suspend fun rescheduleStudyEndAlarm(context: Context, database: AppDatabase) {
+    val scheduledAlarm = withContext(Dispatchers.IO) {
+        database.scheduledAlarmDao().getByIdentifier("EndStudyReceiver", "End")
+    }
+
+    if (scheduledAlarm != null) {
+        setStudyEndAlarm(context, scheduledAlarm)
+        Log.i("EndStudyReceiver", "Rescheduled study end alarm for timestamp ${scheduledAlarm.timestamp}")
+    } else {
+        Log.w("EndStudyReceiver", "No scheduled study end alarm found to reschedule")
+    }
+}
+
+fun setStudyEndAlarm(context: Context, scheduledAlarm: ScheduledAlarm) {
     val endStudyIntent = Intent(context, EndStudyReceiver::class.java)
     val pendingIntent = PendingIntent.getBroadcast(
         context,
-        101,
+        scheduledAlarm.requestCode,
         endStudyIntent,
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
     )
@@ -55,20 +84,20 @@ fun scheduleStudyEndAlarm(context: Context, afterDays: Int) {
         if (alarmManager.canScheduleExactAlarms()) {
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
-                System.currentTimeMillis() + TimeUnit.DAYS.toMillis(afterDays.toLong()),
+                scheduledAlarm.timestamp,
                 pendingIntent
             )
         } else {
             alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
-                System.currentTimeMillis() + TimeUnit.DAYS.toMillis(afterDays.toLong()),
+                scheduledAlarm.timestamp,
                 pendingIntent
             )
         }
     } else {
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + TimeUnit.DAYS.toMillis(afterDays.toLong()),
+            scheduledAlarm.timestamp,
             pendingIntent
         )
     }
