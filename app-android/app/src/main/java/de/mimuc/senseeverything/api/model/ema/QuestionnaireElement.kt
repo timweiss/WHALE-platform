@@ -38,12 +38,13 @@ enum class GroupAlignment {
 
 @Serializable
 sealed class QuestionnaireElement {
-    abstract val id: Int
-    abstract val questionnaireId: Int
-    abstract val name: String
-    abstract val step: Int
-    abstract val position: Int
-    
+    open val id: Int = 0
+    open val questionnaireId: Int = 0
+    open val name: String = ""
+    open val step: Int = 0
+    open val position: Int = 0
+    open val displayGroup: Int = 0
+
     // Computed property that derives type from the actual class
     val type: QuestionnaireElementType
         get() = when (this) {
@@ -65,11 +66,6 @@ sealed class QuestionnaireElement {
 @Serializable
 @SerialName("text_view")
 data class TextViewElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: TextViewConfiguration
 ) : QuestionnaireElement()
 
@@ -81,11 +77,6 @@ data class TextViewConfiguration(
 @Serializable
 @SerialName("radio_group")
 data class RadioGroupElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: RadioGroupConfiguration
 ) : QuestionnaireElement()
 
@@ -98,11 +89,6 @@ data class RadioGroupConfiguration(
 @Serializable
 @SerialName("checkbox_group")
 data class CheckboxGroupElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: CheckboxGroupConfiguration
 ) : QuestionnaireElement()
 
@@ -115,11 +101,6 @@ data class CheckboxGroupConfiguration(
 @Serializable
 @SerialName("slider")
 data class SliderElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: SliderConfiguration
 ) : QuestionnaireElement()
 
@@ -133,11 +114,6 @@ data class SliderConfiguration(
 @Serializable
 @SerialName("text_entry")
 data class TextEntryElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: TextEntryConfiguration
 ) : QuestionnaireElement()
 
@@ -149,11 +125,6 @@ data class TextEntryConfiguration(
 @Serializable
 @SerialName("external_questionnaire_link")
 data class ExternalQuestionnaireLinkElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: ExternalQuestionnaireLinkConfiguration
 ) : QuestionnaireElement()
 
@@ -173,11 +144,6 @@ data class UrlParameter(
 @Serializable
 @SerialName("social_network_entry")
 data class SocialNetworkEntryElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: SocialNetworkEntryConfiguration = SocialNetworkEntryConfiguration()
 ) : QuestionnaireElement()
 
@@ -189,11 +155,6 @@ data class SocialNetworkEntryConfiguration(
 @Serializable
 @SerialName("social_network_rating")
 data class SocialNetworkRatingElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: SocialNetworkRatingConfiguration
 ) : QuestionnaireElement()
 
@@ -205,11 +166,6 @@ data class SocialNetworkRatingConfiguration(
 @Serializable
 @SerialName("circumplex")
 data class CircumplexElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: CircumplexConfiguration
 ) : QuestionnaireElement()
 
@@ -230,11 +186,6 @@ data class CircumplexClip(
 @Serializable
 @SerialName("likert_scale_label")
 data class LikertScaleLabelElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: LikertScaleLabelConfiguration
 ) : QuestionnaireElement()
 
@@ -246,11 +197,6 @@ data class LikertScaleLabelConfiguration(
 @Serializable
 @SerialName("button_group")
 data class ButtonGroupElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: ButtonGroupConfiguration
 ) : QuestionnaireElement()
 
@@ -269,11 +215,6 @@ data class ButtonOption(
 @Serializable
 @SerialName("malformed")
 data class MalformedElement(
-    override val id: Int,
-    override val questionnaireId: Int,
-    override val name: String,
-    override val step: Int,
-    override val position: Int,
     val configuration: MalformedConfiguration = MalformedConfiguration()
 ) : QuestionnaireElement()
 

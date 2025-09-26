@@ -1,0 +1,1 @@
+alter table esm_elements add column display_group integer default 0 not null;

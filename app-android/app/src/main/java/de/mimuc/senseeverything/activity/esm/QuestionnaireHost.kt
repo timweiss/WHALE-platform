@@ -140,6 +140,16 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 }
 
 @Composable
+fun ElementSeparator(element: QuestionnaireElement, currentElements: List<QuestionnaireElement>) {
+    val previousElement = if (element.position > 0) {
+        currentElements.getOrNull(element.position - 1)
+    } else null
+    if (previousElement != null && previousElement.displayGroup != element.displayGroup) {
+        Spacer(modifier = Modifier.padding(8.dp))
+    }
+}
+
+@Composable
 fun QuestionnaireHost(
     questionnaire: FullQuestionnaire,
     textReplacements: Map<String, String>,
@@ -169,6 +179,8 @@ fun QuestionnaireHost(
             // column layout as we cannot nest LazyColumn inside LazyColumn
             Column {
                 for (element in currentElements) {
+                    ElementSeparator(element, currentElements)
+
                     val elementValue = answerValues.value[element.id]
                     QuestionnaireElement(element, elementValue, textReplacements, onValueChange = { id, value ->
                         viewModel.setElementValue(id, value)
@@ -214,6 +226,8 @@ fun QuestionnaireHost(
                         .padding(bottom = 56.dp)
                 ) {
                     items(items = currentElements, key = { item -> item.id }) { element ->
+                        ElementSeparator(element, currentElements)
+
                         val elementValue = answerValues.value[element.id]
                         QuestionnaireElement(element, elementValue, textReplacements, onValueChange = { id, value ->
                             viewModel.setElementValue(id, value)
