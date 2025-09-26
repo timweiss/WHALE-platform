@@ -230,6 +230,7 @@ class EnrolmentViewModel @Inject constructor(
                 database.notificationTriggerDao().deleteAll()
                 database.generatedKeyDao().deleteAll()
                 database.socialNetworkContactDao().deleteAll()
+                database.scheduledAlarmDao().deleteAll()
                 database.close()
             }
 

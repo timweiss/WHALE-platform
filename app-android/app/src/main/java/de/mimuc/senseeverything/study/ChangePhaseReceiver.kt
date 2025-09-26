@@ -62,9 +62,9 @@ suspend fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, ph
         val intent = Intent(context, ChangePhaseReceiver::class.java)
         intent.putExtra("phaseJson", Json.encodeToString(phase))
 
-        // if fromDay is 0, schedule phase change 5 minutes after study start, otherwise on start of the day
+        // if fromDay is 0, schedule phase change 2 minutes after study start, otherwise on start of the day
         val triggerTimestamp = if (phase.fromDay == 0) {
-            studyStartTimestamp + TimeUnit.MINUTES.toMillis(5)
+            studyStartTimestamp + TimeUnit.MINUTES.toMillis(2)
         } else {
             timestampToNextFullDay(studyStartTimestamp, phase.fromDay)
         }
