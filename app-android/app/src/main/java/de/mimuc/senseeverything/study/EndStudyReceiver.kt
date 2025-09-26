@@ -43,8 +43,8 @@ class EndStudyReceiver : BroadcastReceiver() {
     }
 }
 
-suspend fun scheduleStudyEndAlarm(context: Context, afterDays: Int, database: AppDatabase) {
-    val timestamp = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(afterDays.toLong())
+suspend fun scheduleStudyEndAlarm(context: Context, startedTimestamp: Long, afterDays: Int, database: AppDatabase) {
+    val timestamp = startedTimestamp + TimeUnit.DAYS.toMillis(afterDays.toLong())
 
     val scheduledAlarm = ScheduledAlarm.getOrCreateScheduledAlarm(
         database,

@@ -241,8 +241,6 @@ class InteractionFloatingWidgetService : Service() {
                     logInteractionMessage(InteractionLogType.ConfirmAnotherInteraction)
                 } else {
                     logInteractionMessage(InteractionLogType.End)
-                    SEApplicationController.getInstance().esmHandler.initializeTriggers(dataStore)
-
                     sendBroadcast(this, "interactionEnd")
                 }
             } else {

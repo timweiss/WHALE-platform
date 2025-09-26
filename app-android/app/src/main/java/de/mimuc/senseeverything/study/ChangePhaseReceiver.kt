@@ -12,10 +12,8 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.goAsync
-import de.mimuc.senseeverything.service.SEApplicationController
-import kotlinx.coroutines.Dispatchers
+import de.mimuc.senseeverything.service.esm.EsmHandler
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.Calendar
@@ -38,15 +36,8 @@ class ChangePhaseReceiver  : BroadcastReceiver() {
 
         Log.d("ChangePhaseReceiver", "Changing phase to ${phase.name} (from ${phase.fromDay} for ${phase.durationDays} days)")
 
-        val application = context.applicationContext as SEApplicationController
-        application.esmHandler.scheduleRandomEMANotificationsForPhase(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager)
-        application.esmHandler.scheduleFloatingWidgetNotifications(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager, database)
-    }
-
-    companion object {
-        fun getPendingIntentId(phase: ExperimentalGroupPhase): Int {
-            return 20000 + phase.fromDay
-        }
+        EsmHandler.scheduleRandomEMANotificationsForPhase(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager)
+        EsmHandler.scheduleFloatingWidgetNotifications(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager, database)
     }
 }
 

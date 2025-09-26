@@ -12,6 +12,8 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
+import kotlinx.coroutines.flow.first
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -44,7 +46,11 @@ class PeriodicNotificationReceiver: BroadcastReceiver() {
 
         // schedule next notification
         if (trigger != null && context != null && questionnaireName != null) {
-            EsmHandler().scheduleNextPeriodicNotification(context, trigger, totalDays, remainingDays, questionnaireName)
+            val studyStart = dataStoreManager.timestampStudyStartedFlow.first()
+            val days = dataStoreManager.studyDaysFlow.first()
+            val studyEnd = studyStart + TimeUnit.DAYS.toMillis((days).toLong())
+
+            EsmHandler.scheduleNextPeriodicNotificationStateless(context, trigger, studyStart, studyEnd, questionnaireName, database)
         } else {
             Log.e("PeriodicNotificationReceiver", "Failed to schedule next notification, missing information c:${context} t:${trigger} n:${questionnaireName}")
         }

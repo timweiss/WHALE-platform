@@ -81,6 +81,7 @@ import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.service.AccessibilityLogService
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
@@ -688,13 +689,13 @@ class StartStudyViewModel @Inject constructor(
                     Log.e("StartStudyViewModel", "Could not load questionnaires", exception)
                 }
 
-                getApplication<SEApplicationController>().esmHandler.schedulePeriodicQuestionnaires(
+                EsmHandler.schedulePeriodicQuestionnaires(
                     context,
                     dataStoreManager,
                     database
                 )
 
-                getApplication<SEApplicationController>().esmHandler.scheduleOneTimeQuestionnaires(
+                EsmHandler.scheduleOneTimeQuestionnaires(
                     context,
                     dataStoreManager,
                     database
@@ -704,10 +705,10 @@ class StartStudyViewModel @Inject constructor(
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
                 enqueuePendingQuestionnaireUploadWorker(context, studyId, token)
-                scheduleStudyEndAlarm(context, study.durationDays, database)
 
                 val startedTimestamp = System.currentTimeMillis()
                 dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
+                scheduleStudyEndAlarm(context, startedTimestamp, study.durationDays, database)
                 reschedulePhaseChanges(context, database, dataStoreManager)
 
                 // automatically start data collection

@@ -44,7 +44,7 @@ class RandomNotificationReceiver: BroadcastReceiver() {
 
         // schedule next notification
         if (trigger != null && context != null && questionnaireName != null) {
-            EsmHandler().scheduleRandomEMANotificationForTrigger(
+            EsmHandler.scheduleRandomEMANotificationForTrigger(
                 trigger,
                 Calendar.getInstance(),
                 questionnaireName,

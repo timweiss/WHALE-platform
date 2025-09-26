@@ -11,6 +11,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.service.esm.FloatingWidgetNotificationScheduler
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.rescheduleStudyEndAlarm
@@ -86,4 +87,6 @@ private suspend fun rescheduleAlarms(context: Context, database: AppDatabase, da
     floatingWidgetScheduler.schedulePlannedNotificationTriggers(context, database)
 
     reschedulePhaseChanges(context, database, dataStoreManager)
+
+    EsmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager, database)
 }

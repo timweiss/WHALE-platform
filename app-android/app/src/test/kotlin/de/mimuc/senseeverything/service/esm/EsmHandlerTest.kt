@@ -4,206 +4,17 @@ import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.RandomEMATriggerConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import java.util.Calendar
 
 class EsmHandlerTest {
-    @Test
-    fun testConsecutiveNotificationDatesStartSameDay() {
-        val startCalendar = Calendar.getInstance()
-        startCalendar.apply {
-            set(Calendar.HOUR_OF_DAY, 10)
-            set(Calendar.MINUTE, 0)
-        }
-
-        val handler = EsmHandler()
-        val scheduleHour = 19
-        val scheduleMinute = 0
-
-        var nextCalendar = handler.calculateNextNotificationTime(startCalendar, scheduleHour, scheduleMinute)
-
-        for (i in 1..7) {
-            assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + i, nextCalendar.get(Calendar.DAY_OF_MONTH))
-            assertEquals(scheduleHour, nextCalendar.get(Calendar.HOUR_OF_DAY))
-            assertEquals(scheduleMinute, nextCalendar.get(Calendar.MINUTE))
-            nextCalendar = handler.calculateNextNotificationTime(nextCalendar, scheduleHour, scheduleMinute)
-        }
-    }
-
-    @Test
-    fun testScheduleOnSameDayTrue() {
-        val startCalendar = Calendar.getInstance()
-        startCalendar.apply {
-            set(Calendar.HOUR_OF_DAY, 10)
-            set(Calendar.MINUTE, 0)
-        }
-
-        val handler = EsmHandler()
-        val scheduleHour = 19
-        val scheduleMinute = 0
-
-        assertTrue(handler.shouldScheduleOnSameDay(startCalendar, scheduleHour, scheduleMinute))
-    }
-
-    @Test
-    fun testScheduleOnSameDayFalse() {
-        val startCalendar = Calendar.getInstance()
-        startCalendar.apply {
-            set(Calendar.HOUR_OF_DAY, 20)
-            set(Calendar.MINUTE, 0)
-        }
-
-        val handler = EsmHandler()
-        val scheduleHour = 19
-        val scheduleMinute = 0
-
-        assertFalse(handler.shouldScheduleOnSameDay(startCalendar, scheduleHour, scheduleMinute))
-    }
-
-    @Test
-    fun testScheduleSevenDayStudyStartSameDay() {
-        val startCalendar = Calendar.getInstance()
-        startCalendar.apply {
-            set(Calendar.HOUR_OF_DAY, 10)
-            set(Calendar.MINUTE, 0)
-        }
-
-        var remainingStudyDays = 7
-
-        val scheduleHour = 19
-        val scheduleMinute = 0
-
-        val handler = EsmHandler()
-
-        var nextSchedule = startCalendar
-
-        var scheduledDays = 0
-
-        if (handler.shouldScheduleOnSameDay(startCalendar, scheduleHour, scheduleMinute)) {
-            nextSchedule = handler.calculateNextNotificationTime((startCalendar.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, -1) }, scheduleHour, scheduleMinute)
-            assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextSchedule.get(Calendar.DAY_OF_MONTH))
-            remainingStudyDays -= 1
-            scheduledDays += 1
-        }
-
-        for (i in 1..remainingStudyDays) {
-            nextSchedule = handler.calculateNextNotificationTime(nextSchedule, scheduleHour, scheduleMinute)
-            remainingStudyDays -= 1
-            scheduledDays += 1
-
-            assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + i, nextSchedule.get(Calendar.DAY_OF_MONTH))
-            assertEquals(scheduleHour, nextSchedule.get(Calendar.HOUR_OF_DAY))
-            assertEquals(scheduleMinute, nextSchedule.get(Calendar.MINUTE))
-        }
-
-        assertEquals(7, scheduledDays)
-        assertEquals(0, remainingStudyDays)
-    }
-
-    @Test
-    fun testGetNextNotificationSevenDayStudyStartSameDay() {
-        val startCalendar = Calendar.getInstance()
-        startCalendar.apply {
-            set(Calendar.HOUR_OF_DAY, 10)
-            set(Calendar.MINUTE, 0)
-        }
-
-        val remainingStudyDays = 7
-
-        val scheduleHour = 19
-        val scheduleMinute = 0
-
-        val handler = EsmHandler()
-
-        var nextSchedule = handler.getNextNotification(startCalendar.clone() as Calendar, scheduleHour, scheduleMinute, remainingStudyDays, remainingStudyDays)
-        assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextSchedule.calendar.get(Calendar.DAY_OF_MONTH))
-        assertEquals(remainingStudyDays -1, nextSchedule.remainingDays)
-
-        for (i in 1 until remainingStudyDays) {
-            nextSchedule = handler.getNextNotification(nextSchedule.calendar, scheduleHour, scheduleMinute, remainingStudyDays, nextSchedule.remainingDays)
-            assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + i, nextSchedule.calendar.get(Calendar.DAY_OF_MONTH))
-            assertEquals(remainingStudyDays - i - 1, nextSchedule.remainingDays)
-        }
-
-        assertEquals(0, nextSchedule.remainingDays)
-    }
-
-    @Test
-    fun testGetNextNotificationSevenDayStudyStartNextDay() {
-        val startCalendar = Calendar.getInstance()
-        startCalendar.apply {
-            set(Calendar.HOUR_OF_DAY, 20)
-            set(Calendar.MINUTE, 0)
-        }
-
-        val remainingStudyDays = 7
-
-        val scheduleHour = 19
-        val scheduleMinute = 0
-
-        val handler = EsmHandler()
-
-        var nextSchedule = handler.getNextNotification(startCalendar.clone() as Calendar, scheduleHour, scheduleMinute, remainingStudyDays, remainingStudyDays)
-        assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + 1, nextSchedule.calendar.get(Calendar.DAY_OF_MONTH))
-        assertEquals(remainingStudyDays -1, nextSchedule.remainingDays)
-
-        for (i in 1 until remainingStudyDays) {
-            nextSchedule = handler.getNextNotification(nextSchedule.calendar, scheduleHour, scheduleMinute, remainingStudyDays, nextSchedule.remainingDays)
-            assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + i + 1, nextSchedule.calendar.get(Calendar.DAY_OF_MONTH))
-            assertEquals(remainingStudyDays - i - 1, nextSchedule.remainingDays)
-        }
-
-        assertEquals(0, nextSchedule.remainingDays)
-    }
-
-    @Test
-    fun testScheduleSevenDayStudyStartNextDay() {
-        val startCalendar = Calendar.getInstance()
-        startCalendar.apply {
-            set(Calendar.HOUR_OF_DAY, 20)
-            set(Calendar.MINUTE, 0)
-        }
-
-        var remainingStudyDays = 7
-
-        val scheduleHour = 19
-        val scheduleMinute = 0
-
-        val handler = EsmHandler()
-
-        var nextSchedule = startCalendar
-
-        var scheduledDays = 0
-
-        if (handler.shouldScheduleOnSameDay(startCalendar, scheduleHour, scheduleMinute)) {
-            nextSchedule = handler.calculateNextNotificationTime((startCalendar.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, -1) }, scheduleHour, scheduleMinute)
-            assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextSchedule.get(Calendar.DAY_OF_MONTH))
-            remainingStudyDays -= 1
-            scheduledDays += 1
-        }
-
-        for (i in 1..remainingStudyDays) {
-            nextSchedule = handler.calculateNextNotificationTime(nextSchedule, scheduleHour, scheduleMinute)
-            remainingStudyDays -= 1
-            scheduledDays += 1
-
-            assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + i, nextSchedule.get(Calendar.DAY_OF_MONTH))
-            assertEquals(scheduleHour, nextSchedule.get(Calendar.HOUR_OF_DAY))
-            assertEquals(scheduleMinute, nextSchedule.get(Calendar.MINUTE))
-        }
-
-        assertEquals(7, scheduledDays)
-        assertEquals(0, remainingStudyDays)
-    }
-
     // Random Notifications
-
     @Test
     fun testInsideTimeBucket() {
         val timeBucket = "08:00-23:00"
-        val handler = EsmHandler()
 
         val time1 = Calendar.getInstance()
         time1.apply {
@@ -217,14 +28,13 @@ class EsmHandlerTest {
             set(Calendar.MINUTE, 0)
         }
 
-        assertTrue(handler.isInTimeBucket(time1, timeBucket))
-        assertTrue(handler.isInTimeBucket(time2, timeBucket))
+        assertTrue(EsmHandler.isInTimeBucket(time1, timeBucket))
+        assertTrue(EsmHandler.isInTimeBucket(time2, timeBucket))
     }
 
     @Test
     fun testOutsideTimeBucket() {
         val timeBucket = "08:00-23:00"
-        val handler = EsmHandler()
 
         val time1 = Calendar.getInstance()
         time1.apply {
@@ -238,8 +48,8 @@ class EsmHandlerTest {
             set(Calendar.MINUTE, 1)
         }
 
-        assertFalse(handler.isInTimeBucket(time1, timeBucket))
-        assertFalse(handler.isInTimeBucket(time2, timeBucket))
+        assertFalse(EsmHandler.isInTimeBucket(time1, timeBucket))
+        assertFalse(EsmHandler.isInTimeBucket(time2, timeBucket))
     }
 
     @Test
@@ -252,8 +62,7 @@ class EsmHandlerTest {
             set(Calendar.MINUTE, 0)
         }
 
-        val handler = EsmHandler()
-        val nextNotification = handler.getCalendarForNextRandomNotification(trigger, startCalendar)
+        val nextNotification = EsmHandler.getCalendarForNextRandomNotification(trigger, startCalendar)
 
         assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextNotification.get(Calendar.DAY_OF_MONTH))
         assertEquals(11, nextNotification.get(Calendar.HOUR_OF_DAY))
@@ -270,8 +79,7 @@ class EsmHandlerTest {
             set(Calendar.MINUTE, 0)
         }
 
-        val handler = EsmHandler()
-        val nextNotification = handler.getCalendarForNextRandomNotification(trigger, startCalendar)
+        val nextNotification = EsmHandler.getCalendarForNextRandomNotification(trigger, startCalendar)
 
         assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH) + 1, nextNotification.get(Calendar.DAY_OF_MONTH))
         assertEquals(9, nextNotification.get(Calendar.HOUR_OF_DAY))
@@ -288,13 +96,125 @@ class EsmHandlerTest {
             set(Calendar.MINUTE, 0)
         }
 
-        val handler = EsmHandler()
-        val nextNotification = handler.getCalendarForNextRandomNotification(trigger, startCalendar)
+        val nextNotification = EsmHandler.getCalendarForNextRandomNotification(trigger, startCalendar)
 
         assertEquals(startCalendar.get(Calendar.DAY_OF_MONTH), nextNotification.get(Calendar.DAY_OF_MONTH))
         val minimumTimeInMilis = startCalendar.timeInMillis + (trigger.configuration.distanceMinutes * 60 * 1000 - (trigger.configuration.randomToleranceMinutes/2) * 60 * 1000)
         val maximumTimeInMilis = startCalendar.timeInMillis + (trigger.configuration.distanceMinutes * 60 * 1000 + (trigger.configuration.randomToleranceMinutes/2) * 60 * 1000)
         assertTrue(nextNotification.timeInMillis in minimumTimeInMilis..maximumTimeInMilis)
+    }
+
+    // Stateless Periodic Notification Tests
+
+    @Test
+    fun testCalculateNextPeriodicNotificationTimeToday() {
+        val studyEndTimestamp = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_MONTH, 2) // Study ends in 2 days
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+        }.timeInMillis
+
+        // Current time is 10 AM, schedule at 7 PM today
+        val currentTime = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 0)
+        }
+
+        val result = EsmHandler.calculateNextPeriodicNotificationTime(
+            currentTime,
+            studyEndTimestamp,
+            19, // 7 PM
+            0   // 0 minutes
+        )
+
+        assertNotNull(result)
+
+        val resultCalendar = Calendar.getInstance().apply { timeInMillis = result!! }
+        assertEquals(19, resultCalendar.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, resultCalendar.get(Calendar.MINUTE))
+
+        // Should be today since current time is 10 AM and schedule is 7 PM
+        assertEquals(currentTime.get(Calendar.DAY_OF_MONTH), resultCalendar.get(Calendar.DAY_OF_MONTH))
+    }
+
+    @Test
+    fun testCalculateNextPeriodicNotificationTimeTomorrow() {
+        val studyEndTimestamp = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_MONTH, 2) // Study ends in 2 days
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+        }.timeInMillis
+
+        // Current time is 8 PM, schedule at 7 PM (should be tomorrow)
+        val currentTime = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 20)
+            set(Calendar.MINUTE, 0)
+        }
+
+        val result = EsmHandler.calculateNextPeriodicNotificationTime(
+            currentTime,
+            studyEndTimestamp,
+            19, // 7 PM
+            0   // 0 minutes
+        )
+
+        assertNotNull(result)
+
+        val resultCalendar = Calendar.getInstance().apply { timeInMillis = result!! }
+        assertEquals(19, resultCalendar.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, resultCalendar.get(Calendar.MINUTE))
+
+        // Should be tomorrow since current time is 8 PM and schedule is 7 PM
+        assertEquals(currentTime.get(Calendar.DAY_OF_MONTH) + 1, resultCalendar.get(Calendar.DAY_OF_MONTH))
+    }
+
+    @Test
+    fun testCalculateNextPeriodicNotificationTimeAfterStudyEnd() {
+        val studyEndTimestamp = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_MONTH, -1) // Study ended yesterday
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+        }.timeInMillis
+
+        val result = EsmHandler.calculateNextPeriodicNotificationTime(
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 10)
+                set(Calendar.MINUTE, 0)
+            },
+            studyEndTimestamp,
+            19, // 7 PM
+            0   // 0 minutes
+        )
+
+        // Should return null since study has ended
+        assertEquals(null, result)
+    }
+
+    @Test
+    fun testCalculateNextPeriodicNotificationTimeExactlyAtEndTime() {
+        val studyEndTimestamp = Calendar.getInstance().apply {
+            add(Calendar.HOUR_OF_DAY, 1) // Study ends in 1 hour
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        // Schedule notification for after study ends
+        val result = EsmHandler.calculateNextPeriodicNotificationTime(
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 10)
+                set(Calendar.MINUTE, 0)
+            },
+            studyEndTimestamp,
+            23, // 11 PM (after study ends)
+            0   // 0 minutes
+        )
+
+        // Should return null since next notification would be after study end
+        assertEquals(null, result)
     }
 }
 

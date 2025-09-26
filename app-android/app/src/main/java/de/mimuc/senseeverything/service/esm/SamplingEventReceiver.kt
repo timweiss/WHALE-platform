@@ -10,7 +10,6 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
-import de.mimuc.senseeverything.service.SEApplicationController
 import java.util.UUID
 import javax.inject.Inject
 
@@ -41,7 +40,7 @@ class SamplingEventReceiver : BroadcastReceiver() {
         val sourceUuid = if (sourceId != null) UUID.fromString(sourceId) else null
 
         // handle Event
-        SEApplicationController.getInstance().esmHandler.handleEvent(
+        EsmHandler.handleEvent(
             eventName,
             sourceUuid,
             if (triggerId != -1) triggerId else null,
