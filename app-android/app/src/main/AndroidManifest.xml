@@ -130,7 +130,6 @@
             android:name=".service.ActivityRecognitionIntentService"
             android:exported="false"
             android:label="@string/app_name" />
-        <service android:name=".service.InteractionFloatingWidgetService" />
         <service android:name=".service.floatingWidget.NotificationTriggerFloatingWidgetService" />
         <service
             android:name=".service.MyNotificationListenerService"
