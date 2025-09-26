@@ -222,7 +222,8 @@ data class TimeInputElement(
 
 @Serializable
 data class TimeInputConfiguration(
-    val label: String = "Select time"
+    val label: String = "Select time",
+    val filledText: String = "Change"
 )
 
 @Serializable

@@ -65,7 +65,10 @@ fun TimeInputElementComponent(
                 modifier = Modifier.Companion.fillMaxWidth(),
                 colors = buttonColor()
             ) {
-                Text(element.configuration.label)
+                Text(
+                    if (hasValue()) element.configuration.filledText else
+                        element.configuration.label
+                )
             }
         }
     }
