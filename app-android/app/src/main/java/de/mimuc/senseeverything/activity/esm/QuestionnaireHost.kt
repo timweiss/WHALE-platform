@@ -141,11 +141,11 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 
 @Composable
 fun ElementSeparator(element: QuestionnaireElement, currentElements: List<QuestionnaireElement>) {
-    val previousElement = if (element.position > 0) {
-        currentElements.getOrNull(element.position - 1)
+    val previousElement = if (element.position > 1) {
+        currentElements.getOrNull(element.position - 2)
     } else null
     if (previousElement != null && previousElement.displayGroup != element.displayGroup) {
-        Spacer(modifier = Modifier.padding(8.dp))
+        Spacer(modifier = Modifier.padding(10.dp))
     }
 }
 
