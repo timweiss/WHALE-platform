@@ -20,7 +20,8 @@ enum class QuestionnaireElementType(val apiName: String) {
     @SerialName("social_network_rating") SOCIAL_NETWORK_RATING("social_network_rating"),
     @SerialName("circumplex") CIRCUMPLEX("circumplex"),
     @SerialName("likert_scale_label") LIKERT_SCALE_LABEL("likert_scale_label"),
-    @SerialName("button_group") BUTTON_GROUP("button_group");
+    @SerialName("button_group") BUTTON_GROUP("button_group"),
+    @SerialName("time_input") TIME_INPUT("time_input");
 
     companion object {
         fun fromApiName(apiName: String): QuestionnaireElementType? {
@@ -59,6 +60,7 @@ sealed class QuestionnaireElement {
             is CircumplexElement -> QuestionnaireElementType.CIRCUMPLEX
             is LikertScaleLabelElement -> QuestionnaireElementType.LIKERT_SCALE_LABEL
             is ButtonGroupElement -> QuestionnaireElementType.BUTTON_GROUP
+            is TimeInputElement -> QuestionnaireElementType.TIME_INPUT
             is MalformedElement -> QuestionnaireElementType.MALFORMED
         }
 }
@@ -213,6 +215,17 @@ data class ButtonOption(
 )
 
 @Serializable
+@SerialName("time_input")
+data class TimeInputElement(
+    val configuration: TimeInputConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class TimeInputConfiguration(
+    val label: String = "Select time"
+)
+
+@Serializable
 @SerialName("malformed")
 data class MalformedElement(
     val configuration: MalformedConfiguration = MalformedConfiguration()
@@ -237,6 +250,7 @@ val questionnaireElementModule = SerializersModule {
         subclass(CircumplexElement::class)
         subclass(LikertScaleLabelElement::class)
         subclass(ButtonGroupElement::class)
+        subclass(TimeInputElement::class)
         subclass(MalformedElement::class)
     }
 }

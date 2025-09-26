@@ -108,6 +108,10 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
                 QuestionnaireElementType.BUTTON_GROUP -> ButtonGroupValue(
                     elementId, elementName, valueJson.getString("selectedButton")
                 )
+                QuestionnaireElementType.TIME_INPUT -> TimeInputValue(
+                    elementId, elementName,
+                    Pair(valueJson.getInt("hour"), valueJson.getInt("minute"))
+                )
                 else -> ElementValue(elementId, elementName, QuestionnaireElementType.MALFORMED)
             }
         }
@@ -245,6 +249,23 @@ class ButtonGroupValue(elementId: Int, elementName: String, var value: String) :
     }
 }
 
+class TimeInputValue(elementId: Int, elementName: String, var value: Pair<Int, Int>) : ElementValue(elementId, elementName, QuestionnaireElementType.TIME_INPUT) {
+    override fun isAnswered(): Boolean {
+        return value.first != -1 && value.second != -1
+    }
+
+    override fun getSerializedValue(): String {
+        return String.format("%02d:%02d", value.first, value.second)
+    }
+
+    override fun valueAsJsonObject(): JSONObject {
+        val json = JSONObject()
+        json.put("hour", value.first)
+        json.put("minute", value.second)
+        return json
+    }
+}
+
 fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
     return when (element.type) {
         QuestionnaireElementType.RADIO_GROUP -> RadioGroupValue(element.id, element.name, -1)
@@ -255,6 +276,7 @@ fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
         QuestionnaireElementType.SOCIAL_NETWORK_RATING -> SocialNetworkRatingValue(element.id, element.name, emptyMap())
         QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(element.id, element.name, (0.0 to 0.0))
         QuestionnaireElementType.BUTTON_GROUP -> ButtonGroupValue(element.id, element.name, "")
+        QuestionnaireElementType.TIME_INPUT -> TimeInputValue(element.id, element.name, (-1 to -1))
         QuestionnaireElementType.MALFORMED -> ElementValue(element.id, element.name, element.type)
         else -> ElementValue(element.id, element.name, element.type)
     }

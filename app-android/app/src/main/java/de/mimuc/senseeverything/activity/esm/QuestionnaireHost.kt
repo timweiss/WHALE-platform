@@ -42,6 +42,7 @@ import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
 import de.mimuc.senseeverything.api.model.SocialNetworkRatingValue
 import de.mimuc.senseeverything.api.model.TextEntryValue
+import de.mimuc.senseeverything.api.model.TimeInputValue
 import de.mimuc.senseeverything.api.model.ema.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.ema.CircumplexElement
 import de.mimuc.senseeverything.api.model.ema.ExternalQuestionnaireLinkElement
@@ -55,6 +56,7 @@ import de.mimuc.senseeverything.api.model.ema.SocialNetworkEntryElement
 import de.mimuc.senseeverything.api.model.ema.SocialNetworkRatingElement
 import de.mimuc.senseeverything.api.model.ema.TextEntryElement
 import de.mimuc.senseeverything.api.model.ema.TextViewElement
+import de.mimuc.senseeverything.api.model.ema.TimeInputElement
 import de.mimuc.senseeverything.api.model.emptyValueForElement
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
@@ -387,6 +389,15 @@ fun QuestionnaireElement(
 
         QuestionnaireElementType.BUTTON_GROUP, QuestionnaireElementType.MALFORMED -> {
             Text("Malformed element type: ${element.type}")
+        }
+
+        QuestionnaireElementType.TIME_INPUT -> {
+            TimeInputElementComponent(element as TimeInputElement, (elementValue as TimeInputValue).value, onValueChange = { newValue ->
+                onValueChange(
+                    element.id,
+                    TimeInputValue(element.id, element.name, newValue)
+                )
+            })
         }
     }
 }
