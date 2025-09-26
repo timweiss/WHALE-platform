@@ -11,6 +11,7 @@ export interface Study {
   durationDays: number;
   allocationStrategy: StudyExperimentalGroupAllocationStrategy;
   completionTracking: CompletionTracking | null;
+  dataProtectionNotice: string | null;
 }
 
 interface StudyRow {
@@ -23,6 +24,7 @@ interface StudyRow {
   duration_days: number;
   allocation_strategy: StudyExperimentalGroupAllocationStrategy;
   completion_tracking: CompletionTracking | null;
+  data_protection_notice: string | null;
 }
 
 enum InteractionWidgetStrategy {
@@ -225,6 +227,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
       durationDays: row.duration_days,
       allocationStrategy: row.allocation_strategy,
       completionTracking: row.completion_tracking,
+      dataProtectionNotice: row.data_protection_notice,
     };
   }
 

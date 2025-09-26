@@ -1,0 +1,1 @@
+alter table studies add column data_protection_notice text null;

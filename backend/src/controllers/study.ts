@@ -36,22 +36,27 @@ export function createStudyController(
     res.json(study);
   });
 
-  app.put('/v1/study/:id', authenticate, requireAdmin, async (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).send({ error: 'Invalid study ID' });
-    }
+  app.put(
+    '/v1/study/:id(\\d+)',
+    authenticate,
+    requireAdmin,
+    async (req, res) => {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).send({ error: 'Invalid study ID' });
+      }
 
-    const study = await studyRepository.getStudyById(id);
-    if (!study) {
-      return res.status(404).send({ error: 'Study not found' });
-    }
+      const study = await studyRepository.getStudyById(id);
+      if (!study) {
+        return res.status(404).send({ error: 'Study not found' });
+      }
 
-    const updatedStudy = await studyRepository.updateStudy(req.body);
-    res.json(updatedStudy);
-  });
+      const updatedStudy = await studyRepository.updateStudy(req.body);
+      res.json(updatedStudy);
+    },
+  );
 
-  app.get('/v1/study/:id', async (req, res) => {
+  app.get('/v1/study/:id(\\d+)', async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).send({ error: 'Invalid study ID' });
@@ -64,8 +69,20 @@ export function createStudyController(
     res.json(study);
   });
 
+  app.get('/v1/study/:enrolmentKey', async (req, res) => {
+    const study = await studyRepository.getStudyByEnrolmentKey(
+      req.params.enrolmentKey as string,
+    );
+
+    if (!study) {
+      return res.status(404).send({ error: 'Study not found' });
+    } else {
+      res.json(study);
+    }
+  });
+
   app.post(
-    '/v1/study/:id/group',
+    '/v1/study/:id(\\d+)/group',
     authenticate,
     requireAdmin,
     async (req, res) => {
