@@ -52,6 +52,21 @@ class EsmHandler {
         const val INTENT_TRIGGER_NOTIFICATION_ID = "notificationId"
         const val INTENT_NOTIFICATION_TRIGGER_VALID_FROM = "validFrom"
 
+        suspend fun rescheduleQuestionnaires(
+            context: Context,
+            dataStoreManager: DataStoreManager,
+            database: AppDatabase
+        ) {
+            Log.i("EsmHandler", "Rescheduling questionnaires")
+
+            schedulePeriodicQuestionnaires(context, dataStoreManager, database)
+            scheduleOneTimeQuestionnaires(context, dataStoreManager, database)
+
+            // also reschedule already scheduled floating widget notifications
+            val floatingWidgetNotificationScheduler = FloatingWidgetNotificationScheduler()
+            floatingWidgetNotificationScheduler.schedulePlannedNotificationTriggers(context, database)
+        }
+
         suspend fun schedulePeriodicQuestionnaires(
             context: Context,
             dataStoreManager: DataStoreManager,
@@ -542,6 +557,19 @@ class EsmHandler {
                         add(Calendar.DATE, trigger.configuration.studyDay)
                     }
 
+                    // don't schedule if the time is in the past
+                    if (calendar.timeInMillis < System.currentTimeMillis()) {
+                        Log.d("EsmHandler", "Not scheduling one time questionnaire for ${questionnaire.name} in the past")
+                        continue
+                    }
+
+                    val scheduledAlarm = ScheduledAlarm.getOrCreateScheduledAlarm(
+                        database,
+                        "OneTimeNotificationReceiver",
+                        "one_time_${trigger.id}",
+                        calendar.timeInMillis
+                    )
+
                     val intent = Intent(context.applicationContext, OneTimeNotificationReceiver::class.java)
                     intent.apply {
                         putExtra(INTENT_TITLE, trigger.configuration.notificationText)
@@ -552,7 +580,7 @@ class EsmHandler {
 
                     val pendingIntent = PendingIntent.getBroadcast(
                         context.applicationContext,
-                        trigger.id,
+                        scheduledAlarm.requestCode,
                         intent,
                         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
                     )

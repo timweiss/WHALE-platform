@@ -12,7 +12,6 @@ import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.EsmHandler
-import de.mimuc.senseeverything.service.esm.FloatingWidgetNotificationScheduler
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.rescheduleStudyEndAlarm
 import kotlinx.coroutines.CoroutineScope
@@ -82,11 +81,6 @@ class OnBootReceiver: BroadcastReceiver() {
 
 private suspend fun rescheduleAlarms(context: Context, database: AppDatabase, dataStoreManager: DataStoreManager) {
     rescheduleStudyEndAlarm(context, database)
-
-    val floatingWidgetScheduler = FloatingWidgetNotificationScheduler()
-    floatingWidgetScheduler.schedulePlannedNotificationTriggers(context, database)
-
     reschedulePhaseChanges(context, database, dataStoreManager)
-
-    EsmHandler.schedulePeriodicQuestionnaires(context, dataStoreManager, database)
+    EsmHandler.rescheduleQuestionnaires(context, dataStoreManager, database)
 }
