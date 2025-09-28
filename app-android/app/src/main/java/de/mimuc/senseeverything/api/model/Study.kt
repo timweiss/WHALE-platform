@@ -10,8 +10,21 @@ data class Study(
     val enrolmentKey: String,
     val description: String,
     val contactEmail: String,
-    val durationDays: Int
-)
+    val durationDays: Int,
+    val dataProtectionNotice: String?
+) {
+    companion object {
+        val empty = Study(
+            name = "No Study",
+            id = -1,
+            enrolmentKey = "",
+            description = "No study loaded",
+            contactEmail = "",
+            durationDays = 0,
+            dataProtectionNotice = null
+        )
+    }
+}
 
 val studyJson = Json {
     serializersModule = Json.serializersModule

@@ -8,6 +8,10 @@ class ApiResources {
             return "$API_BASE/study/$studyId"
         }
 
+        fun studyByEnrolmentKey(enrolmentKey: String): String {
+            return "$API_BASE/study/$enrolmentKey"
+        }
+
         fun completionStatus(): String {
             return "${API_BASE}/completion"
         }

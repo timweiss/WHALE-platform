@@ -133,4 +133,8 @@
     <string name="questionnaire_next">Next</string>
     <string name="questionnaire_save">Save</string>
     <string name="questionnaire_empty_error">No questions have been provided. This is likely a mistake of the study creator.</string>
+    <string name="onboarding_data_protection">Data Protection</string>
+    <string name="onboarding_data_protection_header">Please read carefully</string>
+    <string name="onboarding_data_protection_not_available">No data protection notice was filled for this study.</string>
+    <string name="onboarding_data_protection_accept">I have read and accept the data protection notice.</string>
 </resources>

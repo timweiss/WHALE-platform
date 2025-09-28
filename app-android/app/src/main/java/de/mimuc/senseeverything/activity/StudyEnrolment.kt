@@ -18,25 +18,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,17 +38,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.volley.VolleyError
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
-import de.mimuc.senseeverything.api.ApiResources
-import de.mimuc.senseeverything.api.decodeError
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
-import de.mimuc.senseeverything.api.model.EnrolmentRequest
-import de.mimuc.senseeverything.api.model.EnrolmentResponse
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
@@ -105,26 +94,17 @@ class EnrolmentViewModel @Inject constructor(
     private val dataStoreManager: DataStoreManager,
     private val database: AppDatabase
 ) : AndroidViewModel(application) {
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> get() = _isLoading
-
     private val _isEnrolled = MutableStateFlow(false)
     val isEnrolled: StateFlow<Boolean> get() = _isEnrolled
 
     private val _participantId = MutableStateFlow("")
     val participantId: StateFlow<String> get() = _participantId
 
-    private val _study = MutableStateFlow(Study("", -1, "", "", "", 0))
+    private val _study = MutableStateFlow(Study.empty)
     val study: StateFlow<Study> get() = _study
 
     private val _questionnaires = MutableStateFlow(mutableStateListOf<FullQuestionnaire>())
     val questionnaires: StateFlow<List<FullQuestionnaire>> get() = _questionnaires
-
-    private val _errorCode = MutableStateFlow("")
-    val errorCode: StateFlow<String> get() = _errorCode
-
-    private val _showErrorDialog = MutableStateFlow(false)
-    val showErrorDialog: StateFlow<Boolean> get() = _showErrorDialog
 
     init {
         viewModelScope.launch {
@@ -139,50 +119,6 @@ class EnrolmentViewModel @Inject constructor(
 
             if (participantId.isNotEmpty()) {
                 _participantId.value = participantId
-            }
-        }
-    }
-
-    fun performAction(context: Context, text: String, finishedEnrolment: () -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val client = ApiClient.getInstance(context)
-            val request = EnrolmentRequest(text)
-
-            try {
-                val enrolmentResponse = client.postSerialized<EnrolmentRequest, EnrolmentResponse>(
-                    url = ApiResources.enrolment(),
-                    requestData = request
-                )
-
-                val participantId = enrolmentResponse.participantId
-                val studyId = enrolmentResponse.studyId
-
-                _isLoading.value = false
-                _isEnrolled.value = true
-                _participantId.value = participantId
-
-                dataStoreManager.saveEnrolment(
-                    enrolmentResponse.token,
-                    participantId,
-                    studyId,
-                    enrolmentResponse.phases
-                )
-                finishedEnrolment()
-            } catch (error: Exception) {
-                _isEnrolled.value = false
-                _isLoading.value = false
-
-                val volleyError = error as? VolleyError
-                if (volleyError != null) {
-                    val decodedError = decodeError(volleyError)
-                    Log.e("Enrolment", "Error: ${decodedError.httpCode} ${decodedError.appCode} ${decodedError.message}")
-                    _errorCode.value = decodedError.appCode
-                } else {
-                    Log.e("Enrolment", "Error: ${error.message}")
-                    _errorCode.value = "unknown"
-                }
-                _showErrorDialog.value = true
             }
         }
     }
@@ -258,10 +194,6 @@ class EnrolmentViewModel @Inject constructor(
         }
     }
 
-    fun closeError() {
-        _showErrorDialog.value = false
-        _errorCode.value = ""
-    }
 }
 
 @Composable
@@ -270,76 +202,19 @@ fun EnrolmentScreen(
     innerPadding: PaddingValues,
     finishedEnrolment: () -> Unit
 ) {
-    val textState = remember { mutableStateOf("") }
-    val isLoading = viewModel.isLoading.collectAsState()
     val isEnrolled = viewModel.isEnrolled.collectAsState()
     val participantId = viewModel.participantId.collectAsState()
     val context = LocalContext.current
     val study = viewModel.study.collectAsState()
     val questionnaires by viewModel.questionnaires.collectAsState()
     val noQuestionnaires = questionnaires.isEmpty()
-    val errorCode = viewModel.errorCode.collectAsState()
-    val showErrorDialog = viewModel.showErrorDialog.collectAsState()
 
     Column(
         modifier = Modifier
             .padding(innerPadding)
             .padding(16.dp)
     ) {
-        if (!isEnrolled.value) {
-            TextField(
-                value = textState.value,
-                onValueChange = { textState.value = it },
-                label = { Text("Enrolment Key") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (isLoading.value) {
-                CircularProgressIndicator()
-            } else {
-                Button(
-                    onClick = {
-                        viewModel.performAction(context, textState.value, finishedEnrolment)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Enrol in Study")
-                }
-            }
-
-            if (showErrorDialog.value && errorCode.value.isNotEmpty()) {
-                AlertDialog(
-                    title = {
-                        if (errorCode.value == "full" || errorCode.value == "closed") {
-                            Text("Study closed")
-                        } else {
-                            Text("Incorrect enrolment key")
-                        }
-                    },
-                    text = {
-                        if (errorCode.value == "full" || errorCode.value == "closed") {
-                            Text("The study no longer accepts new participants.")
-                        } else {
-                            Text("The study could not be joined. Please check if the enrolment key is correct.")
-                        }
-                    },
-                    onDismissRequest = {
-                        viewModel.closeError()
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                viewModel.closeError()
-                            }
-                        ) {
-                            Text("Confirm")
-                        }
-                    }
-                )
-            }
-        } else {
+        if (isEnrolled.value) {
             Icon(
                 Icons.Rounded.Check,
                 contentDescription = "success!",

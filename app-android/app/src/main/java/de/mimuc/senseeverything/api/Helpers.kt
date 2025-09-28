@@ -42,6 +42,16 @@ suspend fun loadStudy(apiClient: ApiClient, studyId: Int): Study? {
     }
 }
 
+suspend fun loadStudyByEnrolmentKey(apiClient: ApiClient, enrolmentKey: String): Study? {
+    return try {
+        Log.d("Api", "Loading study by enrolment key $enrolmentKey")
+        apiClient.getSerialized<Study>(ApiResources.studyByEnrolmentKey(enrolmentKey), emptyMap(), studyJson)
+    } catch (e: Exception) {
+        Log.e("Api", "Error loading study: ${e.message}")
+        null
+    }
+}
+
 suspend fun fetchCompletionStatus(apiClient: ApiClient, dataStoreManager: DataStoreManager): Map<String, Boolean> {
     val token = dataStoreManager.tokenFlow.first()
     if (token.isEmpty()) {

@@ -133,7 +133,7 @@ class StudyHomeViewModel @Inject constructor(
     private val _currentDay = MutableStateFlow(0)
     val currentDay: StateFlow<Int> get() = _currentDay
 
-    private val _study = MutableStateFlow(Study("", -1, "", "", "", -1))
+    private val _study = MutableStateFlow(Study.empty)
     val study: StateFlow<Study> get() = _study
 
     private val _onboardingStep = MutableStateFlow(OnboardingStep.WELCOME)
