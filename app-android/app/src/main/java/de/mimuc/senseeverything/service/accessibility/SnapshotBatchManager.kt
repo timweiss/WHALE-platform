@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.TimeUnit
 
 /**
  * Manages batching of screen snapshots and broadcasts them for sensor collection.
@@ -22,7 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 class SnapshotBatchManager(
     private val context: Context,
     private val batchSize: Int = 50,
-    private val flushIntervalMs: Long = 60_000L // 1 minute
+    private val flushIntervalMs: Long = TimeUnit.MINUTES.toMillis(1)
 ) {
     companion object {
         const val TAG = "SnapshotBatchManager"
