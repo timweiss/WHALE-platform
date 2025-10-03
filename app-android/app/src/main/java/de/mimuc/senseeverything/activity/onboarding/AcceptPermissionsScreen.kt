@@ -43,7 +43,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.getActivity
 import de.mimuc.senseeverything.data.DataStoreManager
-import de.mimuc.senseeverything.service.AccessibilityLogService
+import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

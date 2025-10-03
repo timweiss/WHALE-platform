@@ -8,7 +8,6 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import de.mimuc.senseeverything.data.DataStoreManager;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
@@ -16,14 +15,13 @@ import de.mimuc.senseeverything.sensor.implementation.ActivityRecognitionSensor;
 import de.mimuc.senseeverything.sensor.implementation.BluetoothSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
-import de.mimuc.senseeverything.sensor.implementation.MyAccelerometerSensor;
-import de.mimuc.senseeverything.sensor.implementation.MyGyroscopeSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyLightSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyProximitySensor;
 import de.mimuc.senseeverything.sensor.implementation.NotificationSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOnOffSensor;
 import de.mimuc.senseeverything.sensor.implementation.ScreenOrientationSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConnectedWifiSensor;
+import de.mimuc.senseeverything.sensor.implementation.UITreeSensor;
 import de.mimuc.senseeverything.sensor.implementation.UsageStatsSensor;
 
 @Singleton
@@ -44,6 +42,7 @@ public class SingletonSensorList {
 		this.list.add(new MyProximitySensor(aContext, database));
 		this.list.add(new ScreenOnOffSensor(aContext, database));
 		this.list.add(new AccessibilitySensor(aContext, database));
+		this.list.add(new UITreeSensor(aContext, database));
 		this.list.add(new MyLightSensor(aContext, database));
 		this.list.add(new InteractionLogSensor(aContext, database));
 		this.list.add(new NotificationSensor(aContext, database));

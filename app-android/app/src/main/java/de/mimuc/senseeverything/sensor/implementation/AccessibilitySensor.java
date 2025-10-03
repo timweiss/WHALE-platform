@@ -4,11 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.view.View;
 
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
-import de.mimuc.senseeverything.service.AccessibilityLogService;
+import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService;
+import de.mimuc.senseeverything.service.accessibility.AccessibilityNameConsumer;
 
 public class AccessibilitySensor extends AbstractSensor {
 
@@ -58,8 +58,8 @@ public class AccessibilitySensor extends AbstractSensor {
 		if (m_Receiver == null)
 			m_Receiver = new DataUpdateReceiver();
         
-		IntentFilter intentFilter = new IntentFilter(AccessibilityLogService.TAG);
-		intentFilter.addAction(AccessibilityLogService.TAG);
+		IntentFilter intentFilter = new IntentFilter(AccessibilityNameConsumer.TAG);
+		intentFilter.addAction(AccessibilityNameConsumer.TAG);
 		m_Context.registerReceiver(m_Receiver, intentFilter);
 				
 		m_IsRunning = true;
@@ -82,7 +82,7 @@ public class AccessibilitySensor extends AbstractSensor {
  
         @Override
         public void onReceive(Context context, Intent intent) {
-	        if (intent.getAction().equals(AccessibilityLogService.TAG)) {
+	        if (intent.getAction().equals(AccessibilityNameConsumer.TAG)) {
 	        	if(m_IsRunning) {
 					onLogDataItem(System.currentTimeMillis(), intent.getStringExtra(android.content.Intent.EXTRA_TEXT));
 	        	}

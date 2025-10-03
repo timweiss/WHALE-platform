@@ -102,7 +102,7 @@
             android:enabled="true" />
 
         <service
-            android:name=".service.AccessibilityLogService"
+            android:name=".service.accessibility.AccessibilityLogService"
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
