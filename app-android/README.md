@@ -160,6 +160,88 @@ Currently, sampling is manually started. It is managed by [SamplingManager](app/
 * [AudioSampleService](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AudioSampleSensor.java): Will record audio until it is stopped again
 * [SingletonSensorList](app/src/main/java/de/mimuc/senseeverything/sensor/SingletonSensorList.java): For long-running tasks, we want to reuse the existing sensor instances, and clean them up manually
 
+## Sensors
+
+### UI Tree Sensor
+
+The [UITreeSensor](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/UITreeSensor.java) captures privacy-preserving structural representations of UI screens and user interactions for behavioral analysis. It works in conjunction with the accessibility service to log detailed UI hierarchies without capturing any personal data.
+
+#### How It Works
+
+1. **Accessibility Service** captures UI trees and user interactions via [UITreeConsumer](app/src/main/java/de/mimuc/senseeverything/service/accessibility/UITreeConsumer.kt)
+2. **SnapshotBatchManager** batches the data (50 snapshots or 60 seconds)
+4. **UITreeSensor** receives and logs the batch to database (`ui_tree.json`)
+
+#### Data Structure
+
+Each logged line contains a batch with two types of snapshots:
+
+**1. Skeleton Snapshots** (Full UI Structure)
+```json
+{
+  "timestamp": 1699876543210,
+  "appPackage": "com.instagram.android",
+  "framework": "NATIVE",
+  "skeleton": {
+    "signature": "a3f5b8c...",
+    "nodes": [
+      {
+        "id": 0,
+        "type": "CONTAINER",
+        "region": "CENTER",
+        "sizeClass": "FULLSCREEN",
+        "relativeX": 0.0,
+        "relativeY": 0.0,
+        "clickable": false,
+        "hasText": false,
+        "textCategory": "SHORT_PHRASE"
+      }
+    ]
+  }
+}
+```
+
+**2. Interaction Snapshots** (User Actions)
+```json
+{
+  "timestamp": 1699876545123,
+  "skeleton": {
+    "signature": "a3f5b8c...",
+    "nodes": []
+  },
+  "interaction": {
+    "type": "TAP",
+    "targetNodeId": 2,
+    "tapX": 0.9,
+    "tapY": 0.89
+  }
+}
+```
+
+#### Privacy Features
+- Text content categorized by length only (SINGLE_WORD, SHORT_PHRASE, SENTENCE, etc.)
+- No actual text, usernames, messages, or content
+- Only structural properties (type, position, size)
+
+#### Interaction Types
+
+The sensor tracks five types of user interactions:
+- **TAP**: Single tap, double-tap, button clicks
+- **LONG_PRESS**: Long press events
+- **SCROLL**: Scrolling through content
+- **TEXT_INPUT**: Text entry in input fields
+- **SWIPE**: Swipe gestures
+
+#### Supported Frameworks
+
+Works across UI frameworks via accessibility service:
+- Native Android (View, Jetpack Compose)
+- React Native
+- Flutter
+- Xamarin
+- WebView (Cordova, Ionic, Capacitor)
+- Unity
+
 ## Known Issues
 * AppSensor does not sample the foreground activity (function was deprecated with Android Lollipop)
   * **Current Solution** We're using [AccessibilitySensor](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AccessibilitySensor.java) as it yields useful information about app use, which can be post-processed to infer opened apps and interactions
