@@ -40,7 +40,7 @@ fun makeForegroundInfo(
         .setContentTitle(title)
         .setTicker(title)
         .setContentText(detail)
-        .setSmallIcon(R.drawable.notification_whale)
+        .setSmallIcon(R.drawable.notification_working_q)
         .setOngoing(true)
         .build()
 

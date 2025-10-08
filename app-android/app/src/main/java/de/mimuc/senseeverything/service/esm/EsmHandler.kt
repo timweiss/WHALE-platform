@@ -646,7 +646,7 @@ class NotificationPushHelper(private val context: Context) {
         return NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
             .setContentTitle(title)
-            .setSmallIcon(R.drawable.notification_whale)
+            .setSmallIcon(R.drawable.notification_silhouette_q)
             .setLargeIcon(
                 BitmapFactory.decodeResource(
                     context.resources,
