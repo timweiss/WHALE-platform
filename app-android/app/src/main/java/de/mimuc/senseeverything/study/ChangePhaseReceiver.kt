@@ -5,13 +5,13 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.goAsync
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.esm.EsmHandler
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
@@ -34,7 +34,7 @@ class ChangePhaseReceiver  : BroadcastReceiver() {
         val phaseJson = intent?.getStringExtra("phaseJson") ?: return@goAsync
         val phase = Json.decodeFromString<ExperimentalGroupPhase>(phaseJson)
 
-        Log.d("ChangePhaseReceiver", "Changing phase to ${phase.name} (from ${phase.fromDay} for ${phase.durationDays} days)")
+        WHALELog.i("ChangePhaseReceiver", "Changing phase to ${phase.name} (from ${phase.fromDay} for ${phase.durationDays} days)")
 
         EsmHandler.scheduleRandomEMANotificationsForPhase(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager)
         EsmHandler.scheduleFloatingWidgetNotifications(phase, Calendar.getInstance(), context.applicationContext, dataStoreManager, database)
@@ -48,7 +48,7 @@ suspend fun reschedulePhaseChanges(context: Context, database: AppDatabase, data
     if (phases != null) {
         schedulePhaseChanges(context, studyStartTimestamp, phases, database)
     } else {
-        Log.w("ChangePhaseReceiver", "Cannot reschedule phase changes, missing phases")
+        WHALELog.w("ChangePhaseReceiver", "Cannot reschedule phase changes, missing phases")
     }
 }
 
@@ -70,7 +70,7 @@ suspend fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, ph
         }
 
         if (triggerTimestamp < System.currentTimeMillis()) {
-            Log.d("ChangePhaseReceiver", "Not scheduling phase change to ${phase.name} at $triggerTimestamp, timestamp is in the past")
+            WHALELog.i("ChangePhaseReceiver", "Not scheduling phase change to ${phase.name} at $triggerTimestamp, timestamp is in the past")
             continue
         }
 
@@ -88,7 +88,7 @@ suspend fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, ph
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
         )
 
-        Log.d("ChangePhaseReceiver", "Scheduling phase change to ${phase.name} at $triggerTimestamp")
+        WHALELog.i("ChangePhaseReceiver", "Scheduling phase change to ${phase.name} at $triggerTimestamp")
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
             scheduledAlarm.timestamp,

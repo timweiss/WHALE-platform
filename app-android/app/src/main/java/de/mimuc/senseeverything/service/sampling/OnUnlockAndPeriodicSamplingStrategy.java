@@ -22,6 +22,7 @@ import android.util.Log;
 import java.util.Calendar;
 
 import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import de.mimuc.senseeverything.service.LogService;
 
@@ -44,22 +45,22 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
             try {
                 logServiceMessenger.send(Message.obtain(null, LogService.STOP_SENSORS, 0, 0));
             } catch (RemoteException e) {
-                Log.e(TAG, "failed to send message", e);
+                WHALELog.INSTANCE.e(TAG, "failed to send message", e);
             }
         } else {
-            Log.e(TAG, "logServiceMessenger is null");
+            WHALELog.INSTANCE.e(TAG, "logServiceMessenger is null");
         }
 
         try {
             context.unbindService(serviceConnection);
         } catch (Exception e) {
-            Log.e(TAG, "failed to unbind service", e);
+            WHALELog.INSTANCE.e(TAG, "failed to unbind service", e);
         }
 
         try {
             context.stopService(new Intent(context, LogService.class));
         } catch (Exception e) {
-            Log.e(TAG, "failed to stop service", e);
+            WHALELog.INSTANCE.e(TAG, "failed to stop service", e);
         }
     }
 
@@ -77,7 +78,7 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
 
             logServiceMessenger.send(msg);
         } catch (Exception e) {
-            Log.e(TAG, "failed to send message", e);
+            WHALELog.INSTANCE.e(TAG, "failed to send message", e);
         }
     }
 
@@ -89,7 +90,7 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
         try {
             logServiceMessenger.send(Message.obtain(null, LogService.LISTEN_LOCK_UNLOCK_AND_PERIODIC, 0, 0));
         } catch (Exception e) {
-            Log.e(TAG, "failed to send message", e);
+            WHALELog.INSTANCE.e(TAG, "failed to send message", e);
         }
     }
 
@@ -134,13 +135,13 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.d(TAG, "LogService disconnected");
+            WHALELog.INSTANCE.i(TAG, "LogService disconnected");
             logServiceMessenger = null;
         }
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.d(TAG, "LogService connected");
+            WHALELog.INSTANCE.i(TAG, "LogService connected");
             logServiceMessenger = new Messenger(service);
 
             // we can only tell it to listen once we've connected to the LogService
@@ -155,14 +156,14 @@ public class OnUnlockAndPeriodicSamplingStrategy implements SamplingStrategy {
     private void stopSampling() {
         if (logServiceMessenger == null)
         {
-            Log.e(TAG, "logService is null");
+            WHALELog.INSTANCE.e(TAG, "logService is null");
             return;
         }
 
         try {
             logServiceMessenger.send(Message.obtain(null, LogService.STOP_SENSORS, 0, 0));
         } catch (Exception e) {
-            Log.e(TAG, "failed to send message", e);
+            WHALELog.INSTANCE.e(TAG, "failed to send message", e);
         }
     }
 }

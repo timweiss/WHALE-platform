@@ -3,8 +3,8 @@ package de.mimuc.senseeverything.service.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
-import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import de.mimuc.senseeverything.logging.WHALELog
 
 class AccessibilityLogService : AccessibilityService() {
     private val info = AccessibilityServiceInfo()
@@ -16,18 +16,18 @@ class AccessibilityLogService : AccessibilityService() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "onCreate")
+        WHALELog.i(TAG, "onCreate")
 
         consumers.forEach { it.init(this) }
     }
 
     override fun onInterrupt() {
-        Log.v(TAG, "onInterrupt")
+        WHALELog.v(TAG, "onInterrupt")
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        Log.v(TAG, "onServiceConnected")
+        WHALELog.v(TAG, "onServiceConnected")
 
         info.eventTypes = AccessibilityEvent.TYPES_ALL_MASK
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_ALL_MASK
@@ -40,13 +40,13 @@ class AccessibilityLogService : AccessibilityService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        Log.d(TAG, "onStartCommand() was called")
+        WHALELog.i(TAG, "onStartCommand() was called")
 
         return START_STICKY
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "service stopped")
+        WHALELog.i(TAG, "service stopped")
         consumers.forEach { it.shutdown() }
         stopForeground(true)
         super.onDestroy()

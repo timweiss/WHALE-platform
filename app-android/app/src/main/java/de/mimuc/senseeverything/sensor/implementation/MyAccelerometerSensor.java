@@ -15,6 +15,7 @@ import android.widget.TextView;
 
 import de.mimuc.senseeverything.activity.CONST;
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class MyAccelerometerSensor extends AbstractSensor implements SensorEventListener {
@@ -64,7 +65,7 @@ public class MyAccelerometerSensor extends AbstractSensor implements SensorEvent
 			try {
 				closeDataSource();
 			} catch (Exception e) {
-				Log.e(TAG, e.toString());
+				WHALELog.INSTANCE.e(TAG, e.toString());
 			}
 			m_IsRunning = false;
 		}
@@ -76,7 +77,7 @@ public class MyAccelerometerSensor extends AbstractSensor implements SensorEvent
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
-		Log.d(TAG,  event.values + ",");
+		WHALELog.INSTANCE.d(TAG,  event.values + ",");
         Long t = System.currentTimeMillis();
 		if (m_IsRunning) {
 			if (event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {

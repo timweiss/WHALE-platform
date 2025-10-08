@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.service;
 
 import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.logging.WHALELog;
 
 import android.annotation.SuppressLint;
 import android.app.PendingIntent;
@@ -36,10 +37,10 @@ public class AbstractService extends ForegroundService {
 
 
 	private boolean servicesConnected() {
-		Log.d(TAG, "activity servicesConnected");
+		WHALELog.INSTANCE.d(TAG, "activity servicesConnected");
 		int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
 		if (ConnectionResult.SUCCESS == resultCode) {
-			Log.d(TAG, "Google Play services is available.");
+			WHALELog.INSTANCE.d(TAG, "Google Play services is available.");
 			return true;
 		} else {
 			return false;
@@ -53,16 +54,16 @@ public class AbstractService extends ForegroundService {
 			try {
 				connectionResult.startResolutionForResult(null, CONNECTION_FAILURE_RESOLUTION_REQUEST);
 			} catch (SendIntentException e) {
-				Log.e(TAG, e.toString());
+				WHALELog.INSTANCE.e(TAG, e.toString());
 			}
 		} else {
 			int errorCode = connectionResult.getErrorCode();
-			Log.d(TAG, "ERROR: " + errorCode);
+			WHALELog.INSTANCE.d(TAG, "ERROR: " + errorCode);
 		}
 	}
 
 	public void onConnected() {
-		Log.d(TAG, "activity onConnected");
+		WHALELog.INSTANCE.d(TAG, "activity onConnected");
 		mInProgress = false;
 	}
 
@@ -71,7 +72,7 @@ public class AbstractService extends ForegroundService {
 	}
 	
 	public void startUpdates() {
-		Log.d(TAG, "start activity updates");
+		WHALELog.INSTANCE.d(TAG, "start activity updates");
 		mRequestType = REQUEST_TYPE.START;
 		if (!servicesConnected()) {
 			return;
@@ -82,7 +83,7 @@ public class AbstractService extends ForegroundService {
 	}
 
 	public void stopUpdates() {
-		Log.d(TAG, "stop activity updates");
+		WHALELog.INSTANCE.d(TAG, "stop activity updates");
 		mRequestType = REQUEST_TYPE.STOP;
 		if (!servicesConnected()) {
 			return;

@@ -2,7 +2,7 @@ package de.mimuc.senseeverything.service.accessibility
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.accessibility.model.ScreenSnapshot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +61,7 @@ class SnapshotBatchManager(
             val batch = createBatchJson(snapshots)
             broadcastBatch(batch)
 
-            Log.d(TAG, "Flushed batch of ${snapshots.size} snapshots via broadcast")
+            WHALELog.i(TAG, "Flushed batch of ${snapshots.size} snapshots via broadcast")
         }
     }
 
@@ -80,9 +80,9 @@ class SnapshotBatchManager(
             val intent = Intent(BROADCAST_ACTION)
             intent.putExtra(EXTRA_BATCH_JSON, batch.toString())
             context.sendBroadcast(intent)
-            Log.d(TAG, "Broadcast batch with ${batch.getInt("count")} snapshots")
+            WHALELog.i(TAG, "Broadcast batch with ${batch.getInt("count")} snapshots")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to broadcast batch", e)
+            WHALELog.e(TAG, "Failed to broadcast batch", e)
         }
     }
 

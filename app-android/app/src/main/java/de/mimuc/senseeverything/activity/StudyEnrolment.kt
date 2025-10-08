@@ -6,7 +6,6 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -51,6 +50,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -144,13 +144,13 @@ class EnrolmentViewModel @Inject constructor(
 
     fun fetchQuestionnaires(context: Context) {
         viewModelScope.launch {
-            Log.d("Enrolment", "loading questionnaires")
+            WHALELog.i("Enrolment", "loading questionnaires")
             val studyId = dataStoreManager.studyIdFlow.first()
             val client = ApiClient.getInstance(getApplication())
             val questionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, client)
             persistQuestionnaireElementContent(context, questionnaires)
 
-            Log.d("Enrolment", questionnaires.toString())
+            WHALELog.d("Enrolment", questionnaires.toString())
 
             _questionnaires.value = questionnaires.toMutableStateList()
         }
@@ -176,7 +176,7 @@ class EnrolmentViewModel @Inject constructor(
             if (activity != null) {
                 activity.finish()
             } else {
-                Log.e("OnboardingViewModel", "Could not get activity")
+                WHALELog.e("OnboardingViewModel", "Could not get activity")
             }
         }
     }

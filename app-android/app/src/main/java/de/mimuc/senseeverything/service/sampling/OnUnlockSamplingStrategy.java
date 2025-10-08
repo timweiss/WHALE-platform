@@ -15,6 +15,7 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
 import de.mimuc.senseeverything.service.LogService;
 
@@ -38,7 +39,7 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
         try {
             context.unbindService(serviceConnection);
         } catch (Exception e) {
-            Log.e(TAG, "could not unbind context from connection, could be because it's a new activity", e);
+            WHALELog.INSTANCE.e(TAG, "could not unbind context from connection, could be because it's a new activity", e);
         }
 
         // we should continue trying to stop the service even if unbinding fails (as it could be a new activity)
@@ -54,7 +55,7 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
                 stopHandler.removeCallbacksAndMessages(null);
             }
         } catch (Exception e) {
-            Log.e(TAG, "failed to stop service", e);
+            WHALELog.INSTANCE.e(TAG, "failed to stop service", e);
         }
     }
 
@@ -66,7 +67,7 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
         try {
             logServiceMessenger.send(Message.obtain(null, LogService.SLEEP_MODE, 0, 0));
         } catch (Exception e) {
-            Log.e(TAG, "failed to send message", e);
+            WHALELog.INSTANCE.e(TAG, "failed to send message", e);
         }
     }
 
@@ -78,7 +79,7 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
         try {
             logServiceMessenger.send(Message.obtain(null, LogService.LISTEN_LOCK_UNLOCK, 0, 0));
         } catch (Exception e) {
-            Log.e(TAG, "failed to send message", e);
+            WHALELog.INSTANCE.e(TAG, "failed to send message", e);
         }
     }
 
@@ -103,13 +104,13 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.d(TAG, "LogService disconnected");
+            WHALELog.INSTANCE.i(TAG, "LogService disconnected");
             logServiceMessenger = null;
         }
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.d(TAG, "LogService connected");
+            WHALELog.INSTANCE.i(TAG, "LogService connected");
             logServiceMessenger = new Messenger(service);
 
             // we can only tell it to listen once we've connected to the LogService
@@ -124,14 +125,14 @@ public class OnUnlockSamplingStrategy implements SamplingStrategy {
     private void stopSampling() {
         if (logServiceMessenger == null)
         {
-            Log.e(TAG, "logService is null");
+            WHALELog.INSTANCE.e(TAG, "logService is null");
             return;
         }
 
         try {
             logServiceMessenger.send(Message.obtain(null, LogService.STOP_SENSORS, 0, 0));
         } catch (Exception e) {
-            Log.e(TAG, "failed to send message", e);
+            WHALELog.INSTANCE.e(TAG, "failed to send message", e);
         }
     }
 }

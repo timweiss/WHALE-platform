@@ -5,13 +5,13 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.goAsync
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -33,13 +33,13 @@ class EndStudyReceiver : BroadcastReceiver() {
         val applicationContext = context?.applicationContext ?: return@goAsync
 
         dataStoreManager.saveStudyState(StudyState.ENDED)
-        Log.i(TAG, "Marked study as ended")
+        WHALELog.i(TAG, "Marked study as ended")
 
         runStudyLifecycleCleanup(applicationContext)
 
         val token = dataStoreManager.tokenFlow.first()
         enqueueSingleSensorReadingsUploadWorker(applicationContext, token, "finalReadingsUpload", false)
-        Log.i(TAG, "Scheduled final sensor readings upload")
+        WHALELog.i(TAG, "Scheduled final sensor readings upload")
     }
 }
 
@@ -54,6 +54,7 @@ suspend fun scheduleStudyEndAlarm(context: Context, startedTimestamp: Long, afte
     )
 
     setStudyEndAlarm(context, scheduledAlarm)
+    WHALELog.i("EndStudyReceiver", "Scheduled study end alarm for timestamp $timestamp")
 }
 
 suspend fun rescheduleStudyEndAlarm(context: Context, database: AppDatabase) {
@@ -63,9 +64,9 @@ suspend fun rescheduleStudyEndAlarm(context: Context, database: AppDatabase) {
 
     if (scheduledAlarm != null) {
         setStudyEndAlarm(context, scheduledAlarm)
-        Log.i("EndStudyReceiver", "Rescheduled study end alarm for timestamp ${scheduledAlarm.timestamp}")
+        WHALELog.i("EndStudyReceiver", "Rescheduled study end alarm for timestamp ${scheduledAlarm.timestamp}")
     } else {
-        Log.w("EndStudyReceiver", "No scheduled study end alarm found to reschedule")
+        WHALELog.w("EndStudyReceiver", "No scheduled study end alarm found to reschedule")
     }
 }
 

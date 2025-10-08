@@ -20,6 +20,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.data.DataStoreManager;
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SensorNotRunningException;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
@@ -100,7 +101,7 @@ public class LogService extends AbstractService {
         public void handleMessage(Message msg) {
             LogService service = serviceReference.get();
             if (service != null) {
-                Log.d(TAG, "message: " + msg.what);
+                WHALELog.INSTANCE.i(TAG, "message: " + msg.what);
                 switch (msg.what) {
                     case START_SENSORS: {
                         service.startSensors(false, true);
@@ -142,7 +143,7 @@ public class LogService extends AbstractService {
                         super.handleMessage(msg);
                 }
             } else {
-                Log.e(TAG, "Service has unexpectedly died");
+                WHALELog.INSTANCE.e(TAG, "Service has unexpectedly died");
             }
         }
     }
@@ -151,7 +152,7 @@ public class LogService extends AbstractService {
 
     Handler lockUnlockStopHandler = new Handler();
     Runnable lockUnlockStopRunnable = () -> {
-        Log.d(TAG, "lockUnlockStopRunnable: stop sampling");
+        WHALELog.INSTANCE.i(TAG, "lockUnlockStopRunnable: stop sampling");
         setState(LogServiceState.IDLE);
     };
 
@@ -164,10 +165,10 @@ public class LogService extends AbstractService {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-                    Log.d(TAG, "lockUnlockReceiver: device locked");
+                    WHALELog.INSTANCE.i(TAG, "lockUnlockReceiver: device locked");
                     hideInteractionWidget();
                 } else {
-                    Log.d(TAG, "lockUnlockReceiver: device unlocked, sensorlist" + singletonSensorList);
+                    WHALELog.INSTANCE.i(TAG, "lockUnlockReceiver: device unlocked, sensorlist" + singletonSensorList);
                     showInteractionWidget();
                     setState(LogServiceState.SAMPLING_AFTER_UNLOCK);
                 }
@@ -175,21 +176,21 @@ public class LogService extends AbstractService {
         };
         initializeSensors();
         registerReceiver(lockUnlockReceiver, filter);
-        Log.i(TAG, "registered lock/unlock receiver");
+        WHALELog.INSTANCE.i(TAG, "registered lock/unlock receiver");
     }
 
     private void stopListeningForLockUnlock() {
         unregisterReceiver(lockUnlockReceiver);
-        Log.i(TAG, "unregistered lock/unlock receiver");
+        WHALELog.INSTANCE.i(TAG, "unregistered lock/unlock receiver");
     }
 
     Handler periodicHandler = new Handler();
     Runnable periodicRunnable = () -> {
         if (!isSampling) {
-            Log.d(TAG, "periodicRunnable: start sampling");
+            WHALELog.INSTANCE.i(TAG, "periodicRunnable: start sampling");
             setState(LogServiceState.SAMPLING_PERIODIC);
         } else {
-            Log.d(TAG, "periodicRunnable: stop sampling");
+            WHALELog.INSTANCE.i(TAG, "periodicRunnable: stop sampling");
             setState(LogServiceState.IDLE);
         }
     };
@@ -218,10 +219,10 @@ public class LogService extends AbstractService {
     }
 
     private void processNewState(LogServiceState previousState, LogServiceState newState) {
-        Log.d(TAG, "state transition: " + previousState + " -> " + newState);
+        WHALELog.INSTANCE.i(TAG, "state transition: " + previousState + " -> " + newState);
         if (previousState == LogServiceState.IDLE) {
             if (newState == LogServiceState.SAMPLING_AFTER_UNLOCK) {
-                Log.d(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
+                WHALELog.INSTANCE.i(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
                 startSensors(false, false);
                 lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
                 lockUnlockStopHandler.postDelayed(lockUnlockStopRunnable, LOCK_UNLOCK_SAMPLE_DURATION);
@@ -251,6 +252,7 @@ public class LogService extends AbstractService {
                 stopSensors(false);
                 state = LogServiceState.IDLE;
             } else {
+                WHALELog.INSTANCE.e(TAG, "invalid state transition");
                 // throw new IllegalStateException("Cannot transition from SAMPLING_AFTER_UNLOCK to SAMPLING_PERIODIC");
             }
         }
@@ -259,19 +261,19 @@ public class LogService extends AbstractService {
     /* Section: Receiving Sensor Log Data */
 
     private void receiveSensorLogData(String sensorName, String sensorData) {
-        Log.d(TAG, "received sensor log data: " + sensorName + " " + sensorData);
+        WHALELog.INSTANCE.d(TAG, "received sensor log data: " + sensorName + " " + sensorData);
 
         try {
             Class<?> sensorClass = Class.forName(sensorName);
             AbstractSensor sensor = singletonSensorList.getSensorOfType(sensorClass);
-            Log.d(TAG, "sensors active: " + singletonSensorList.getList(this, database, "").stream().filter(s -> s.isRunning()).count());
+            WHALELog.INSTANCE.i(TAG, "sensors active: " + singletonSensorList.getList(this, database, "").stream().filter(s -> s.isRunning()).count());
             if (sensor != null) {
                 sensor.tryLogStringData(sensorData);
             }
         } catch (ClassNotFoundException e) {
-            Log.e(TAG, "Could not find sensor class: " + sensorName, e);
+            WHALELog.INSTANCE.e(TAG, "Could not find sensor class: " + sensorName, e);
         } catch (SensorNotRunningException e) {
-            Log.e(TAG, "Sensor not running: " + sensorName, e);
+            WHALELog.INSTANCE.e(TAG, "Sensor not running: " + sensorName, e);
         }
     }
 
@@ -287,7 +289,7 @@ public class LogService extends AbstractService {
                     EmptyCoroutineContext.INSTANCE,
                     (scope, continuation) -> dataStoreManager.saveStudyPausedUntil(untilTime, continuation));
         } catch (Exception e) {
-            Log.e(TAG, "Could not save study paused", e);
+            WHALELog.INSTANCE.e(TAG, "Could not save study paused", e);
         }
         // Sleep Notification
         replaceNotification(getString(R.string.app_name), getString(R.string.notification_sleep_text), R.drawable.notification_whale);
@@ -302,7 +304,7 @@ public class LogService extends AbstractService {
                     EmptyCoroutineContext.INSTANCE,
                     (scope, continuation) -> dataStoreManager.saveStudyPausedUntil(-1, continuation));
         } catch (Exception e) {
-            Log.e(TAG, "Could not save study paused", e);
+            WHALELog.INSTANCE.e(TAG, "Could not save study paused", e);
         }
 
         if (isInSleepMode) {
@@ -337,14 +339,14 @@ public class LogService extends AbstractService {
             // use the singleton list because we want to keep our sensor's state inbetween activations
             sensorList = singletonSensorList.getList(this, database, salt);
 
-            Log.d(TAG, "size: " + sensorList.size());
+            WHALELog.INSTANCE.i(TAG, "size: " + sensorList.size());
             for (AbstractSensor sensor : sensorList) {
                 if (sensor.isEnabled() && sensor.isAvailable(this) && (sensor.availableForPeriodicSampling() || !onlyPeriodic || (sensor.availableForContinuousSampling() && includeContinous))) {
                     sensor.start(this);
 
-                    Log.d(TAG, sensor.getSensorName() + " turned on");
+                    WHALELog.INSTANCE.i(TAG, sensor.getSensorName() + " turned on");
                 } else {
-                    Log.w(TAG, sensor.getSensorName() + " turned off");
+                    WHALELog.INSTANCE.i(TAG, sensor.getSensorName() + " turned off");
                 }
             }
 

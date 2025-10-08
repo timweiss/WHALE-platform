@@ -1,12 +1,12 @@
 package de.mimuc.senseeverything.workers.conversation
 
 import android.content.Context
-import android.util.Log
 import com.konovalov.vad.webrtc.VadWebRTC
 import com.konovalov.vad.webrtc.config.FrameSize
 import com.konovalov.vad.webrtc.config.Mode
 import com.konovalov.vad.webrtc.config.SampleRate
 import com.konovalov.vad.yamnet.SoundCategory
+import de.mimuc.senseeverything.logging.WHALELog
 import java.io.File
 
 class WebRTCReader : VadReader() {
@@ -25,7 +25,7 @@ class WebRTCReader : VadReader() {
             val chunkSize = vad.frameSize.value * 2
 
             val file = File(path)
-            Log.d(TAG, "size of file: " + file.length().toString())
+            WHALELog.i(TAG, "size of file: " + file.length().toString())
 
             File(path).inputStream().use { input ->
                 val audioHeader = ByteArray(44).apply { input.read(this) }

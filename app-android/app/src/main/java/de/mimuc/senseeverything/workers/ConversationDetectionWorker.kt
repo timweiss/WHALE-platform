@@ -2,7 +2,6 @@ package de.mimuc.senseeverything.workers
 
 import android.app.NotificationManager
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.OneTimeWorkRequestBuilder
@@ -15,6 +14,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.workers.conversation.VadReader
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateLength
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateSpeechPercentage
@@ -76,7 +76,7 @@ class ConversationDetectionWorker @AssistedInject constructor(
         )
 
         val name = reader.TAG
-        Log.d(TAG, "speech detected in $name audio $log")
+        WHALELog.i(TAG, "speech detected in $name audio $log")
 
         logSpeechDetectionResult(name, timestamp, log)
     }
@@ -86,7 +86,7 @@ class ConversationDetectionWorker @AssistedInject constructor(
             try {
                 database.logDataDao().insertAll(LogData(timestamp, "Conversation ${type}", line))
             } catch (e: Exception) {
-                Log.e(TAG, "Error logging speech detection result", e)
+                WHALELog.e(TAG, "Error logging speech detection result", e)
                 throw e
             }
         }

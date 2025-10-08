@@ -1,7 +1,6 @@
 package de.mimuc.senseeverything.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -24,6 +23,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -50,17 +50,17 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 val pendingQuestionnaires = database.pendingQuestionnaireDao().getAll()
 
                 if (pendingQuestionnaires.isEmpty()) {
-                    Log.i("PendingQuestionnaireUploadWorker", "No pending questionnaires to upload.")
+                    WHALELog.i("PendingQuestionnaireUploadWorker", "No pending questionnaires to upload.")
                     return@withContext Result.success()
                 }
 
-                Log.i("PendingQuestionnaireUploadWorker", "Found ${pendingQuestionnaires.size} pending questionnaires to upload.")
+                WHALELog.i("PendingQuestionnaireUploadWorker", "Found ${pendingQuestionnaires.size} pending questionnaires to upload.")
                 val apiClient = ApiClient.getInstance(applicationContext)
 
                 val notificationTriggers = database.notificationTriggerDao().getAll().associateBy { it.uid }
 
                 for (pendingQuestionnaire in pendingQuestionnaires) {
-                    Log.i("PendingQuestionnaireUploadWorker", "Uploading pending questionnaire: ${pendingQuestionnaire.uid}")
+                    WHALELog.i("PendingQuestionnaireUploadWorker", "Uploading pending questionnaire: ${pendingQuestionnaire.uid}")
                     val questionnaire = fullQuestionnaireJson.decodeFromString<Questionnaire>(pendingQuestionnaire.questionnaireJson)
                     uploadQuestionnaireAnswer(
                         apiClient,
@@ -83,7 +83,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 if (e is NetworkError || e is TimeoutError) {
                     Result.retry()
                 } else {
-                    Log.d("QuestionnaireUploadWorker", "Error uploading questionnaire answers: $e, ${e.stackTraceToString()}")
+                    WHALELog.e("QuestionnaireUploadWorker", "Error uploading questionnaire answers: $e, ${e.stackTraceToString()}")
                     Result.failure()
                 }
             }
@@ -101,7 +101,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
 
         if (remainingNotificationTriggers.isEmpty()) return
 
-        Log.i("PendingQuestionnaireUploadWorker", "Synchronizing ${remainingNotificationTriggers.size} leftover notification triggers without pending questionnaires.")
+        WHALELog.i("PendingQuestionnaireUploadWorker", "Synchronizing ${remainingNotificationTriggers.size} leftover notification triggers without pending questionnaires.")
         for ((_, trigger) in remainingNotificationTriggers) {
             // create dummy pending questionnaire for each remaining trigger
             val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
@@ -112,13 +112,13 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
             )
 
             if (pendingQuestionnaireId == null) {
-                Log.e("PendingQuestionnaireUploadWorker", "Failed to create pending questionnaire for trigger: ${trigger.uid}")
+                WHALELog.e("PendingQuestionnaireUploadWorker", "Failed to create pending questionnaire for trigger: ${trigger.uid}")
                 continue
             }
 
             val pendingQuestionnaire = database.pendingQuestionnaireDao().getById(pendingQuestionnaireId)
             if (pendingQuestionnaire == null) {
-                Log.e("PendingQuestionnaireUploadWorker", "Failed to retrieve created pending questionnaire for trigger: ${trigger.uid}")
+                WHALELog.e("PendingQuestionnaireUploadWorker", "Failed to retrieve created pending questionnaire for trigger: ${trigger.uid}")
                 continue
             }
 

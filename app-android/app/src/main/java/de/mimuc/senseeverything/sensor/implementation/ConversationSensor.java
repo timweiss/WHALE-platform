@@ -21,6 +21,7 @@ import java.nio.ByteOrder;
 import java.util.UUID;
 
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class ConversationSensor extends AbstractSensor {
@@ -60,7 +61,7 @@ public class ConversationSensor extends AbstractSensor {
         if (m_IsRunning)
             return;
 
-        Log.d(TAG, "conversationSensor: start called, guid" + guid);
+        WHALELog.INSTANCE.d(TAG, "conversationSensor: start called, guid" + guid);
 
         startRecording(context);
         m_IsRunning = true;
@@ -75,13 +76,13 @@ public class ConversationSensor extends AbstractSensor {
 
     private void stopRecording() {
         runningTask.cancel(true);
-        Log.d(TAG, "Enqueueing speech detection worker");
+        WHALELog.INSTANCE.d(TAG, "Enqueueing speech detection worker");
         enqueueConversationDetectionWorker(this.context, currentRecordingFilename, System.currentTimeMillis());
     }
 
     private void startRecording(Context context) {
         String filename = getFilenameForSampleStorage();
-        Log.i(TAG, "saving recording at location " + filename);
+        WHALELog.INSTANCE.i(TAG, "saving recording at location " + filename);
         currentRecordingFilename = filename;
         runningTask = new RecordWaveTask(context).execute(new File(currentRecordingFilename));
     }
@@ -89,13 +90,13 @@ public class ConversationSensor extends AbstractSensor {
     @Override
     public void stop() {
         if (m_IsRunning) {
-            Log.d(TAG, "stopped recording by daemon");
+            WHALELog.INSTANCE.d(TAG, "stopped recording by daemon");
             m_IsRunning = false;
             try {
                 stopRecording();
                 closeDataSource();
             } catch (Exception e) {
-                Log.e(TAG, e.toString());
+                WHALELog.INSTANCE.e(TAG, e.toString());
             }
         }
     }
@@ -343,7 +344,7 @@ public class ConversationSensor extends AbstractSensor {
             if (results[0] instanceof Throwable) {
                 // Error
                 throwable = (Throwable) results[0];
-                Log.e(RecordWaveTask.class.getSimpleName(), throwable.getMessage(), throwable);
+                WHALELog.INSTANCE.e(RecordWaveTask.class.getSimpleName(), throwable.getMessage(), throwable);
             }
         }
     }

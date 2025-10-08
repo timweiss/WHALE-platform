@@ -1,11 +1,11 @@
 package de.mimuc.senseeverything.workers.conversation
 
 import android.content.Context
-import android.util.Log
 import com.konovalov.vad.yamnet.VadYamnet
 import com.konovalov.vad.yamnet.config.FrameSize
 import com.konovalov.vad.yamnet.config.Mode
 import com.konovalov.vad.yamnet.config.SampleRate
+import de.mimuc.senseeverything.logging.WHALELog
 import java.io.File
 
 class YAMNetReader : VadReader() {
@@ -25,7 +25,7 @@ class YAMNetReader : VadReader() {
             val chunkSize = vad.frameSize.value * 2
 
             val file = File(path)
-            Log.d(TAG, "size of file: " + file.length().toString())
+            WHALELog.i(TAG, "size of file: " + file.length().toString())
 
             File(path).inputStream().use { input ->
                 val audioHeader = ByteArray(44).apply { input.read(this) }

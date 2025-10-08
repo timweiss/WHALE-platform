@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class ScreenOrientationSensor extends AbstractSensor {
@@ -57,7 +58,7 @@ public class ScreenOrientationSensor extends AbstractSensor {
 				onLogDataItem(t, "UNDEFINED");
 			}
 		} catch (Exception e) {
-			Log.e(TAG, e.toString());
+			WHALELog.INSTANCE.e(TAG, e.toString());
 		}
 		
 		IntentFilter filter = new IntentFilter();
@@ -98,7 +99,7 @@ public class ScreenOrientationSensor extends AbstractSensor {
 							onLogDataItem(t, "UNDEFINED");
 		                }
 	                } catch (Exception e) {
-						Log.e(TAG, e.toString());
+						WHALELog.INSTANCE.e(TAG, e.toString());
 					}
 	            }				
 			}			

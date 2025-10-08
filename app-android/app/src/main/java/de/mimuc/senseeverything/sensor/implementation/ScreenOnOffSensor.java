@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.View;
 
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class ScreenOnOffSensor extends AbstractSensor {
@@ -55,7 +56,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
 				onLogDataItem(t, "off");
 			}
 		} catch (Exception e) {
-			Log.e(TAG, e.toString());
+			WHALELog.INSTANCE.e(TAG, e.toString());
 		}
 		
 		IntentFilter filter = new IntentFilter();
@@ -81,7 +82,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
 			try {
 				closeDataSource();
 			} catch (Exception e) {
-				Log.e(TAG, e.toString());
+				WHALELog.INSTANCE.e(TAG, e.toString());
 			}	
 		}	
 	}

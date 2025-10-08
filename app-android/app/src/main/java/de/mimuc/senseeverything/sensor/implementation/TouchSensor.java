@@ -5,6 +5,7 @@ import java.util.Random;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.handler.HandlerListener;
 import de.mimuc.senseeverything.handler.TouchHandler;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 import android.content.Context;
@@ -79,12 +80,12 @@ public class TouchSensor extends AbstractSensor implements HandlerListener {
 	@Override
 	public void sendMessage(String msg) {
 		if(m_IsRunning) {
-			Log.d(TAG, "#"+msg);
+			WHALELog.INSTANCE.d(TAG, "#"+msg);
 			onLogDataItem(System.currentTimeMillis(), msg);
 		}
 		else
 		{
-			Log.d(TAG, "not running");
+			WHALELog.INSTANCE.d(TAG, "not running");
 		}
 	}
 

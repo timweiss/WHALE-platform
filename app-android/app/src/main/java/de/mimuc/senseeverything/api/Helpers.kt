@@ -1,10 +1,10 @@
 package de.mimuc.senseeverything.api
 
-import android.util.Log
 import com.android.volley.VolleyError
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.studyJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 
@@ -20,7 +20,7 @@ fun decodeError(error: VolleyError): ApiError {
             val json = JSONObject(data)
             ApiError(response.statusCode, json.getString("code"), json.getString("error"))
         } catch (e: Exception) {
-            Log.e("Enrolment", "Error decoding error response: $e")
+            WHALELog.e("Enrolment", "Error decoding error response: $e")
             ApiError(response.statusCode, "unknown", message)
         }
     } else {
@@ -34,20 +34,20 @@ suspend fun loadStudy(apiClient: ApiClient, studyId: Int): Study? {
     }
 
     return try {
-        Log.d("Api", "Loading study $studyId")
+        WHALELog.i("Api", "Loading study $studyId")
         apiClient.getSerialized<Study>(ApiResources.studyById(studyId), emptyMap(), studyJson)
     } catch (e: Exception) {
-        Log.e("Api", "Error loading study: ${e.message}")
+        WHALELog.e("Api", "Error loading study: ${e.message}")
         null
     }
 }
 
 suspend fun loadStudyByEnrolmentKey(apiClient: ApiClient, enrolmentKey: String): Study? {
     return try {
-        Log.d("Api", "Loading study by enrolment key $enrolmentKey")
+        WHALELog.i("Api", "Loading study by enrolment key $enrolmentKey")
         apiClient.getSerialized<Study>(ApiResources.studyByEnrolmentKey(enrolmentKey), emptyMap(), studyJson)
     } catch (e: Exception) {
-        Log.e("Api", "Error loading study: ${e.message}")
+        WHALELog.e("Api", "Error loading study: ${e.message}")
         null
     }
 }
@@ -61,15 +61,15 @@ suspend fun fetchCompletionStatus(apiClient: ApiClient, dataStoreManager: DataSt
     val headers = mapOf("Authorization" to "Bearer $token")
 
     return try {
-        Log.d("Api", "Fetching completion status")
+        WHALELog.i("Api", "Fetching completion status")
         val status = apiClient.getSerialized<Map<String, Boolean>>(
             url = ApiResources.completionStatus(),
             headers = headers
         )
-        Log.d("Api", "Received completion status: $status")
+        WHALELog.i("Api", "Received completion status: $status")
         status
     } catch (e: Exception) {
-        Log.e("Api", "Error fetching completion status: ${e.message}")
+        WHALELog.e("Api", "Error fetching completion status: ${e.message}")
         emptyMap()
     }
 }

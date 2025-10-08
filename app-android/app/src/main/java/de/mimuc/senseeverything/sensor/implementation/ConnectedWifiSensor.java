@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.View;
 
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class ConnectedWifiSensor extends AbstractSensor {
@@ -49,7 +50,7 @@ public class ConnectedWifiSensor extends AbstractSensor {
 		try {
 			onLogDataItem(t, ssid);
 		} catch (Exception e) {
-			Log.e(TAG, e.toString());
+			WHALELog.INSTANCE.e(TAG, e.toString());
 		}
 		m_IsRunning = true;
 	}

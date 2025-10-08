@@ -8,6 +8,7 @@ import java.io.Serializable;
 
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.db.models.LogData;
+import de.mimuc.senseeverything.logging.WHALELog;
 
 public abstract class AbstractSensor implements Serializable  {
 
@@ -70,11 +71,11 @@ public abstract class AbstractSensor implements Serializable  {
 	public void start(Context context){
 		m_isSensorAvailable = isAvailable(context);
 		if (!m_isSensorAvailable)
-			Log.i(TAG, "Sensor not available");
+			WHALELog.INSTANCE.i(TAG, "Sensor not available");
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){
-		Log.d(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
+		WHALELog.INSTANCE.v(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
 
 		AsyncTask.execute(() -> {
 			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));

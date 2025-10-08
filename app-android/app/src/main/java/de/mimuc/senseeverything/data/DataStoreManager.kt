@@ -1,7 +1,6 @@
 package de.mimuc.senseeverything.data
 
 import android.content.Context
-import android.util.Log
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.MultiProcessDataStoreFactory
@@ -14,6 +13,7 @@ import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -198,7 +198,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
 
     suspend fun saveParticipantId(participantId: String) {
         dataStore.updateData { preferences ->
-            Log.d("datastore", "saveParticipantId: $participantId")
+            WHALELog.i("datastore", "saveParticipantId: $participantId")
             preferences.copy(lastUpdate = System.currentTimeMillis(), participantId = participantId)
         }
     }

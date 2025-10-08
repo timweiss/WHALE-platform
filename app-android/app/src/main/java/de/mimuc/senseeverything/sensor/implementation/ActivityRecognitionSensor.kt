@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.ActivityRecognition
 import com.google.android.gms.location.ActivityTransition
@@ -14,6 +13,7 @@ import com.google.android.gms.location.ActivityTransitionRequest
 import com.google.android.gms.location.ActivityTransitionResult
 import com.google.android.gms.location.DetectedActivity
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.sensor.AbstractSensor
 
 class ActivityRecognitionSensor(val context: Context, database: AppDatabase) :
@@ -73,12 +73,12 @@ class ActivityRecognitionSensor(val context: Context, database: AppDatabase) :
 
         task.addOnSuccessListener {
             m_IsRunning = true
-            Log.d(TAG, "Activity transition updates requested successfully")
+            WHALELog.i(TAG, "Activity transition updates requested successfully")
         }
 
         task.addOnFailureListener { e: Exception ->
             m_IsRunning = false
-            Log.e(TAG, "Failed to request activity transition updates", e)
+            WHALELog.e(TAG, "Failed to request activity transition updates", e)
         }
     }
 
@@ -97,12 +97,12 @@ class ActivityRecognitionSensor(val context: Context, database: AppDatabase) :
             task.addOnSuccessListener {
                 m_IsRunning = false
                 receiverIntent = null
-                Log.d(TAG, "Activity transition updates removed successfully")
+                WHALELog.i(TAG, "Activity transition updates removed successfully")
             }
 
             task.addOnFailureListener { e: Exception ->
                 // Handle error
-                Log.e(TAG, "Failed to remove activity transition updates", e)
+                WHALELog.e(TAG, "Failed to remove activity transition updates", e)
             }
         }
     }

@@ -3,13 +3,13 @@ package de.mimuc.senseeverything.service.sampling
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
@@ -31,12 +31,12 @@ class OnBootReceiver: BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) = goAsync {
         if (context == null) {
-            Log.e("BootUpReceiver", "Context is null")
+            WHALELog.e("BootUpReceiver", "Context is null")
             return@goAsync
         }
 
         if (intent!!.action == "android.intent.action.BOOT_COMPLETED") {
-            Log.d("BootUpReceiver", "Received boot completed intent")
+            WHALELog.i("BootUpReceiver", "Received boot completed intent")
 
             CoroutineScope(Dispatchers.Main).launch {
                 val (studyPaused, studyPausedUntil, studyState) = combine(
@@ -48,26 +48,26 @@ class OnBootReceiver: BroadcastReceiver() {
                 }.first()
 
                 val currentContext = context.applicationContext
-                Log.d("BootUpReceiver", "Study paused: $studyPaused, paused until: $studyPausedUntil")
+                WHALELog.i("BootUpReceiver", "Study paused: $studyPaused, paused until: $studyPausedUntil")
 
                 if (studyState == StudyState.RUNNING && (!studyPaused || studyPausedUntil < System.currentTimeMillis() || studyPausedUntil == -1L)) {
                     // study can start right away
-                    Log.d("BootUpReceiver", "Study is not paused, starting sampling")
+                    WHALELog.i("BootUpReceiver", "Study is not paused, starting sampling")
                     startSampling(currentContext)
 
                     // all alarms need to be rescheduled after reboot
                     rescheduleAlarms(currentContext, database, dataStoreManager)
                 } else if (studyState == StudyState.RUNNING) {
                     // study is paused, so we don't start sampling
-                    Log.d("BootUpReceiver", "Study is paused until $studyPausedUntil, starting alarm manager to resume study")
+                    WHALELog.i("BootUpReceiver", "Study is paused until $studyPausedUntil, starting alarm manager to resume study")
                     scheduleResumeSamplingAlarm(currentContext, studyPausedUntil)
                 } else {
-                    Log.d("BootUpReceiver", "Study has ended, not starting sampling")
+                    WHALELog.i("BootUpReceiver", "Study has ended, not starting sampling")
                     // todo: disable BootUpReceiver
                 }
             }
         } else {
-            Log.e("BootUpReceiver", "invalid intent action: " + intent.action)
+            WHALELog.e("BootUpReceiver", "invalid intent action: " + intent.action)
         }
     }
 

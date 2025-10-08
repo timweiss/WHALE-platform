@@ -2,7 +2,6 @@ package de.mimuc.senseeverything.service.floatingWidget
 
 import android.content.Intent
 import android.os.IBinder
-import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.lifecycle.LifecycleService
@@ -22,6 +21,7 @@ import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.esm.FloatingWidgetNotificationScheduler
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.CoroutineScope
@@ -87,7 +87,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
                 val currentNotificationTrigger = currentNotificationTrigger
                 if (currentNotificationTrigger == null) {
-                    Log.i(TAG, "No valid trigger found for this unlock, stopping service")
+                    WHALELog.i(TAG, "No valid trigger found for this unlock, stopping service")
                     stopSelf()
                     return@launch
                 }
@@ -95,7 +95,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                 try {
                     currentQuestionnaireTrigger = fullQuestionnaireJson.decodeFromString(currentNotificationTrigger.triggerJson) as EMAFloatingWidgetNotificationTrigger?
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to parse questionnaire trigger JSON: ${currentNotificationTrigger.triggerJson}", e)
+                    WHALELog.e(TAG, "Failed to parse questionnaire trigger JSON: ${currentNotificationTrigger.triggerJson}", e)
                 }
 
                 // Load questionnaire from DataStoreManager
@@ -125,13 +125,13 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                     // Render the dynamic questionnaire widget
                     renderDynamicWidget()
 
-                    Log.i(TAG, "Displaying questionnaire: ${currentQuestionnaire!!.questionnaire.name}")
+                    WHALELog.i(TAG, "Displaying questionnaire: ${currentQuestionnaire!!.questionnaire.name} for trigger ${currentNotificationTrigger.uid}")
                 } else {
-                    Log.e(TAG, "Failed to load questionnaire for trigger ${currentNotificationTrigger.name}: ${currentNotificationTrigger.questionnaireId}")
+                    WHALELog.e(TAG, "Failed to load questionnaire for trigger ${currentNotificationTrigger.name}: ${currentNotificationTrigger.questionnaireId}")
                     stopSelf()
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading questionnaire", e)
+                WHALELog.e(TAG, "Error loading questionnaire", e)
                 stopSelf()
             }
         }
@@ -140,7 +140,7 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
     private fun renderDynamicWidget() {
         if (currentQuestionnaire == null) {
-            Log.e(TAG, "Cannot render widget: questionnaire is null")
+            WHALELog.e(TAG, "Cannot render widget: questionnaire is null")
             return
         }
 
@@ -165,16 +165,16 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
             windowManager?.addView(view, params)
 
-            Log.d(TAG, "Dynamic floating widget rendered successfully")
+            WHALELog.i(TAG, "Dynamic floating widget rendered successfully")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to render dynamic widget", e)
+            WHALELog.e(TAG, "Failed to render dynamic widget", e)
             stopSelf()
         }
     }
 
     private fun handleQuestionnaireComplete(elementValues: Map<Int, ElementValue>) {
-        Log.i(TAG, "Questionnaire completed")
+        WHALELog.i(TAG, "Questionnaire completed")
 
         scope.launch {
             try {
@@ -185,14 +185,14 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
                 withContext (Dispatchers.IO) {
                     database.notificationTriggerDao()?.update(currentNotificationTrigger!!)
-                    Log.i(TAG, "Trigger marked as answered in database")
+                    WHALELog.i(TAG, "Trigger marked as answered in database")
                 }
 
                 val answers = elementValues.filter { it.value.isAnswer }
                 scheduleAnswerUpload(answers)
                 evaluateRules(answers)
             } catch (e: Exception) {
-                Log.e(TAG, "Error handling questionnaire completion", e)
+                WHALELog.e(TAG, "Error handling questionnaire completion", e)
             }
 
             // Stop the service
@@ -204,19 +204,19 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
         withContext(Dispatchers.IO) {
             val pendingQuestionnaire = pendingQuestionnaire
             if (pendingQuestionnaire == null) {
-                Log.e(TAG, "Failed to find pending questionnaire after creation")
+                WHALELog.e(TAG, "Failed to find pending questionnaire after creation")
                 return@withContext
             }
 
             val currentQuestionnaire = currentQuestionnaire
             if (currentQuestionnaire == null) {
-                Log.e(TAG, "Cannot schedule upload: currentQuestionnaire is null")
+                WHALELog.e(TAG, "Cannot schedule upload: currentQuestionnaire is null")
                 return@withContext
             }
 
             pendingQuestionnaire.markCompleted(database, answers)
 
-            Log.d(TAG, "Pending questionnaire marked as completed with answers: ${pendingQuestionnaire.elementValuesJson}")
+            WHALELog.d(TAG, "Pending questionnaire marked as completed with answers: ${pendingQuestionnaire.elementValuesJson}")
 
             val userToken = dataStore.tokenFlow.first()
 
@@ -229,38 +229,38 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                 pendingQuestionnaire.uid
             )
 
-            Log.i(TAG, "Scheduled questionnaire upload with pending ID: ${pendingQuestionnaire.uid}")
+            WHALELog.i(TAG, "Scheduled questionnaire upload with pending ID: ${pendingQuestionnaire.uid} for trigger ID: ${currentNotificationTrigger?.uid}")
         }
     }
 
     private fun evaluateRules(answers: Map<Int, ElementValue>) {
         val currentQuestionnaire = currentQuestionnaire
         if (currentQuestionnaire == null) {
-            Log.e(TAG, "Cannot evaluate rules: currentQuestionnaire is null")
+            WHALELog.e(TAG, "Cannot evaluate rules: currentQuestionnaire is null")
             return
         }
 
         if (currentQuestionnaire.questionnaire.rules.isNullOrEmpty()) {
-            Log.i(TAG, "No rules to evaluate for this questionnaire")
+            WHALELog.i(TAG, "No rules to evaluate for this questionnaire")
             return
         }
 
         val pendingQuestionnaire = pendingQuestionnaire
         if (pendingQuestionnaire == null) {
-            Log.e(TAG, "Cannot evaluate rules: pendingQuestionnaire is null")
+            WHALELog.e(TAG, "Cannot evaluate rules: pendingQuestionnaire is null")
             return
         }
 
         val evaluator = QuestionnaireRuleEvaluator(currentQuestionnaire.questionnaire.rules)
         val actions = evaluator.evaluate(answers)
 
-        Log.i(TAG, "Evaluated rules, got actions: $actions")
+        WHALELog.i(TAG, "Evaluated rules, got actions: $actions")
 
         QuestionnaireRuleEvaluator.handleActions(this, actions.flatMap { it.value }, pendingQuestionnaire)
     }
 
     private fun handleQuestionnaireDismiss() {
-        Log.i(TAG, "Questionnaire dismissed")
+        WHALELog.i(TAG, "Questionnaire dismissed")
         stopSelf()
     }
 
@@ -273,9 +273,9 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
             composeView.getAttachedView()?.let { view ->
                 try {
                     windowManager?.removeView(view)
-                    Log.d(TAG, "Removed view from window manager")
+                    WHALELog.i(TAG, "Removed view from window manager")
                 } catch (e: Exception) {
-                    Log.w(TAG, "Error removing view from window manager", e)
+                    WHALELog.w(TAG, "Error removing view from window manager", e)
                 }
             }
             composeView.dispose()
@@ -283,6 +283,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
         job.cancel()
 
-        Log.d(TAG, "Service destroyed")
+        WHALELog.i(TAG, "Service destroyed")
     }
 }

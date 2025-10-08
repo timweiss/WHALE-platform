@@ -5,7 +5,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
@@ -17,6 +16,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.parseTimebucket
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_JSON
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_NOTIFICATION_ID
 import kotlinx.coroutines.Dispatchers
@@ -208,7 +208,7 @@ class FloatingWidgetNotificationScheduler {
             )
         }
 
-        Log.i(
+        WHALELog.i(
             TAG,
             "Scheduling ${plannedNotifications.size} planned push notification triggers after $now"
         )
@@ -357,7 +357,7 @@ class FloatingWidgetNotificationScheduler {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
         )
 
-        Log.i(
+        WHALELog.i(
             "EsmHandler",
             "Scheduling notification trigger for ${notificationTrigger.uid} at ${notificationTrigger.validFrom}"
         )

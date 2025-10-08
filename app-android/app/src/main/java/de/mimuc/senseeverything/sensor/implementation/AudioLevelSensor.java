@@ -9,6 +9,7 @@ import android.view.View;
 import java.io.IOException;
 
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class AudioLevelSensor extends AbstractSensor {
@@ -63,7 +64,7 @@ public class AudioLevelSensor extends AbstractSensor {
 			}, 1000);
 			m_IsRunning = true;
 		} catch (Exception e) {
-			Log.e(TAG, e.toString());
+			WHALELog.INSTANCE.e(TAG, e.toString());
 		}
 		
 	}
@@ -74,7 +75,7 @@ public class AudioLevelSensor extends AbstractSensor {
 				return true;
 			
 			try {
-				Log.d(TAG, "initMediaRecorder");
+				WHALELog.INSTANCE.d(TAG, "initMediaRecorder");
 				mediaRecorder = new MediaRecorder();
 				mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
 				mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
@@ -84,10 +85,10 @@ public class AudioLevelSensor extends AbstractSensor {
 				mediaRecorder.start();
 				return true;
 			} catch (IllegalStateException | IOException e) {
-				Log.e(TAG, e.toString());
+				WHALELog.INSTANCE.e(TAG, e.toString());
 			}
 		} catch(Exception e) {
-			Log.d(TAG, e.toString());
+			WHALELog.INSTANCE.d(TAG, e.toString());
 		}
 		return false;
 	}
@@ -101,7 +102,7 @@ public class AudioLevelSensor extends AbstractSensor {
 			int amplitude = mediaRecorder.getMaxAmplitude();
 			onLogDataItem(t,String.valueOf(amplitude));
 		} catch (Exception e) {
-			Log.d(TAG, e.toString());
+			WHALELog.INSTANCE.d(TAG, e.toString());
 		}
 	}
 	

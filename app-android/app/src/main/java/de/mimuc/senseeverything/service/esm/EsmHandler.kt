@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import de.mimuc.senseeverything.R
@@ -30,6 +29,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -57,7 +57,7 @@ class EsmHandler {
             dataStoreManager: DataStoreManager,
             database: AppDatabase
         ) {
-            Log.i("EsmHandler", "Rescheduling questionnaires")
+            WHALELog.i("EsmHandler", "Rescheduling questionnaires")
 
             schedulePeriodicQuestionnaires(context, dataStoreManager, database)
             scheduleOneTimeQuestionnaires(context, dataStoreManager, database)
@@ -73,6 +73,8 @@ class EsmHandler {
             database: AppDatabase
         ) {
             coroutineScope {
+                WHALELog.i("EsmHandler", "Scheduling periodic questionnaires")
+
                 val questionnaires = (Dispatchers.IO) {
                     dataStoreManager.questionnairesFlow.first()
                 }
@@ -126,7 +128,7 @@ class EsmHandler {
             )
 
             if (nextNotificationTime == null || nextNotificationTime > studyEndTimestamp) {
-                Log.d("EsmHandler", "No more periodic notifications to schedule for trigger ${trigger.id}")
+                WHALELog.i("EsmHandler", "No more periodic notifications to schedule for trigger ${trigger.id}")
                 return
             }
 
@@ -162,7 +164,7 @@ class EsmHandler {
                 pendingIntent
             )
 
-            Log.d(
+            WHALELog.i(
                 "EsmHandler",
                 "Scheduled stateless periodic questionnaire for $questionnaireName at $nextNotificationTime (study day $studyDay)"
             )
@@ -298,7 +300,7 @@ class EsmHandler {
             }
 
             if (pendingId == null) {
-                Log.e("EsmHandler", "Failed to create pending questionnaire entry for trigger ${trigger.id}")
+                WHALELog.e("EsmHandler", "Failed to create pending questionnaire entry for trigger ${trigger.id}")
                 return
             }
 
@@ -342,14 +344,14 @@ class EsmHandler {
 
                     val sourceNotificationTriggerId = sourcePendingQuestionnaire?.notificationTriggerUid
                     if (sourceNotificationTriggerId == null) {
-                        Log.e("EsmHandler", "Pending questionnaire does not have a notification trigger UID")
+                        WHALELog.e("EsmHandler", "Pending questionnaire does not have a notification trigger UID")
                         return@withContext
                     }
 
                     val sourceNotificationTrigger = database.notificationTriggerDao().getById(sourceNotificationTriggerId)
 
                     if (sourceNotificationTrigger == null) {
-                        Log.e("EsmHandler", "Source notification trigger not found in database")
+                        WHALELog.e("EsmHandler", "Source notification trigger not found in database")
                         return@withContext
                     }
 
@@ -376,7 +378,7 @@ class EsmHandler {
                         notificationHelper.pushNotificationTrigger(notificationTrigger)
                     }
 
-                    Log.d("EsmHandler", "Created notification trigger for trigger ${trigger.id} with modality ${trigger.configuration.modality}")
+                    WHALELog.i("EsmHandler", "Created notification trigger for trigger ${trigger.id} with modality ${trigger.configuration.modality}")
                 }
             }
         }
@@ -423,7 +425,7 @@ class EsmHandler {
                 val questionnaire = dataStoreManager.questionnairesFlow.first()
                     .find { it.questionnaire.id == trigger.questionnaireId }?.questionnaire
                 if (questionnaire == null) {
-                    Log.e("EsmHandler", "Questionnaire not found for trigger ${trigger.id}")
+                    WHALELog.e("EsmHandler", "Questionnaire not found for trigger ${trigger.id}")
                     return
                 }
 
@@ -472,7 +474,7 @@ class EsmHandler {
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_ONE_SHOT
             )
 
-            Log.i(
+            WHALELog.i(
                 "EsmHandler",
                 "Scheduling random EMA notification for ${questionnaireName} at ${nextNotificationTime.timeInMillis}"
             )
@@ -528,6 +530,8 @@ class EsmHandler {
             database: AppDatabase
         ) {
             coroutineScope {
+                WHALELog.i("EsmHandler", "Scheduling one time questionnaires")
+
                 val questionnaires = (Dispatchers.IO) {
                     dataStoreManager.questionnairesFlow.first()
                 }
@@ -559,7 +563,7 @@ class EsmHandler {
 
                     // don't schedule if the time is in the past
                     if (calendar.timeInMillis < System.currentTimeMillis()) {
-                        Log.d("EsmHandler", "Not scheduling one time questionnaire for ${questionnaire.name} in the past")
+                        WHALELog.i("EsmHandler", "Not scheduling one time questionnaire for ${questionnaire.name} in the past")
                         continue
                     }
 
@@ -593,7 +597,7 @@ class EsmHandler {
                         pendingIntent
                     )
 
-                    Log.d(
+                    WHALELog.i(
                         "EsmHandler",
                         "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.configuration.studyDay} at ${calendar.timeInMillis}"
                     )
@@ -630,7 +634,7 @@ class NotificationPushHelper(private val context: Context) {
 
             notificationManager.notify(notificationTrigger.uid.hashCode(), notification)
         } catch (e: Exception) {
-            Log.e(NotificationPushHelper::class.simpleName, e.message ?: "Error pushing notification trigger")
+            WHALELog.e(NotificationPushHelper::class.simpleName!!, e.message ?: "Error pushing notification trigger")
         }
     }
 

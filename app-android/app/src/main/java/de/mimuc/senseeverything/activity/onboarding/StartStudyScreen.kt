@@ -2,7 +2,6 @@ package de.mimuc.senseeverything.activity.onboarding
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +35,7 @@ import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
 import de.mimuc.senseeverything.helpers.isServiceRunning
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.EsmHandler
@@ -68,7 +68,7 @@ class StartStudyViewModel @Inject constructor(
             val api = ApiClient.Companion.getInstance(getApplication())
             val study = loadStudy(api, studyId)
             if (study != null) {
-                Log.d("StartStudyViewModel", "Loaded study: $study")
+                WHALELog.d("StartStudyViewModel", "Loaded study: $study")
                 dataStoreManager.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
@@ -80,7 +80,7 @@ class StartStudyViewModel @Inject constructor(
                         fetchAndPersistQuestionnaires(studyId, dataStoreManager, api)
                     persistQuestionnaireElementContent(context, questionnaires)
                 } catch (exception: Exception) {
-                    Log.e("StartStudyViewModel", "Could not load questionnaires", exception)
+                    WHALELog.e("StartStudyViewModel", "Could not load questionnaires", exception)
                 }
 
                 EsmHandler.Companion.schedulePeriodicQuestionnaires(
@@ -112,7 +112,7 @@ class StartStudyViewModel @Inject constructor(
 
                 SamplingEventReceiver.Companion.sendBroadcast(context, "setupComplete")
             } else {
-                Log.e("StartStudyViewModel", "Could not load study")
+                WHALELog.e("StartStudyViewModel", "Could not load study")
             }
 
             _pending.value = false

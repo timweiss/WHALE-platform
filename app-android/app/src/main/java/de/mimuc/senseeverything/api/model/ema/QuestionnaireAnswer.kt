@@ -50,11 +50,11 @@ suspend fun uploadQuestionnaireAnswer(
     userToken: String,
     pendingQuestionnaire: PendingQuestionnaire,
     notificationTrigger: NotificationTrigger?
-) {
+): JsonElement {
     val request = makeAnswerRequest(answers, pendingQuestionnaire, notificationTrigger)
     val headers = mapOf("Authorization" to "Bearer $userToken")
     
-    client.postSerialized<QuestionnaireAnswerRequest, JsonElement>(
+    return client.postSerialized<QuestionnaireAnswerRequest, JsonElement>(
         url = ApiResources.questionnaireAnswer(studyId, questionnaireId),
         requestData = request,
         headers = headers

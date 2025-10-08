@@ -59,7 +59,7 @@ public class StillAliveSensor extends AbstractSensor {
         onLogDataItem(t, "");
 
         if (isNetworkAvailable(context)) {
-            //Log.d(TAG, "Network available");
+            //WHALELog.d(TAG, "Network available");
             //TODO:
         }
     }

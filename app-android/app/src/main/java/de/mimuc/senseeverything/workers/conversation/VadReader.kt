@@ -1,7 +1,7 @@
 package de.mimuc.senseeverything.workers.conversation
 
 import android.content.Context
-import android.util.Log
+import de.mimuc.senseeverything.logging.WHALELog
 
 abstract class VadReader {
     open val TAG = "VadReader"
@@ -16,7 +16,7 @@ abstract class VadReader {
                 .filter { segment -> segment.hasSpeech }
                 .fold(0) { acc, segment -> acc + segment.length }
 
-            Log.d("VadReader", "total $totalLength and speech $speechLength")
+            WHALELog.i("VadReader", "total $totalLength and speech $speechLength")
 
             if (totalLength == 0) return 0.0
 

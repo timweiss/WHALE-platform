@@ -16,7 +16,10 @@ import com.android.volley.toolbox.Volley;
 
 import javax.inject.Inject;
 
+import androidx.room.Room;
+
 import dagger.hilt.android.HiltAndroidApp;
+import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.service.esm.EsmHandler;
 import de.mimuc.senseeverything.service.sampling.OnUnlockAndPeriodicSamplingStrategy;
 import de.mimuc.senseeverything.service.sampling.OnUnlockSamplingStrategy;
@@ -41,6 +44,8 @@ public class SEApplicationController extends Application implements Configuratio
     private SamplingManager mSamplingManager;
 
     private EsmHandler mEsmHandler;
+
+    private AppDatabase mAppDatabase;
 
     /**
      * Method to access the ApplicationController singleton instance
@@ -102,6 +107,24 @@ public class SEApplicationController extends Application implements Configuratio
             mEsmHandler = new EsmHandler();
         }
         return mEsmHandler;
+    }
+
+    /**
+     * Method to lazy initialize the app database, the database instance will be created when it is accessed for the first time
+     * @return The AppDatabase instance, the database will be created if it is null
+     */
+    public AppDatabase getAppDatabase() {
+        if (mAppDatabase == null) {
+            mAppDatabase = Room.databaseBuilder(
+                    getApplicationContext(),
+                    AppDatabase.class,
+                    "senseeverything-roomdb"
+            )
+                    .fallbackToDestructiveMigration()
+                    .enableMultiInstanceInvalidation()
+                    .build();
+        }
+        return mAppDatabase;
     }
 
     @NonNull

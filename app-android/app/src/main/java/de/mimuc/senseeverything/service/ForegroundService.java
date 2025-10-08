@@ -20,6 +20,7 @@ import androidx.core.app.NotificationCompat;
 
 import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.activity.MainActivity;
+import de.mimuc.senseeverything.logging.WHALELog;
 
 public abstract class ForegroundService extends Service {
 
@@ -114,7 +115,7 @@ public abstract class ForegroundService extends Service {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        Log.d(TAG, newConfig.toString());
+        WHALELog.INSTANCE.d(TAG, newConfig.toString());
     }
 
     @Override
@@ -126,7 +127,7 @@ public abstract class ForegroundService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "Service Stopped");
+        WHALELog.INSTANCE.d(TAG, "Service Stopped");
 
         if (m_wakeLock.isHeld()) {
             m_wakeLock.release();

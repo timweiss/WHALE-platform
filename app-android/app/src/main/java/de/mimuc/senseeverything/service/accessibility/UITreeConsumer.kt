@@ -2,10 +2,10 @@ package de.mimuc.senseeverything.service.accessibility
 
 import android.graphics.Point
 import android.graphics.Rect
-import android.util.Log
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.accessibility.model.InteractionEvent
 import de.mimuc.senseeverything.service.accessibility.model.InteractionType
 import de.mimuc.senseeverything.service.accessibility.model.NodeType
@@ -42,7 +42,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
         batchManager = SnapshotBatchManager(service)
 
-        Log.d(TAG, "Initialized with screen size: ${screenSize.x}x${screenSize.y}")
+        WHALELog.i(TAG, "Initialized with screen size: ${screenSize.x}x${screenSize.y}")
     }
 
     override fun consumeEvent(event: AccessibilityEvent) {
@@ -105,7 +105,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
             // Skip if tree is empty (all nodes were invisible)
             if (nodes.isEmpty()) {
-                Log.d(TAG, "Skipping empty tree (all nodes invisible)")
+                WHALELog.i(TAG, "Skipping empty tree (all nodes invisible)")
                 return
             }
 
@@ -133,7 +133,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
                 processSnapshot(snapshot)
 
-                Log.d(TAG, "New screen captured: ${snapshot.appPackage}, signature: ${signature.take(8)}..., nodes: ${nodes.size}")
+                WHALELog.d(TAG, "New screen captured: ${snapshot.appPackage}, signature: ${signature.take(8)}..., nodes: ${nodes.size}")
             }
         } finally {
             rootNode.recycle()
@@ -395,7 +395,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
                 processSnapshot(snapshot)
 
-                Log.d(TAG, "Interaction recorded: ${type.name} on node $nodeId at (${interaction.tapX}, ${interaction.tapY})")
+                WHALELog.d(TAG, "Interaction recorded: ${type.name} on node $nodeId at (${interaction.tapX}, ${interaction.tapY})")
             }
         } finally {
             source.recycle()
@@ -431,10 +431,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     private fun processSnapshot(snapshot: ScreenSnapshot) {
         batchManager.addSnapshot(snapshot)
 
-        if (Log.isLoggable(TAG, Log.DEBUG)) {
-            val stats = batchManager.getStats()
-            Log.d(TAG, "Snapshot added. Queue: ${stats.queueSize}")
-        }
+        val stats = batchManager.getStats()
+        WHALELog.d(TAG, "Snapshot added. Queue: ${stats.queueSize}")
     }
 
     override fun shutdown() {

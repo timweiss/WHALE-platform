@@ -1,12 +1,12 @@
 package de.mimuc.senseeverything.service.floatingWidget
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import de.mimuc.senseeverything.api.model.ButtonGroupValue
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.ButtonGroupElement
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.emptyValueForElement
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +42,7 @@ class FloatingWidgetViewModel() : ViewModel() {
 
         _textReplacements.value = replacements
 
-        Log.i("FloatingWidgetViewModel", "Initialized with questionnaire: ${questionnaire.questionnaire.name}")
+        WHALELog.i("FloatingWidgetViewModel", "Initialized with questionnaire: ${questionnaire.questionnaire.name}")
     }
 
     fun handleButtonSelection(buttonElement: ButtonGroupElement, selectedButton: String) {
@@ -72,16 +72,16 @@ class FloatingWidgetViewModel() : ViewModel() {
 
     private fun navigateToStep(step: Int) {
         _currentStep.value = step
-        Log.d("FloatingWidgetViewModel", "Navigated to step: $step")
+        WHALELog.i("FloatingWidgetViewModel", "Navigated to step: $step")
     }
 
     private fun completeQuestionnaire() {
         _isCompleted.value = true
-        Log.i("FloatingWidgetViewModel", "Questionnaire completed")
+        WHALELog.i("FloatingWidgetViewModel", "Questionnaire completed")
     }
 
     override fun onCleared() {
         super.onCleared()
-        Log.d("FloatingWidgetViewModel", "ViewModel cleared")
+        WHALELog.i("FloatingWidgetViewModel", "ViewModel cleared")
     }
 }

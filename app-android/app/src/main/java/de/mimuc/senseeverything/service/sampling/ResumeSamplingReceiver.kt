@@ -8,7 +8,7 @@ import android.os.IBinder
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
-import android.util.Log
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.LogService
 
 class ResumeSamplingReceiver : BroadcastReceiver() {
@@ -16,7 +16,7 @@ class ResumeSamplingReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         if (context == null) {
-            Log.e(TAG, "Context is null")
+            WHALELog.e(TAG, "Context is null")
             return
         }
 
@@ -31,7 +31,7 @@ class ResumeSamplingReceiver : BroadcastReceiver() {
             override fun onServiceConnected(name: android.content.ComponentName?, binder: IBinder?) {
                 serviceMessenger = binder?.let { Messenger(it) }
                 if (serviceMessenger == null) {
-                    Log.e(TAG, "Messenger is null")
+                    WHALELog.e(TAG, "Messenger is null")
                     applicationContext.unbindService(this)
                     return
                 }
@@ -40,9 +40,9 @@ class ResumeSamplingReceiver : BroadcastReceiver() {
                 val msg = Message.obtain(null, LogService.LISTEN_LOCK_UNLOCK_AND_PERIODIC, 0, 0)
                 try {
                     serviceMessenger?.send(msg)
-                    Log.d(TAG, "Message sent to service")
+                    WHALELog.i(TAG, "Message sent to service")
                 } catch (e: RemoteException) {
-                    Log.e(TAG, "Error sending message to service", e)
+                    WHALELog.e(TAG, "Error sending message to service", e)
                 } finally {
                     // Unbind from the service to prevent leaks
                     applicationContext.unbindService(this)
@@ -50,7 +50,7 @@ class ResumeSamplingReceiver : BroadcastReceiver() {
             }
 
             override fun onServiceDisconnected(name: android.content.ComponentName?) {
-                Log.e(TAG, "Service disconnected unexpectedly")
+                WHALELog.e(TAG, "Service disconnected unexpectedly")
                 serviceMessenger = null
             }
         }, Context.BIND_AUTO_CREATE)

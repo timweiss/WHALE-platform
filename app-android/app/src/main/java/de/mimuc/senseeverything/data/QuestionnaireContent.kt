@@ -13,6 +13,7 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.model.ema.CircumplexElement
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
+import de.mimuc.senseeverything.logging.WHALELog
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -97,6 +98,7 @@ private fun saveImageToFile(context: Context, imageData: ByteArray, fileName: St
             fos.write(imageData)
         }
     } catch (e: IOException) {
+        WHALELog.e("QuestionnaireContent", "Error saving image to file: $fileName", e)
         e.printStackTrace()
     }
 }

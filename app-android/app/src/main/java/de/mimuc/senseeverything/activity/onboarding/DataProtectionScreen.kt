@@ -2,7 +2,6 @@ package de.mimuc.senseeverything.activity.onboarding
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -41,6 +40,7 @@ import de.mimuc.senseeverything.api.model.EnrolmentRequest
 import de.mimuc.senseeverything.api.model.EnrolmentResponse
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -119,10 +119,10 @@ class DataProtectionViewModel @Inject constructor(
                 val volleyError = error as? VolleyError
                 if (volleyError != null) {
                     val decodedError = decodeError(volleyError)
-                    Log.e("DataProtectionViewModel", "Enrolment Error: ${decodedError.httpCode} ${decodedError.appCode} ${decodedError.message}")
+                    WHALELog.e("DataProtectionViewModel", "Enrolment Error: ${decodedError.httpCode} ${decodedError.appCode} ${decodedError.message}")
                     _errorCode.value = decodedError.appCode
                 } else {
-                    Log.e("DataProtectionViewModel", "Enrolment Error: ${error.message}")
+                    WHALELog.e("DataProtectionViewModel", "Enrolment Error: ${error.message}")
                     _errorCode.value = "unknown"
                 }
                 _showErrorDialog.value = true

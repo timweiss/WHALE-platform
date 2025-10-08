@@ -2,7 +2,6 @@ package de.mimuc.senseeverything.workers
 
 import android.app.NotificationManager
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -20,13 +19,14 @@ import com.google.firebase.ktx.Firebase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
-import kotlinx.serialization.Serializable
 import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import java.util.concurrent.TimeUnit
 
 @Serializable
@@ -84,7 +84,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
     ): Result {
         val data = db.logDataDao().getNextNUnsynced(n)
         if (data.isEmpty()) {
-            Log.i(TAG, "Completed Sensor Reading Sync")
+            WHALELog.i(TAG, "Completed Sensor Reading Sync")
             return Result.success()
         }
 
@@ -109,7 +109,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             )
 
             db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
-            Log.i(TAG, "batch synced successful, removed ${data.size} entries")
+            WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
 
             return syncNextNActivities(
                 db,
@@ -124,7 +124,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 return Result.retry()
             }
 
-            Log.e(
+            WHALELog.e(
                 TAG,
                 "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining"
             )

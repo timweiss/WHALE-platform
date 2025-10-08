@@ -3,7 +3,6 @@ package de.mimuc.senseeverything.activity.onboarding
 import android.app.Application
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +36,7 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.getActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -116,7 +116,7 @@ class OnboardingViewModel @Inject constructor(
         if (activity != null) {
             activity.finish()
         } else {
-            Log.e("OnboardingViewModel", "Could not get activity")
+            WHALELog.e("OnboardingViewModel", "Could not get activity")
         }
     }
 }

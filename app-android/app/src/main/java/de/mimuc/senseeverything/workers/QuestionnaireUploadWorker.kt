@@ -1,7 +1,6 @@
 package de.mimuc.senseeverything.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -10,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.android.volley.ClientError
 import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
 import dagger.assisted.Assisted
@@ -19,6 +19,7 @@ import de.mimuc.senseeverything.api.model.ema.uploadQuestionnaireAnswer
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -47,7 +48,7 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
                 val pendingQuestionnaire = getPendingQuestionnaire(pendingQuestionnaireId)
 
                 if (pendingQuestionnaire == null) {
-                    Log.e("QuestionnaireUploadWorker", "Pending questionnaire not found for ID: $pendingQuestionnaireId")
+                    WHALELog.e("QuestionnaireUploadWorker", "Pending questionnaire not found for ID: $pendingQuestionnaireId")
                     return@withContext Result.failure()
                 }
 
@@ -68,14 +69,25 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
 
                 Result.success()
             } catch (e: Exception) {
-                if (e is NetworkError || e is TimeoutError) {
-                    Result.retry()
-                } else {
-                    Log.d(
-                        "QuestionnaireUploadWorker",
-                        "Error uploading questionnaire answers: $e, ${e.stackTraceToString()}"
-                    )
-                    Result.failure()
+                when (e) {
+                    is NetworkError, is TimeoutError -> {
+                        WHALELog.w("QuestionnaireUploadWorker", "Network error uploading questionnaire answers, will retry", e)
+                        Result.retry()
+                    }
+
+                    is ClientError -> {
+                        val message = e.networkResponse.data.decodeToString()
+                        WHALELog.e("QuestionnaireUploadWorker", "Client error uploading questionnaire answers: $message", e)
+                        Result.failure()
+                    }
+
+                    else -> {
+                        WHALELog.e(
+                            "QuestionnaireUploadWorker",
+                            "Error uploading questionnaire answers: $e, ${e.stackTraceToString()}"
+                        )
+                        Result.failure()
+                    }
                 }
             }
         }

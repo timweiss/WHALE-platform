@@ -1,7 +1,6 @@
 package de.mimuc.senseeverything.activity.esm
 
 import android.app.Application
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +59,7 @@ import de.mimuc.senseeverything.api.model.ema.TimeInputElement
 import de.mimuc.senseeverything.api.model.emptyValueForElement
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -119,7 +119,7 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     }
 
     fun save() {
-        Log.d(
+        WHALELog.d(
             "Questionnaire",
             "Saving questionnaire from host with values: ${_elementValues.value}"
         )
@@ -129,7 +129,7 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     private fun initializeValues() {
         _elementValues.value = mutableMapOf()
 
-        Log.i("QuestionnaireHostViewModel", "Initial values set: ${initialValues.size}")
+        WHALELog.i("QuestionnaireHostViewModel", "Initial values set: ${initialValues.size}")
 
         for (element in questionnaire.elements) {
             val elementValue =

@@ -5,6 +5,8 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
+import de.mimuc.senseeverything.logging.WHALELog;
+
 public class WindowContentAccessibilityService extends AccessibilityService {
 
     public static final String TAG = "WindowContentAccess.Se.";
@@ -12,21 +14,21 @@ public class WindowContentAccessibilityService extends AccessibilityService {
     public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
         AccessibilityNodeInfo accessibilityNodeInfo = getRootInActiveWindow();
         if (accessibilityNodeInfo != null) {
-            Log.i(TAG, accessibilityNodeInfo.toString());
+            WHALELog.INSTANCE.i(TAG, accessibilityNodeInfo.toString());
         } else {
-            Log.i(TAG,"accessibility Node was null");
+            WHALELog.INSTANCE.i(TAG,"accessibility Node was null");
         }
     }
 
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
-        Log.i(TAG,"onServiceConnected()");
+        WHALELog.INSTANCE.i(TAG,"onServiceConnected()");
     }
 
 
     @Override
     public void onInterrupt() {
-        Log.i(TAG,"onInterrupt()");
+        WHALELog.INSTANCE.i(TAG,"onInterrupt()");
     }
 }

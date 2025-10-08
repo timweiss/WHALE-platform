@@ -1,10 +1,10 @@
 package de.mimuc.senseeverything.data
 
-import android.util.Log
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchCompletionStatus
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.GeneratedKey
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.first
 
 suspend fun fetchExternalQuestionnaireParams(
@@ -35,7 +35,7 @@ suspend fun fetchExternalQuestionnaireParams(
                 val completedString = completion.filter { (k, v) -> v }.keys.joinToString(",")
                 results.put(key, completedString)
             } catch (e: Exception) {
-               Log.e("ExternalQuestionnaireParamsHelper", "Error fetching completion status: $e")
+               WHALELog.e("ExternalQuestionnaireParamsHelper", "Error fetching completion status: $e")
             }
         }
     }

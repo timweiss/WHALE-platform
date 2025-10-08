@@ -3,7 +3,6 @@ package de.mimuc.senseeverything.service.esm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
@@ -12,6 +11,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
+import de.mimuc.senseeverything.logging.WHALELog
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -52,7 +52,7 @@ class RandomNotificationReceiver: BroadcastReceiver() {
                 context
             )
         } else {
-            Log.e("PeriodicNotificationReceiver", "Failed to schedule next notification, missing information c:${context} t:${trigger} n:${questionnaireName}")
+            WHALELog.e("PeriodicNotificationReceiver", "Failed to schedule next notification, missing information c:${context} t:${trigger} n:${questionnaireName}")
         }
     }
 }

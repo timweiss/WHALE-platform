@@ -7,11 +7,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.mimuc.senseeverything.activity.CONST;
+import de.mimuc.senseeverything.logging.WHALELog;
 
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 
 public final class TouchHandler extends Handler {
 
@@ -107,7 +107,7 @@ public final class TouchHandler extends Handler {
     			}
     		}
 		} catch (IOException | InterruptedException e) {
-			Log.e(TAG, e.toString());
+			WHALELog.INSTANCE.e(TAG, e.toString());
 		}
     }
 	

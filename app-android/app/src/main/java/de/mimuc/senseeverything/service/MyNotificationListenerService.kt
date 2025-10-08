@@ -1,7 +1,6 @@
 package de.mimuc.senseeverything.service
 
 import android.app.ActivityManager
-import android.app.Application
 import android.app.Notification
 import android.app.NotificationChannel
 import android.content.ComponentName
@@ -13,7 +12,7 @@ import android.os.IBinder
 import android.os.Messenger
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.util.Log
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.sensor.implementation.NotificationSensor
 
 
@@ -49,7 +48,7 @@ class MyNotificationListenerService : NotificationListenerService() {
             keyLastNotificationWhen[key] = notifWhen
 
             if (currentChannel == null) {
-                Log.d(TAG, "onNotificationPosted: channel not found")
+                WHALELog.w(TAG, "onNotificationPosted: channel not found")
                 return
             }
 
@@ -61,7 +60,7 @@ class MyNotificationListenerService : NotificationListenerService() {
             val shouldVibrate = currentChannel.shouldVibrate()
             val importance = currentChannel.importance
 
-            Log.d(TAG, "onNotificationPosted: key:${key} when:${sbn.notification.`when`} vibrate:${shouldVibrate} importance:${importance} category:${category} packageName:${packageName}")
+            WHALELog.i(TAG, "onNotificationPosted: key:${key} when:${sbn.notification.`when`} vibrate:${shouldVibrate} importance:${importance} category:${category} packageName:${packageName}")
             sendToSensor("${notifWhen},${key},${packageName},${shouldVibrate},${importance},${category}")
         }
     }
@@ -88,7 +87,7 @@ class MyNotificationListenerService : NotificationListenerService() {
 
     private fun sendToSensor(data: String) {
         if (!boundToLogService) {
-            Log.d(TAG, "sendToSensor: not bound, queueing and binding now")
+            WHALELog.w(TAG, "sendToSensor: not bound, queueing and binding now")
             queueAndBind(data)
             return
         }
@@ -102,7 +101,7 @@ class MyNotificationListenerService : NotificationListenerService() {
         try {
             logServiceMessenger?.send(msg)
         } catch (e: Exception) {
-            Log.e(TAG, "sendToSensor: error", e)
+            WHALELog.e(TAG, "sendToSensor: error", e)
         }
     }
 
@@ -110,7 +109,7 @@ class MyNotificationListenerService : NotificationListenerService() {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             logServiceMessenger = Messenger(service)
             boundToLogService = true
-            Log.d(TAG, "connected to logservice")
+            WHALELog.i(TAG, "connected to logservice")
             consumeQueue()
         }
 
@@ -125,7 +124,7 @@ class MyNotificationListenerService : NotificationListenerService() {
 
         if (!boundToLogService && !bindingToLogService) {
             if (!isServiceRunning(LogService::class.java)) {
-                Log.d(TAG, "LogService is not running, keeping in queue")
+                WHALELog.w(TAG, "LogService is not running, keeping in queue")
                 return
             }
 
@@ -148,7 +147,7 @@ class MyNotificationListenerService : NotificationListenerService() {
                 bindService(intent, mConnection, Context.BIND_AUTO_CREATE)
             }
         } else {
-            Log.d(TAG, "LogService is not running, not connecting to it")
+            WHALELog.w(TAG, "LogService is not running, not connecting to it")
         }
     }
 

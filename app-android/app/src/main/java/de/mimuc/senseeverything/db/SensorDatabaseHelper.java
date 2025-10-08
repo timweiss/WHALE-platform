@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.db;
 
 import de.mimuc.senseeverything.R;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 import android.content.ContentValues;
@@ -71,8 +72,8 @@ public class SensorDatabaseHelper extends SQLiteOpenHelper {
 		{
 			return false;
 		}
-		
-		Log.d(TAG, pSensor.getSensorName() + " create");
+
+		WHALELog.INSTANCE.d(TAG, pSensor.getSensorName() + " create");
 		SQLiteDatabase db = this.getWritableDatabase();
 		ContentValues values = new ContentValues();
 		
@@ -116,7 +117,7 @@ public class SensorDatabaseHelper extends SQLiteOpenHelper {
 		}
 		else
 		{
-			Log.d(TAG, "Not Contraind Column " + COLUMN_ISENABLED);
+			WHALELog.INSTANCE.d(TAG, "Not Contraind Column " + COLUMN_ISENABLED);
 		}
 		cursor.close();
 		db.close();

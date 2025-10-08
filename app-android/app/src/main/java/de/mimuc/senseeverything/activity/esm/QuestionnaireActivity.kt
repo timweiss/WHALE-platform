@@ -7,7 +7,6 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -39,6 +38,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.QuestionnaireDataRepository
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -111,7 +111,7 @@ class QuestionnaireViewModel @Inject constructor(
             val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
             _questionnaire.value = loaded
             _isLoading.value = false
-            Log.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
+            WHALELog.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
         } else {
             val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
             if (triggerId != -1) {
@@ -127,7 +127,7 @@ class QuestionnaireViewModel @Inject constructor(
                         }
                     }
                 }
-                Log.i(
+                WHALELog.i(
                     "Questionnaire",
                     "Loaded questionnaire by trigger id: $triggerId, name: ${_questionnaire.value.questionnaire.name}"
                 )
@@ -136,7 +136,7 @@ class QuestionnaireViewModel @Inject constructor(
 
         pendingQuestionnaireId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)?.let { UUID.fromString(it) }
         if (pendingQuestionnaireId != null) {
-            Log.i(
+            WHALELog.i(
                 "Questionnaire",
                 "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
             )
@@ -152,7 +152,7 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     fun saveFromHost(values: Map<Int, ElementValue>, context: Context) {
-        Log.i(
+        WHALELog.i(
             "QuestionnaireActivity",
             "Saving questionnaire received from host, values: $values"
         )
@@ -162,7 +162,7 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     fun stepChanged(page: Int, values: Map<Int, ElementValue>, context: Context) {
-        Log.d("QuestionnaireViewModel", "Step changed to page $page with values: $values")
+        WHALELog.i("QuestionnaireViewModel", "Step changed to page $page with values: $values")
 
         viewModelScope.launch(Dispatchers.IO) {
             if (pendingQuestionnaire != null) {
@@ -172,7 +172,7 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     fun saveQuestionnaire(context: Context) {
-        Log.i("Questionnaire", "Saving questionnaire")
+        WHALELog.i("Questionnaire", "Saving questionnaire")
 
         viewModelScope.launch {
             combine(
@@ -183,7 +183,7 @@ class QuestionnaireViewModel @Inject constructor(
                 }
 
                 // schedule to upload answers
-                Log.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
+                WHALELog.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
                 enqueueQuestionnaireUploadWorker(
                     context,
                     makeAnswerJsonArray(),
@@ -193,7 +193,7 @@ class QuestionnaireViewModel @Inject constructor(
                     pendingQuestionnaireId
                 )
 
-                Log.i("Questionnaire", "Scheduled questionnaire upload worker")
+                WHALELog.i("Questionnaire", "Scheduled questionnaire upload worker")
 
                 // pop activity
                 val activity = (context as? Activity)
@@ -220,9 +220,9 @@ class QuestionnaireViewModel @Inject constructor(
     private fun loadFromPendingQuestionnaire() {
         if (pendingQuestionnaire != null) {
             _elementValues.value = ElementValue.valueMapFromJson(JSONArray(pendingQuestionnaire!!.elementValuesJson ?: "[]"))
-            Log.i("Questionnaire", "Loaded pending questionnaire values: ${_elementValues.value}")
+            WHALELog.i("Questionnaire", "Loaded pending questionnaire values: ${_elementValues.value}")
         } else {
-            Log.w("Questionnaire", "No pending questionnaire to load from")
+            WHALELog.w("Questionnaire", "No pending questionnaire to load from")
         }
     }
 }

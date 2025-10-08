@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class BluetoothSensor extends AbstractSensor {
@@ -58,18 +59,18 @@ public class BluetoothSensor extends AbstractSensor {
 			return;
 
 		if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-			Log.e(TAG, "BLUETOOTH_SCAN permission not granted");
+			WHALELog.INSTANCE.e(TAG, "BLUETOOTH_SCAN permission not granted");
 			return;
 		}
 
 		this.context = context;
 
-		Log.d(TAG, "Starting discovery");
+		WHALELog.INSTANCE.d(TAG, "Starting discovery");
 		executor = Executors.newFixedThreadPool(1);
 		executor.execute(() -> {
             BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             if (!mBluetoothAdapter.startDiscovery()) {
-                Log.e(TAG, "could not start discovery");
+                WHALELog.INSTANCE.e(TAG, "could not start discovery");
                 return;
             }
 
@@ -93,10 +94,10 @@ public class BluetoothSensor extends AbstractSensor {
 				try {
 					String address = getSensitiveDataHash(device.getAddress(), sensitiveDataSalt);
 					// getName() required BLUETOOTH_CONNECT permission
-					Log.i(TAG, address);
+					WHALELog.INSTANCE.i(TAG, address);
 					onLogDataItem(t, address);
 				} catch (SecurityException e) {
-					Log.e(TAG, e.getMessage());
+					WHALELog.INSTANCE.e(TAG, e.getMessage());
 				}
 			}
 		}

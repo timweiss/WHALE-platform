@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 
 public class AudioSampleSensor extends AbstractSensor {
@@ -47,7 +48,7 @@ public class AudioSampleSensor extends AbstractSensor {
 		if (m_IsRunning)
 			return;
 
-		Log.d(TAG, "audioSampleSensor: start called, guid" + guid);
+		WHALELog.INSTANCE.d(TAG, "audioSampleSensor: start called, guid" + guid);
 
 		if (initMediaRecorder()) {
 			startRecording();
@@ -77,34 +78,34 @@ public class AudioSampleSensor extends AbstractSensor {
 		try {
 			String filename = getFilenameForSampleStorage();
 			mediaRecorder.setOutputFile(filename);
-			Log.i(TAG, "saving recording at location " + filename);
+			WHALELog.INSTANCE.i(TAG, "saving recording at location " + filename);
 			currentRecordingFilename = filename;
 			mediaRecorder.prepare();
 			mediaRecorder.start();
 		} catch (IOException e) {
-			Log.e(TAG, e.toString());
+			WHALELog.INSTANCE.e(TAG, e.toString());
 		}
 	}
 	
 	private boolean initMediaRecorder() {
 		try {
 			if (mediaRecorder != null) {
-				Log.d(TAG, "initMediaRecorder: already initialized");
+				WHALELog.INSTANCE.d(TAG, "initMediaRecorder: already initialized");
 				return true;
 			}
 
 			try {
-				Log.d(TAG, "initMediaRecorder");
+				WHALELog.INSTANCE.d(TAG, "initMediaRecorder");
 				mediaRecorder = new MediaRecorder();
 				mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
 				mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
 				mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);
 				return true;
 			} catch (IllegalStateException e) {
-				Log.e(TAG, e.toString());
+				WHALELog.INSTANCE.e(TAG, e.toString());
 			}
 		} catch(Exception e) {
-			Log.d(TAG, e.toString());
+			WHALELog.INSTANCE.d(TAG, e.toString());
 		}
 		return false;
 	}
@@ -112,7 +113,7 @@ public class AudioSampleSensor extends AbstractSensor {
 	@Override
 	public void stop() {
 		if(m_IsRunning) {
-			Log.d(TAG, "stopped recording by daemon");
+			WHALELog.INSTANCE.d(TAG, "stopped recording by daemon");
 			m_IsRunning = false;
 			try {
 				if (mediaRecorder != null) {
@@ -120,7 +121,7 @@ public class AudioSampleSensor extends AbstractSensor {
 				}
 				closeDataSource();
 			} catch (Exception e) {
-				Log.e(TAG, e.toString());
+				WHALELog.INSTANCE.e(TAG, e.toString());
 			}
 		}	
 	}	

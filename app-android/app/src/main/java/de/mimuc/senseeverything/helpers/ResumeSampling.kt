@@ -5,7 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.sampling.ResumeSamplingReceiver
 
 fun scheduleResumeSamplingAlarm(context: Context, at: Long): Boolean {
@@ -29,7 +29,7 @@ fun scheduleResumeSamplingAlarm(context: Context, at: Long): Boolean {
                     pendingIntent
                 )
             } else {
-                Log.e(tag, "Cannot schedule exact alarms")
+                WHALELog.e(tag, "Cannot schedule exact alarms")
                 return false
             }
         } else {
@@ -39,10 +39,10 @@ fun scheduleResumeSamplingAlarm(context: Context, at: Long): Boolean {
                 pendingIntent
             )
         }
-        Log.i(tag, "Scheduled resume timer at $at")
+        WHALELog.i(tag, "Scheduled resume timer at $at")
         return true
     } else {
-        Log.e(tag, "AlarmManager is null")
+        WHALELog.e(tag, "AlarmManager is null")
     }
 
     return false

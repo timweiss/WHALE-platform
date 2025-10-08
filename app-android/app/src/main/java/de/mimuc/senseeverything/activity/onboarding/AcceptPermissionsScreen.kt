@@ -13,7 +13,6 @@ import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
 import android.text.TextUtils
-import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -43,8 +42,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.getActivity
 import de.mimuc.senseeverything.data.DataStoreManager
-import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -138,7 +138,7 @@ class AcceptPermissionsViewModel @Inject constructor(
             ActivityCompat.requestPermissions(activity, arrayOf(permission), 1)
             checkAndSetPermission(permission)
         } else {
-            Log.e("AcceptPermissionsViewModel", "Could not get activity")
+            WHALELog.e("AcceptPermissionsViewModel", "Could not get activity")
         }
     }
 
@@ -157,14 +157,14 @@ class AcceptPermissionsViewModel @Inject constructor(
                     _permissions.value = _permissions.value.toMutableMap().apply {
                         put(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
                     }
-                    Log.d(
+                    WHALELog.i(
                         "AcceptPermissionsViewModel",
                         "SYSTEM_ALERT_WINDOW permission already granted"
                     )
                 }
             }
         } else {
-            Log.e("AcceptPermissionsViewModel", "Could not get activity")
+            WHALELog.e("AcceptPermissionsViewModel", "Could not get activity")
         }
     }
 
@@ -223,7 +223,7 @@ class AcceptPermissionsViewModel @Inject constructor(
                 Settings.Secure.ACCESSIBILITY_ENABLED
             )
         } catch (e: Settings.SettingNotFoundException) {
-            Log.d("Onboarding", e.toString())
+            WHALELog.e("Onboarding", e.toString())
         }
 
         val mStringColonSplitter = TextUtils.SimpleStringSplitter(':')

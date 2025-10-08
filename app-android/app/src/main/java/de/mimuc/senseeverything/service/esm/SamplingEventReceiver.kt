@@ -4,12 +4,12 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.goAsync
+import de.mimuc.senseeverything.logging.WHALELog
 import java.util.UUID
 import javax.inject.Inject
 
@@ -23,14 +23,14 @@ class SamplingEventReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) = goAsync {
         if (context == null) {
-            Log.e("SamplingEventReceiver", "Context is null")
+            WHALELog.e("SamplingEventReceiver", "Context is null")
             return@goAsync
         }
 
 
         val eventName = intent?.getStringExtra("eventName")
         if (eventName == null) {
-            Log.e("SamplingEventReceiver", "Event name is null")
+            WHALELog.e("SamplingEventReceiver", "Event name is null")
             return@goAsync
         }
 

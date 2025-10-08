@@ -1,6 +1,6 @@
 package de.mimuc.senseeverything.helpers
 
-import android.util.Log
+import de.mimuc.senseeverything.logging.WHALELog
 import java.security.MessageDigest
 
 fun generateSensitiveDataSalt() : String {
@@ -9,7 +9,7 @@ fun generateSensitiveDataSalt() : String {
 
 fun getSensitiveDataHash(data: String, salt: String): String {
     if (salt.isEmpty() || salt == "changemepleeease") {
-        Log.w("SensitiveData", "Salt is empty or null")
+        WHALELog.w("SensitiveData", "Salt is empty or null")
     }
     return (data + salt).sha256()
 }
