@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.data
 
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import java.util.Calendar
 import java.util.UUID
 import javax.inject.Inject
@@ -19,12 +20,7 @@ class QuestionnaireDataRepository @Inject constructor(
         }
 
         // we only have text replacements for questionnaires triggered by a NotificationTrigger
-        val notificationTriggerId = pendingQuestionnaire.notificationTriggerUid
-        if (notificationTriggerId == null) {
-            return emptyMap()
-        }
-
-        val notificationTrigger = database.notificationTriggerDao().getById(notificationTriggerId)
+        val notificationTrigger = findNextNotificationTrigger(pendingQuestionnaire)
         if (notificationTrigger == null) {
             return emptyMap()
         }
@@ -56,6 +52,27 @@ class QuestionnaireDataRepository @Inject constructor(
         }
 
         return map
+    }
+
+    /**
+     * Get the NotificationTrigger of the PendingQuestionnaire. If the PendingQuestionnaire does not have one
+     * but it has a source, it was created by an event and might have a NotificationTrigger in its ancestry.
+     * We recursively search the ancestry until we find a NotificationTrigger or run out of ancestors.
+     */
+    private fun findNextNotificationTrigger(pendingQuestionnaire: PendingQuestionnaire): NotificationTrigger? {
+        val notificationTriggerId = pendingQuestionnaire.notificationTriggerUid
+        if (notificationTriggerId != null) {
+            return database.notificationTriggerDao().getById(notificationTriggerId)
+        }
+
+        val sourcePendingNotificationId = pendingQuestionnaire.sourcePendingNotificationId
+            ?: return null
+
+        val sourcePendingQuestionnaire = database.pendingQuestionnaireDao()
+            .getById(sourcePendingNotificationId)
+            ?: return null
+
+        return findNextNotificationTrigger(sourcePendingQuestionnaire)
     }
 
     private fun getTriggersForTimeBucketOnDay(

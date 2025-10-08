@@ -65,8 +65,10 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
                     notificationTrigger
                 )
 
-                deletePendingQuestionnaire(pendingQuestionnaireId)
+                // hint: cannot be deleted in case it is a source of another PendingQuestionnaire
+                // deletePendingQuestionnaire(pendingQuestionnaireId)
 
+                WHALELog.i("QuestionnaireUploadWorker", "Successfully uploaded questionnaire answers for pending questionnaire ID: $pendingQuestionnaireId")
                 Result.success()
             } catch (e: Exception) {
                 when (e) {

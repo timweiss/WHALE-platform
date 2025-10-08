@@ -49,6 +49,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
+import de.mimuc.senseeverything.workers.enqueueSinglePendingQuestionnaireUploadWorker
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -144,6 +145,14 @@ class StudyDebugInfoViewModel @Inject constructor(
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
             enqueueSingleSensorReadingsUploadWorker(getApplication(), token, "immediateFromDebugSettings", true)
+        }
+    }
+
+    fun schedulePendingQuestionnaireSync() {
+        viewModelScope.launch {
+            val token = dataStoreManager.tokenFlow.first()
+            val studyId = dataStoreManager.studyIdFlow.first()
+            enqueueSinglePendingQuestionnaireUploadWorker(getApplication(), studyId, token, "immediateFromDebugSettings")
         }
     }
 
@@ -244,6 +253,15 @@ fun StudyDebugInfoView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sync all data now")
+        }
+
+        Button(
+            onClick = {
+                viewModel.schedulePendingQuestionnaireSync()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Sync questionnaires now")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

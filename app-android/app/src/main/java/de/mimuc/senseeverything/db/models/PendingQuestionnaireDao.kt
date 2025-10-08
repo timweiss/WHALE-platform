@@ -30,7 +30,7 @@ interface PendingQuestionnaireDao {
     @Query("DELETE FROM pending_questionnaire WHERE uid = :uid")
     fun deleteById(uid: UUID)
 
-    @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now")
+    @Query("DELETE FROM pending_questionnaire WHERE valid_until < :now AND valid_until != -1")
     fun deleteExpired(now: Long)
 
     @Query("DELETE FROM pending_questionnaire")

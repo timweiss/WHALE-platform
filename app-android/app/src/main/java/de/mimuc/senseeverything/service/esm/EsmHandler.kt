@@ -255,6 +255,7 @@ class EsmHandler {
                         handleEventOnQuestionnaire(
                             matchingQuestionnaire,
                             trigger,
+                            sourceId,
                             context,
                             dataStoreManager,
                             database
@@ -283,6 +284,7 @@ class EsmHandler {
         suspend fun handleEventOnQuestionnaire(
             questionnaire: FullQuestionnaire,
             trigger: EventQuestionnaireTrigger,
+            sourceId: UUID?,
             context: Context,
             dataStoreManager: DataStoreManager,
             database: AppDatabase
@@ -294,7 +296,9 @@ class EsmHandler {
                     pendingId = PendingQuestionnaire.createEntry(
                         database,
                         dataStoreManager,
-                        trigger
+                        trigger,
+                        notificationTriggerUid = null,
+                        sourcePendingNotificationId = sourceId
                     )
                 }
             }
@@ -366,7 +370,7 @@ class EsmHandler {
                         modality = trigger.configuration.modality,
                         source = NotificationTriggerSource.RuleBased,
                         questionnaireId = trigger.questionnaireId.toLong(),
-                        triggerJson = fullQuestionnaireJson.encodeToString(trigger),
+                        triggerJson = fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger),
                         updatedAt = System.currentTimeMillis()
                     )
 

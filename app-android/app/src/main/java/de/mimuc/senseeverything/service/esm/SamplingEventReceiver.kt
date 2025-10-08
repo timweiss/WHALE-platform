@@ -56,7 +56,7 @@ class SamplingEventReceiver : BroadcastReceiver() {
             intent.apply {
                 putExtra("eventName", eventName)
                 if (source != null) {
-                    putExtra("sourceId", source.uid)
+                    putExtra("sourceId", source.uid.toString())
                 }
                 if (triggerId != null) {
                     putExtra("triggerId", triggerId)

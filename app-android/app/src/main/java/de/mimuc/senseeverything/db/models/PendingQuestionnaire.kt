@@ -37,6 +37,12 @@ enum class PendingQuestionnaireDisplayType {
         parentColumns = arrayOf("uid"),
         childColumns = arrayOf("notification_trigger_uid"),
         onDelete = SET_NULL
+    ),
+    ForeignKey(
+        entity = PendingQuestionnaire::class,
+        parentColumns = arrayOf("uid"),
+        childColumns = arrayOf("source_pending_notification_id"),
+        onDelete = SET_NULL
     )
 ])
 data class PendingQuestionnaire(
@@ -51,6 +57,7 @@ data class PendingQuestionnaire(
     @ColumnInfo(name = "status") var status: PendingQuestionnaireStatus,
     @ColumnInfo(name = "finished_at") var finishedAt: Long? = null,
     @ColumnInfo(name = "notification_trigger_uid") var notificationTriggerUid: UUID? = null,
+    @ColumnInfo(name = "source_pending_notification_id") val sourcePendingNotificationId: UUID? = null,
     @ColumnInfo(name = "display_type") val displayType: PendingQuestionnaireDisplayType = PendingQuestionnaireDisplayType.INBOX
 ) {
 
@@ -59,7 +66,8 @@ data class PendingQuestionnaire(
             database: AppDatabase,
             dataStoreManager: DataStoreManager,
             trigger: QuestionnaireTrigger,
-            notificationTriggerUid: UUID? = null
+            notificationTriggerUid: UUID? = null,
+            sourcePendingNotificationId: UUID? = null
         ): UUID? {
             val questionnaire = dataStoreManager.questionnairesFlow.first()
                 .find { q -> q.questionnaire.id == trigger.questionnaireId }
@@ -83,6 +91,7 @@ data class PendingQuestionnaire(
                 PendingQuestionnaireStatus.NOTIFIED,
                 null,
                 notificationTriggerUid,
+                sourcePendingNotificationId,
                 displayType
             )
 

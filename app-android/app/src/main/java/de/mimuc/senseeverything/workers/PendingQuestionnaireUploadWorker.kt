@@ -14,7 +14,7 @@ import com.android.volley.TimeoutError
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
-import de.mimuc.senseeverything.api.model.ema.Questionnaire
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.api.model.ema.questionnaireJson
@@ -61,11 +61,11 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
 
                 for (pendingQuestionnaire in pendingQuestionnaires) {
                     WHALELog.i("PendingQuestionnaireUploadWorker", "Uploading pending questionnaire: ${pendingQuestionnaire.uid}")
-                    val questionnaire = fullQuestionnaireJson.decodeFromString<Questionnaire>(pendingQuestionnaire.questionnaireJson)
+                    val questionnaire = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pendingQuestionnaire.questionnaireJson)
                     uploadQuestionnaireAnswer(
                         apiClient,
                         pendingQuestionnaire.elementValuesJson ?: "[]",
-                        questionnaire.id,
+                        questionnaire.questionnaire.id,
                         studyId,
                         userToken,
                         pendingQuestionnaire,
@@ -122,16 +122,17 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 continue
             }
 
-            val questionnaire = fullQuestionnaireJson.decodeFromString<Questionnaire>(pendingQuestionnaire.questionnaireJson)
+            val questionnaire = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pendingQuestionnaire.questionnaireJson)
             uploadQuestionnaireAnswer(
                 ApiClient.getInstance(applicationContext),
                 "[]",
-                questionnaire.id,
+                questionnaire.questionnaire.id,
                 inputData.getInt("studyId", -1),
                 inputData.getString("userToken") ?: "",
                 pendingQuestionnaire,
                 trigger
             )
+            WHALELog.i("PendingQuestionnaireUploadWorker", "Successfully uploaded dummy questionnaire answers for leftover NotificationTrigger: ${trigger.uid}")
         }
     }
 }
@@ -153,6 +154,30 @@ fun enqueuePendingQuestionnaireUploadWorker(context: Context, studyId: Int, user
         .setInputData(data)
         .setConstraints(constraints)
         .setInitialDelay(delayHours, TimeUnit.HOURS)
+        .build()
+
+    WorkManager.getInstance(context).enqueue(uploadWorkRequest)
+}
+
+fun enqueueSinglePendingQuestionnaireUploadWorker(
+    context: Context,
+    studyId: Int,
+    userToken: String,
+    tag: String
+) {
+    val data = workDataOf(
+        "studyId" to studyId,
+        "userToken" to userToken
+    )
+
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .build()
+
+    val uploadWorkRequest = androidx.work.OneTimeWorkRequestBuilder<PendingQuestionnaireUploadWorker>()
+        .addTag(tag)
+        .setInputData(data)
+        .setConstraints(constraints)
         .build()
 
     WorkManager.getInstance(context).enqueue(uploadWorkRequest)
