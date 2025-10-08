@@ -3,6 +3,7 @@ package de.mimuc.senseeverything.sensor.implementation
 import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.os.Build
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.sensor.AbstractSensor
 import java.util.Calendar
@@ -47,6 +48,19 @@ class UsageStatsSensor(applicationContext: Context?, database: AppDatabase?) :
             }
 
             onLogDataItem(t, mySortedMap.toString())
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val standbyBucket = usm.appStandbyBucket
+            val enum = when (standbyBucket) {
+                UsageStatsManager.STANDBY_BUCKET_ACTIVE -> "Active"
+                UsageStatsManager.STANDBY_BUCKET_WORKING_SET -> "Working Set"
+                UsageStatsManager.STANDBY_BUCKET_FREQUENT -> "Frequent"
+                UsageStatsManager.STANDBY_BUCKET_RARE -> "Rare"
+                UsageStatsManager.STANDBY_BUCKET_RESTRICTED -> "Restricted"
+                else -> "Unknown"
+            }
+            onLogDataItem(t, "App Standby Bucket: $standbyBucket ($enum)")
         }
 
         m_IsRunning = true
