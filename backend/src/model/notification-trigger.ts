@@ -31,7 +31,6 @@ export const NotificationTriggerValidation = z.object({
   priority: z.enum(NotificationTriggerPriority),
   modality: z.enum(NotificationTriggerModality),
   source: z.enum(NotificationTriggerSource),
-  sourceNotificationTriggerId: z.uuid().nullable(),
   questionnaireId: z.number(),
   triggerId: z.number(),
   plannedAt: z.number().nullable(),
