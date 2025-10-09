@@ -38,6 +38,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.QuestionnaireDataRepository
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.Dispatchers
@@ -178,8 +179,14 @@ class QuestionnaireViewModel @Inject constructor(
             combine(
                 dataStoreManager.studyIdFlow, dataStoreManager.tokenFlow
             ) { studyId, token ->
+                val pendingQuestionnaire = pendingQuestionnaire
+                if (pendingQuestionnaire == null) {
+                    WHALELog.e("Questionnaire", "No pending questionnaire to save to")
+                    return@combine
+                }
+
                 withContext(Dispatchers.IO) {
-                    pendingQuestionnaire?.markCompleted(database, answerValues(elementValues.value))
+                    pendingQuestionnaire.markCompleted(database, answerValues(elementValues.value))
                 }
 
                 // schedule to upload answers
@@ -194,6 +201,13 @@ class QuestionnaireViewModel @Inject constructor(
                 )
 
                 WHALELog.i("Questionnaire", "Scheduled questionnaire upload worker")
+
+                val rules = questionnaire.value.questionnaire.rules
+                if (rules != null) {
+                    val actions = QuestionnaireRuleEvaluator(rules).evaluate(elementValues.value)
+                    WHALELog.i("Questionnaire", "Evaluated rules, got actions: $actions")
+                    QuestionnaireRuleEvaluator.handleActions(context, actions.flatMap { it.value }, pendingQuestionnaire)
+                }
 
                 // pop activity
                 val activity = (context as? Activity)
