@@ -1,7 +1,6 @@
 package de.mimuc.senseeverything.helpers
 
 import java.util.Calendar
-import kotlin.random.Random
 
 val TIME_BUCKETS = listOf(
     "00:00-02:00",
@@ -28,11 +27,6 @@ fun getCurrentTimeBucket(): String {
         val end = bucket.split("-")[1].split(":")[0].toInt()
         hour in start until end
     } ?: "Unknown"
-}
-
-fun shouldDisplayFromRandomDiceThrow(): Boolean {
-    val random = Random.nextInt(1, 3)
-    return random == 1
 }
 
 
