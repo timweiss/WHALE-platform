@@ -30,6 +30,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.floatingWidget.NotificationTriggerFloatingWidgetService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -624,7 +625,7 @@ class NotificationPushHelper(private val context: Context) {
             )
         }
 
-        val notification = buildNotification(title ?: "It's time for $questionnaireName", intent)
+        val notification = buildActivityNotification(title ?: "It's time for $questionnaireName", intent)
 
         notificationManager.notify(triggerId, notification)
     }
@@ -634,7 +635,9 @@ class NotificationPushHelper(private val context: Context) {
             val trigger: EMAFloatingWidgetNotificationTrigger =
                 notificationTrigger.triggerJson.let { fullQuestionnaireJson.decodeFromString<EMAFloatingWidgetNotificationTrigger>(it) }
 
-            val notification = buildNotification(trigger.configuration.notificationText, Intent())
+            // start the floating widget service when notification is tapped
+            val intent = Intent(context, NotificationTriggerFloatingWidgetService::class.java)
+            val notification = buildServiceNotification(trigger.configuration.notificationText, intent)
 
             notificationManager.notify(notificationTrigger.uid.hashCode(), notification)
         } catch (e: Exception) {
@@ -642,7 +645,27 @@ class NotificationPushHelper(private val context: Context) {
         }
     }
 
-    private fun buildNotification(title: String, intent: Intent): Notification {
+    private fun buildActivityNotification(title: String, intent: Intent): Notification {
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return buildNotificationBase(title, pendingIntent)
+    }
+
+    private fun buildServiceNotification(title: String, intent: Intent): Notification {
+        val pendingIntent = PendingIntent.getService(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return buildNotificationBase(title, pendingIntent)
+    }
+
+    private fun buildNotificationBase(title: String, pendingIntent: PendingIntent): Notification {
         return NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
             .setContentTitle(title)
@@ -659,14 +682,7 @@ class NotificationPushHelper(private val context: Context) {
                     .bigText(title)
             )
             .setAutoCancel(true)
-            .setContentIntent(
-                PendingIntent.getActivity(
-                    context,
-                    0,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            )
+            .setContentIntent(pendingIntent)
             .build()
     }
 
