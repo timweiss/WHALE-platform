@@ -12,7 +12,7 @@ interface PendingQuestionnaireDao {
     @Query("SELECT * FROM pending_questionnaire")
     fun getAll(): List<PendingQuestionnaire>
 
-    @Query("SELECT * FROM pending_questionnaire WHERE valid_until > :now OR valid_until = -1")
+    @Query("SELECT * FROM pending_questionnaire WHERE (valid_until > :now OR valid_until = -1) AND status != 'COMPLETED'")
     fun getAllNotExpired(now: Long): List<PendingQuestionnaire>
 
     @Query("SELECT * FROM pending_questionnaire WHERE uid = :uid")

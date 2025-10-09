@@ -9,6 +9,7 @@ import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.esm.OneTimeNotificationReceiver
 import de.mimuc.senseeverything.service.esm.PeriodicNotificationReceiver
 import de.mimuc.senseeverything.service.esm.RandomNotificationReceiver
+import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
 import de.mimuc.senseeverything.service.sampling.ResumeSamplingReceiver
 
 
@@ -16,6 +17,7 @@ fun runStudyLifecycleCleanup(context: Context) {
     stopLogService(context)
     clearJobs(context)
     clearAllAlarms(context)
+    PeriodicServiceHealthcheckReceiver.cancel(context)
 }
 
 fun stopLogService(context: Context) {

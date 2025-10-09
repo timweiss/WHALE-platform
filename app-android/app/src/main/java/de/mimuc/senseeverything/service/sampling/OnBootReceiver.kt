@@ -12,6 +12,8 @@ import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.EsmHandler
+import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
+import de.mimuc.senseeverything.service.healthcheck.ServiceHealthcheck
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.rescheduleStudyEndAlarm
 import kotlinx.coroutines.CoroutineScope
@@ -83,4 +85,10 @@ private suspend fun rescheduleAlarms(context: Context, database: AppDatabase, da
     rescheduleStudyEndAlarm(context, database)
     reschedulePhaseChanges(context, database, dataStoreManager)
     EsmHandler.rescheduleQuestionnaires(context, dataStoreManager, database)
+
+    // Schedule periodic healthcheck
+    PeriodicServiceHealthcheckReceiver.schedule(context)
+
+    // Run immediate healthcheck after boot
+    ServiceHealthcheck.checkServices(context)
 }

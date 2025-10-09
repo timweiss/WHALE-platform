@@ -76,7 +76,7 @@ class ConversationDetectionWorker @AssistedInject constructor(
         )
 
         val name = reader.TAG
-        WHALELog.i(TAG, "speech detected in $name audio $log")
+        WHALELog.v(TAG, "speech detected in $name audio $log")
 
         logSpeechDetectionResult(name, timestamp, log)
     }

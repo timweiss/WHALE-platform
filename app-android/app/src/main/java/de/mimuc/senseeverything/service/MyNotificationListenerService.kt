@@ -45,7 +45,7 @@ class MyNotificationListenerService : NotificationListenerService() {
             val shouldVibrate = currentChannel.shouldVibrate()
             val importance = currentChannel.importance
 
-            WHALELog.i(TAG, "onNotificationPosted: key:${key} when:${sbn.notification.`when`} vibrate:${shouldVibrate} importance:${importance} category:${category} packageName:${packageName}")
+            WHALELog.v(TAG, "onNotificationPosted: key:${key} when:${sbn.notification.`when`} vibrate:${shouldVibrate} importance:${importance} category:${category} packageName:${packageName}")
 
             val data = "${notifWhen},${key},${packageName},${shouldVibrate},${importance},${category}"
             broadcastToSensor(data)

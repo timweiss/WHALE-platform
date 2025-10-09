@@ -25,6 +25,8 @@ import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.sensor.SensorNotRunningException;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 import de.mimuc.senseeverything.service.floatingWidget.NotificationTriggerFloatingWidgetService;
+import de.mimuc.senseeverything.service.healthcheck.HealthcheckResult;
+import de.mimuc.senseeverything.service.healthcheck.ServiceHealthcheck;
 import kotlin.Unit;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.BuildersKt;
@@ -171,6 +173,9 @@ public class LogService extends AbstractService {
                     WHALELog.INSTANCE.i(TAG, "lockUnlockReceiver: device unlocked, sensorlist" + singletonSensorList);
                     showInteractionWidget();
                     setState(LogServiceState.SAMPLING_AFTER_UNLOCK);
+
+                    // Run healthcheck on unlock
+                    runHealthcheckOnUnlock(context);
                 }
             }
         };
@@ -310,6 +315,15 @@ public class LogService extends AbstractService {
         if (isInSleepMode) {
             isInSleepMode = false;
             replaceNotification(getString(R.string.app_name), getString(R.string.notif_title), R.drawable.notification_whale);
+        }
+    }
+
+    /* Section: Healthcheck */
+
+    private void runHealthcheckOnUnlock(Context context) {
+        HealthcheckResult result = ServiceHealthcheck.INSTANCE.checkServices(context);
+        if (!result.getAllHealthy()) {
+            WHALELog.INSTANCE.w(TAG, "Healthcheck failed on unlock - services may need attention");
         }
     }
 

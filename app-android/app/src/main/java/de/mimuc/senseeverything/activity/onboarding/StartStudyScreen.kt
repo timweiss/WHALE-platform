@@ -40,6 +40,7 @@ import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
+import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
 import de.mimuc.senseeverything.workers.enqueuePendingQuestionnaireUploadWorker
@@ -104,6 +105,7 @@ class StartStudyViewModel @Inject constructor(
                 dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
                 scheduleStudyEndAlarm(context, startedTimestamp, study.durationDays, database)
                 reschedulePhaseChanges(context, database, dataStoreManager)
+                PeriodicServiceHealthcheckReceiver.schedule(context)
 
                 // automatically start data collection
                 if (!isServiceRunning(LogService::class.java)) {
