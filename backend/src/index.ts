@@ -17,7 +17,7 @@ export function makeExpressApp(
   observability: Observability,
 ) {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
 
   app.get('/', (req, res) => {
     res.send('Social Interaction Sensing!');
@@ -66,11 +66,7 @@ export async function main() {
 
   const pool = usePool(olly);
 
-  const app = makeExpressApp(
-    pool,
-    initializeRepositories(pool, olly),
-    olly,
-  );
+  const app = makeExpressApp(pool, initializeRepositories(pool, olly), olly);
 
   const server = app.listen(Config.app.port, () => {
     olly.logger.info(`Server listening on port ${Config.app.port}`);
