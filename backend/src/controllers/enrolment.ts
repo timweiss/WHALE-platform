@@ -19,9 +19,7 @@ const CreateEnrolment = z.object({
 });
 
 function generateParticipantId() {
-  const alphabet =
-    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-
+  const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz';
   return customAlphabet(alphabet, 8)();
 }
 
@@ -160,53 +158,6 @@ export function createEnrolmentController(
         }
       },
     );
-  });
-
-  app.post('/v1/enrolment/:participantId', async (req, res) => {
-    const enrolment = await enrolmentRepository.getEnrolmentByParticipantId(
-      req.params.participantId,
-    );
-    if (!enrolment) {
-      return res.status(404).send({ error: 'Enrolment not found' });
-    }
-
-    const experimentalGroup = await studyRepository.getExperimentalGroupById(
-      enrolment.studyExperimentalGroupId,
-    );
-
-    if (!experimentalGroup) {
-      observability.logger.warn('Experimental Group not found for enrolment', {
-        enrolmentId: enrolment.id,
-        enrolmentExperimentalGroupId: enrolment.studyExperimentalGroupId,
-      });
-
-      return res.status(404).send({ error: 'Experimental Group not found' });
-    }
-
-    const phases =
-      await studyRepository.getExperimentalGroupPhasesByExperimentalGroupId(
-        experimentalGroup.id,
-      );
-
-    if (phases.length === 0) {
-      observability.logger.warn('Experimental Group has no phases', {
-        experimentalGroupId: experimentalGroup.id,
-      });
-
-      return res.status(400).send({
-        error: 'Invalid Study Configuration: Experimental Group has no phases',
-        code: 'invalid_study_configuration',
-      });
-    }
-
-    const token = generateTokenForEnrolment(enrolment.id);
-
-    res.json({
-      participantId: enrolment.participantId,
-      studyId: enrolment.studyId,
-      phases,
-      token,
-    });
   });
 
   const pickExperimentalGroup = async (
