@@ -74,15 +74,32 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 for (pendingQuestionnaire in pendingQuestionnaires) {
                     WHALELog.i("PendingQuestionnaireUploadWorker", "Uploading pending questionnaire: ${pendingQuestionnaire.uid}")
                     val questionnaire = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pendingQuestionnaire.questionnaireJson)
-                    uploadQuestionnaireAnswer(
-                        apiClient,
-                        pendingQuestionnaire.elementValuesJson ?: "[]",
-                        questionnaire.questionnaire.id,
-                        studyId,
-                        userToken,
-                        pendingQuestionnaire,
-                        notificationTriggers.getOrDefault(pendingQuestionnaire.notificationTriggerUid, null)
-                    )
+
+                    try {
+                        uploadQuestionnaireAnswer(
+                            apiClient,
+                            pendingQuestionnaire.elementValuesJson ?: "[]",
+                            questionnaire.questionnaire.id,
+                            studyId,
+                            userToken,
+                            pendingQuestionnaire,
+                            notificationTriggers.getOrDefault(pendingQuestionnaire.notificationTriggerUid, null)
+                        )
+                    } catch (e: Exception) {
+                        WHALELog.e("PendingQuestionnaireUploadWorker", "Error uploading pending questionnaire ${pendingQuestionnaire.uid}: $e")
+                        // decide whether to continue or return failure based on error type
+                        if (e is NetworkError || e is TimeoutError) {
+                            return@withContext Result.retry()
+                        } else {
+                            return@withContext Result.failure()
+                        }
+                    }
+
+
+                    if (isStopped) {
+                        WHALELog.w("PendingQuestionnaireUploadWorker", "Work cancelled, stopping further sync")
+                        return@withContext Result.success()
+                    }
                 }
 
                 synchronizeLeftoverNotificationTriggers(notificationTriggers, pendingQuestionnaires)
@@ -102,7 +119,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
         }
     }
 
-    suspend fun synchronizeLeftoverNotificationTriggers(notificationTriggers: Map<UUID, NotificationTrigger>, pendingQuestionnaires: List<PendingQuestionnaire>) {
+    suspend fun synchronizeLeftoverNotificationTriggers(notificationTriggers: Map<UUID, NotificationTrigger>, pendingQuestionnaires: List<PendingQuestionnaire>): Result {
         // remove triggers present in pendingQuestionnaires
         val remainingNotificationTriggers = notificationTriggers.toMutableMap()
         for (pending in pendingQuestionnaires) {
@@ -111,7 +128,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
             }
         }
 
-        if (remainingNotificationTriggers.isEmpty()) return
+        if (remainingNotificationTriggers.isEmpty()) return Result.success()
 
         WHALELog.i("PendingQuestionnaireUploadWorker", "Synchronizing ${remainingNotificationTriggers.size} leftover notification triggers without pending questionnaires.")
         for ((_, trigger) in remainingNotificationTriggers) {
@@ -135,17 +152,34 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
             }
 
             val questionnaire = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pendingQuestionnaire.questionnaireJson)
-            uploadQuestionnaireAnswer(
-                ApiClient.getInstance(applicationContext),
-                "[]",
-                questionnaire.questionnaire.id,
-                inputData.getInt("studyId", -1),
-                inputData.getString("userToken") ?: "",
-                pendingQuestionnaire,
-                trigger
-            )
-            WHALELog.i("PendingQuestionnaireUploadWorker", "Successfully uploaded dummy questionnaire answers for leftover NotificationTrigger: ${trigger.uid}")
+            try {
+                uploadQuestionnaireAnswer(
+                    ApiClient.getInstance(applicationContext),
+                    "[]",
+                    questionnaire.questionnaire.id,
+                    inputData.getInt("studyId", -1),
+                    inputData.getString("userToken") ?: "",
+                    pendingQuestionnaire,
+                    trigger
+                )
+                WHALELog.i("PendingQuestionnaireUploadWorker", "Successfully uploaded dummy questionnaire answers for leftover NotificationTrigger: ${trigger.uid}")
+            } catch (e: Exception) {
+                WHALELog.e("PendingQuestionnaireUploadWorker", "Error uploading dummy questionnaire for leftover trigger ${trigger.uid}: $e")
+
+                if (e is NetworkError || e is TimeoutError) {
+                    return Result.retry()
+                } else {
+                    return Result.failure()
+                }
+            }
+
+            if (isStopped) {
+                WHALELog.w("PendingQuestionnaireUploadWorker", "Work cancelled while uploading triggers, stopping further sync")
+                return Result.success()
+            }
         }
+
+        return Result.success()
     }
 }
 

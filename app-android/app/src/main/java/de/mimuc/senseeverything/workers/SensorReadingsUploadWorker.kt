@@ -112,6 +112,11 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
             WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
 
+            if (isStopped) {
+                WHALELog.w(TAG, "Work cancelled, stopping further sync")
+                return Result.success()
+            }
+
             return syncNextNActivities(
                 db,
                 context,
