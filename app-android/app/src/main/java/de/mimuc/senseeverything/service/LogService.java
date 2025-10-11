@@ -9,7 +9,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
-import android.util.Log;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -17,19 +16,15 @@ import java.util.List;
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import de.mimuc.senseeverything.R;
 import de.mimuc.senseeverything.data.DataStoreManager;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
-import de.mimuc.senseeverything.sensor.SensorNotRunningException;
 import de.mimuc.senseeverything.sensor.SingletonSensorList;
 import de.mimuc.senseeverything.service.floatingWidget.NotificationTriggerFloatingWidgetService;
 import de.mimuc.senseeverything.service.healthcheck.HealthcheckResult;
 import de.mimuc.senseeverything.service.healthcheck.ServiceHealthcheck;
 import kotlin.Unit;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlinx.coroutines.BuildersKt;
 
 enum LogServiceState {
     IDLE,
@@ -82,8 +77,22 @@ public class LogService extends AbstractService {
 
     @Override
     public void onDestroy() {
+        // clear handlers
+        periodicHandler.removeCallbacks(periodicStartRunnable);
+        periodicHandler.removeCallbacks(periodicStopRunnable);
+        lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
+
         stopSensors(true);
-        unregisterReceiver(lockUnlockReceiver);
+
+        if (lockUnlockReceiver != null) {
+            try {
+                unregisterReceiver(lockUnlockReceiver);
+                WHALELog.INSTANCE.i(TAG, "lockUnlockReceiver unregistered successfully");
+            } catch (IllegalArgumentException e) {
+                WHALELog.INSTANCE.w(TAG, "lockUnlockReceiver was not registered");
+            }
+        }
+
         super.onDestroy();
     }
 
@@ -319,6 +328,10 @@ public class LogService extends AbstractService {
     }
 
     private void stopSensors(boolean includeContinuous) {
+        if (sensorList == null) {
+            WHALELog.INSTANCE.w(TAG, "stopSensors called but sensorList is null");
+            return;
+        }
         for (AbstractSensor sensor : sensorList) {
             if (sensor.isRunning() && ((sensor.availableForContinuousSampling() && includeContinuous) || !sensor.availableForContinuousSampling())) {
                 sensor.stop();
