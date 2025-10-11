@@ -67,11 +67,7 @@ public abstract class ForegroundService extends Service {
                 .setSmallIcon(R.drawable.notification_whale)
                 .setContentIntent(pendingIntent)
                 .build();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
-        } else {
-            startForeground(NOTIF_ID, notification);
-        }
+        startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
     }
 
     protected void replaceNotification(String title, String text, int icon) {
@@ -93,14 +89,9 @@ public abstract class ForegroundService extends Service {
     }
 
     private String getOrCreateNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return createNotificationChannel(NOTIFICATION_CHANNEL_ID, getString(NOTIFICATION_CHANNEL_STRING_ID_NAME));
-        } else {
-            return "";
-        }
+        return createNotificationChannel(NOTIFICATION_CHANNEL_ID, getString(NOTIFICATION_CHANNEL_STRING_ID_NAME));
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private String createNotificationChannel(String channelId, String channelName) {
         NotificationChannel chan = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_NONE);
         chan.setLightColor(Color.BLUE);

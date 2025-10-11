@@ -23,7 +23,7 @@ public class AccessibilitySensor extends AbstractSensor {
 	public AccessibilitySensor(Context applicationContext, AppDatabase database) {
 		super(applicationContext, database);
 		m_IsRunning = false;
-		TAG = getClass().getName();
+		TAG = "AccessibilitySensor";
 		SENSOR_NAME = "Accessibility";
 		FILE_NAME = "accessibility.csv";
 		m_FileHeader = "TimeUnix,Type,Class,Package,Text";

@@ -63,13 +63,11 @@ public class SEApplicationController extends Application implements Configuratio
         sInstance = this;
         super.onCreate();
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel("SEChannel", "SenseEverything", NotificationManager.IMPORTANCE_HIGH);
-            channel.setDescription("SenseEverything Notifications");
+        NotificationChannel channel = new NotificationChannel("SEChannel", "SenseEverything", NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription("SenseEverything Notifications");
 
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
-        }
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
     }
 
     /**

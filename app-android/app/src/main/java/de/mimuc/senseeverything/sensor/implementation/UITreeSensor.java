@@ -23,7 +23,7 @@ public class UITreeSensor extends AbstractSensor {
     public UITreeSensor(Context applicationContext, AppDatabase database) {
         super(applicationContext, database);
         m_IsRunning = false;
-        TAG = getClass().getName();
+        TAG = "UITreeSensor";
         SENSOR_NAME = "UITree";
         FILE_NAME = "ui_tree.json";
         m_FileHeader = ""; // JSON format, no CSV header needed

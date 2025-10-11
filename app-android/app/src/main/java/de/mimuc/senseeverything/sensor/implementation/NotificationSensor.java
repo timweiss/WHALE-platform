@@ -16,7 +16,7 @@ public class NotificationSensor extends AbstractSensor {
 
     public NotificationSensor(Context applicationContext, AppDatabase database) {
         super(applicationContext, database);
-        TAG = getClass().getName();
+        TAG = "NotificationSensor";
         SENSOR_NAME = "Notification";
         FILE_NAME = "notification.csv";
         m_FileHeader = "TimeUnix,When,Key,Package,ShouldVibrate,Importance,Category";

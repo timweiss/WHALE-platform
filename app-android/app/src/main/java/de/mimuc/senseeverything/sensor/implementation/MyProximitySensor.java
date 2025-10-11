@@ -27,7 +27,7 @@ public class MyProximitySensor extends AbstractSensor implements SensorEventList
 	public MyProximitySensor(Context applicationContext, AppDatabase database) {
 		super(applicationContext, database);
 		m_IsRunning = false;
-		TAG = getClass().getName();
+		TAG = "ProximitySensor";
 		SENSOR_NAME = "Proximity";
 		FILE_NAME = "proximity.csv";
 		m_FileHeader = "TimeUnix,Value,Reliable";

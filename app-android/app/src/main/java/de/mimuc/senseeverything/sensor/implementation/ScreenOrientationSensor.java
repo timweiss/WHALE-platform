@@ -24,7 +24,7 @@ public class ScreenOrientationSensor extends AbstractSensor {
 	public ScreenOrientationSensor(Context applicationContext, AppDatabase database) {
 		super(applicationContext, database);
 		m_IsRunning = false;
-		TAG = getClass().getName();
+		TAG = "ScreenOrientationSensor";
 		SENSOR_NAME = "Screen Orientation";
 		FILE_NAME = "screen_orientation.csv";
 		m_FileHeader = "TimeUnix,Value";

@@ -20,7 +20,7 @@ public class ConnectedWifiSensor extends AbstractSensor {
 	public ConnectedWifiSensor(Context applicationContext, AppDatabase database, String salt) {
 		super(applicationContext, database, salt + "wifi");
 		m_IsRunning = false;
-		TAG = getClass().getName();
+		TAG = "ConnectedWifiSensor";
 		SENSOR_NAME = "Wi-Fi SSID";
 		FILE_NAME = "wifi_ssid.csv";
 		m_FileHeader = "TimeUnix,Ssid";

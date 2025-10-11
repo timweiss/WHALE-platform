@@ -20,7 +20,7 @@ public class MyLightSensor extends AbstractSensor implements SensorEventListener
 	public MyLightSensor(Context applicationContext, AppDatabase database) {
 		super(applicationContext, database);
 		m_IsRunning = false;
-		TAG = getClass().getName();
+		TAG = "LightSensor";
 		SENSOR_NAME = "Light Sensor";
 		FILE_NAME = "lightsensor.csv";
 		m_FileHeader = "TimeUnix,Value,Reliable";

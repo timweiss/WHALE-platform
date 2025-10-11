@@ -36,7 +36,7 @@ public class ConversationSensor extends AbstractSensor {
         super(applicationContext, database);
         context = applicationContext;
         m_IsRunning = false;
-        TAG = getClass().getName();
+        TAG = "ConversationSensor";
         SENSOR_NAME = "Conversation";
         FILE_NAME = "audiosamples.csv";
         m_FileHeader = "Timestamp,Filename";

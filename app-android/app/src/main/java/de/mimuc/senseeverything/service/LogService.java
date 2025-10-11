@@ -44,7 +44,6 @@ public class LogService extends AbstractService {
     public static final int STOP_SENSORS = 1;
     public static final int LISTEN_LOCK_UNLOCK = 2;
     public static final int LISTEN_LOCK_UNLOCK_AND_PERIODIC = 3;
-    public static final int SEND_SENSOR_LOG_DATA = 4;
     public static final int SLEEP_MODE = 5;
 
     private final int PERIODIC_SAMPLING_SAMPLE_DURATION = 60 * 1000; // 1 minute
@@ -54,10 +53,10 @@ public class LogService extends AbstractService {
     private List<AbstractSensor> sensorList = null;
     private Messenger mMessenger;
     private BroadcastReceiver lockUnlockReceiver;
-    private boolean isSampling = false;
     private boolean isInSleepMode = false;
 
     private LogServiceState state = LogServiceState.IDLE;
+    private boolean isPeriodicSamplingEnabled = false;
 
     @Inject
     public SingletonSensorList singletonSensorList;
@@ -107,7 +106,6 @@ public class LogService extends AbstractService {
                 switch (msg.what) {
                     case START_SENSORS: {
                         service.startSensors(false, true);
-                        service.stopSleepMode();
                         break;
                     }
                     case STOP_SENSORS: {
@@ -116,29 +114,12 @@ public class LogService extends AbstractService {
                     }
                     case LISTEN_LOCK_UNLOCK: {
                         service.listenForLockUnlock();
-                        service.stopSleepMode();
                         break;
                     }
                     case LISTEN_LOCK_UNLOCK_AND_PERIODIC: {
                         service.listenForLockUnlock();
                         service.setupPeriodicSampling();
                         service.setupContiunousSampling();
-                        service.stopSleepMode();
-                        break;
-                    }
-                    case SEND_SENSOR_LOG_DATA: {
-                        String sensorName = msg.getData().getString("sensorName");
-                        String sensorData = msg.getData().getString("sensorData");
-
-                        service.receiveSensorLogData(sensorName, sensorData);
-                        break;
-                    }
-                    case SLEEP_MODE: {
-                        String until = msg.getData().getString("until");
-                        long untilTime = Long.parseLong(until);
-
-                        service.stopSampling();
-                        service.setSleepMode(untilTime);
                         break;
                     }
                     default:
@@ -190,22 +171,25 @@ public class LogService extends AbstractService {
     }
 
     Handler periodicHandler = new Handler();
-    Runnable periodicRunnable = () -> {
-        if (!isSampling) {
-            WHALELog.INSTANCE.i(TAG, "periodicRunnable: start sampling");
-            setState(LogServiceState.SAMPLING_PERIODIC);
-        } else {
-            WHALELog.INSTANCE.i(TAG, "periodicRunnable: stop sampling");
-            setState(LogServiceState.IDLE);
-        }
+    Runnable periodicStartRunnable = () -> {
+        WHALELog.INSTANCE.i(TAG, "periodicStartRunnable: start sampling");
+        setState(LogServiceState.SAMPLING_PERIODIC);
+    };
+
+    Runnable periodicStopRunnable = () -> {
+        WHALELog.INSTANCE.i(TAG, "periodicStopRunnable: stop sampling");
+        setState(LogServiceState.IDLE);
     };
 
     private void setupPeriodicSampling() {
-        periodicRunnable.run();
+        isPeriodicSamplingEnabled = true;
+        periodicStartRunnable.run();
     }
 
     private void stopPeriodicSampling() {
-        periodicHandler.removeCallbacks(periodicRunnable);
+        isPeriodicSamplingEnabled = false;
+        periodicHandler.removeCallbacks(periodicStartRunnable);
+        periodicHandler.removeCallbacks(periodicStopRunnable);
     }
 
     private void setupContiunousSampling() {
@@ -224,30 +208,39 @@ public class LogService extends AbstractService {
     }
 
     private void processNewState(LogServiceState previousState, LogServiceState newState) {
-        WHALELog.INSTANCE.i(TAG, "state transition: " + previousState + " -> " + newState);
+        WHALELog.INSTANCE.i(TAG, "state transition: " + previousState + " -> " + newState + " (periodicEnabled=" + isPeriodicSamplingEnabled + ")");
         if (previousState == LogServiceState.IDLE) {
             if (newState == LogServiceState.SAMPLING_AFTER_UNLOCK) {
-                WHALELog.INSTANCE.i(TAG, "device unlocked, starting sampling, sensorlist" + singletonSensorList);
+                WHALELog.INSTANCE.i(TAG, "device unlocked, starting full sampling, sensorlist" + singletonSensorList);
+                // Cancel any pending periodic sampling starts since we're doing unlock sampling now
+                periodicHandler.removeCallbacks(periodicStartRunnable);
                 startSensors(false, false);
                 lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
                 lockUnlockStopHandler.postDelayed(lockUnlockStopRunnable, LOCK_UNLOCK_SAMPLE_DURATION);
                 state = LogServiceState.SAMPLING_AFTER_UNLOCK;
             } else if (newState == LogServiceState.SAMPLING_PERIODIC) {
+                WHALELog.INSTANCE.i(TAG, "starting periodic sampling for " + PERIODIC_SAMPLING_SAMPLE_DURATION + "ms");
                 startSensors(true, false);
-                periodicHandler.postDelayed(periodicRunnable, PERIODIC_SAMPLING_SAMPLE_DURATION); // 1 minute
+                periodicHandler.removeCallbacks(periodicStopRunnable);
+                periodicHandler.postDelayed(periodicStopRunnable, PERIODIC_SAMPLING_SAMPLE_DURATION); // 1 minute
                 state = LogServiceState.SAMPLING_PERIODIC;
             }
         } else if (previousState == LogServiceState.SAMPLING_PERIODIC) {
             if (newState == LogServiceState.IDLE) {
+                WHALELog.INSTANCE.i(TAG, "stopping periodic sampling, next cycle in " + PERIODIC_SAMPLING_CYCLE_DURATION + "ms");
                 stopSensors(false);
-                periodicHandler.removeCallbacks(periodicRunnable);
-                periodicHandler.postDelayed(periodicRunnable, PERIODIC_SAMPLING_CYCLE_DURATION); // 5 minutes
+                periodicHandler.removeCallbacks(periodicStopRunnable);
+                if (isPeriodicSamplingEnabled) {
+                    periodicHandler.postDelayed(periodicStartRunnable, PERIODIC_SAMPLING_CYCLE_DURATION); // 5 minutes
+                }
                 state = LogServiceState.IDLE;
             } else if (newState == LogServiceState.SAMPLING_AFTER_UNLOCK) {
                 // if running periodic sampling and device gets unlocked, start full sampling instead
+                WHALELog.INSTANCE.i(TAG, "device unlocked during periodic sampling, switching to full sampling (periodic cycle continues)");
                 stopSensors(false);
                 startSensors(false, false);
-                periodicHandler.removeCallbacks(periodicRunnable);
+                // Don't remove periodic callbacks - let them continue in the background
+                // The periodic cycle will continue, but unlock sampling takes priority
                 lockUnlockStopHandler.removeCallbacks(lockUnlockStopRunnable);
                 lockUnlockStopHandler.postDelayed(lockUnlockStopRunnable, LOCK_UNLOCK_SAMPLE_DURATION);
                 state = LogServiceState.SAMPLING_AFTER_UNLOCK;
@@ -256,65 +249,23 @@ public class LogService extends AbstractService {
             if (newState == LogServiceState.IDLE) {
                 stopSensors(false);
                 state = LogServiceState.IDLE;
+                // If periodic sampling is enabled, check if we should start it now or wait
+                if (isPeriodicSamplingEnabled) {
+                    WHALELog.INSTANCE.i(TAG, "unlock sampling done, periodic cycle continues");
+                    // The periodic cycle should already be scheduled from before the unlock
+                    // If not, restart it
+                    if (!periodicHandler.hasCallbacks(periodicStartRunnable) && !periodicHandler.hasCallbacks(periodicStopRunnable)) {
+                        WHALELog.INSTANCE.i(TAG, "no periodic callbacks found, restarting periodic cycle");
+                        periodicHandler.postDelayed(periodicStartRunnable, PERIODIC_SAMPLING_CYCLE_DURATION);
+                    }
+                }
+            } else if (newState == LogServiceState.SAMPLING_PERIODIC) {
+                // This can happen if periodic sampling fires while unlock sampling is still running
+                WHALELog.INSTANCE.i(TAG, "periodic sampling triggered during unlock sampling, deferring");
+                // Just ignore and let unlock sampling finish, periodic will retry
             } else {
                 WHALELog.INSTANCE.e(TAG, "invalid state transition");
-                // throw new IllegalStateException("Cannot transition from SAMPLING_AFTER_UNLOCK to SAMPLING_PERIODIC");
             }
-        }
-    }
-
-    /* Section: Receiving Sensor Log Data */
-
-    private void receiveSensorLogData(String sensorName, String sensorData) {
-        WHALELog.INSTANCE.d(TAG, "received sensor log data: " + sensorName + " " + sensorData);
-
-        try {
-            Class<?> sensorClass = Class.forName(sensorName);
-            AbstractSensor sensor = singletonSensorList.getSensorOfType(sensorClass);
-            WHALELog.INSTANCE.i(TAG, "sensors active: " + singletonSensorList.getList(this, database, "").stream().filter(s -> s.isRunning()).count());
-            if (sensor != null) {
-                sensor.tryLogStringData(sensorData);
-            }
-        } catch (ClassNotFoundException e) {
-            WHALELog.INSTANCE.e(TAG, "Could not find sensor class: " + sensorName, e);
-        } catch (SensorNotRunningException e) {
-            WHALELog.INSTANCE.e(TAG, "Sensor not running: " + sensorName, e);
-        }
-    }
-
-    /* Section: Sleep Mode */
-
-    private void setSleepMode(long untilTime) {
-        isInSleepMode = true;
-        try {
-            BuildersKt.runBlocking(
-                    EmptyCoroutineContext.INSTANCE,
-                    (scope, continuation) -> dataStoreManager.saveStudyPaused(true, continuation));
-            BuildersKt.runBlocking(
-                    EmptyCoroutineContext.INSTANCE,
-                    (scope, continuation) -> dataStoreManager.saveStudyPausedUntil(untilTime, continuation));
-        } catch (Exception e) {
-            WHALELog.INSTANCE.e(TAG, "Could not save study paused", e);
-        }
-        // Sleep Notification
-        replaceNotification(getString(R.string.app_name), getString(R.string.notification_sleep_text), R.drawable.notification_whale);
-    }
-
-    private void stopSleepMode() {
-        try {
-            BuildersKt.runBlocking(
-                    EmptyCoroutineContext.INSTANCE,
-                    (scope, continuation) -> dataStoreManager.saveStudyPaused(false, continuation));
-            BuildersKt.runBlocking(
-                    EmptyCoroutineContext.INSTANCE,
-                    (scope, continuation) -> dataStoreManager.saveStudyPausedUntil(-1, continuation));
-        } catch (Exception e) {
-            WHALELog.INSTANCE.e(TAG, "Could not save study paused", e);
-        }
-
-        if (isInSleepMode) {
-            isInSleepMode = false;
-            replaceNotification(getString(R.string.app_name), getString(R.string.notif_title), R.drawable.notification_whale);
         }
     }
 
@@ -363,9 +314,6 @@ public class LogService extends AbstractService {
                     WHALELog.INSTANCE.i(TAG, sensor.getSensorName() + " turned off");
                 }
             }
-
-            isSampling = true;
-
             return Unit.INSTANCE;
         });
     }
@@ -376,8 +324,6 @@ public class LogService extends AbstractService {
                 sensor.stop();
             }
         }
-
-        isSampling = false;
     }
 
     @Override

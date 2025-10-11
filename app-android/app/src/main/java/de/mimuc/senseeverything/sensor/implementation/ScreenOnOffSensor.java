@@ -24,7 +24,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
 	public ScreenOnOffSensor(Context applicationContext, AppDatabase database) {
 		super(applicationContext, database);
 		m_IsRunning = false;
-		TAG = getClass().getName();
+		TAG = "ScreenOnOffSensor";
 		SENSOR_NAME = "Screen On/Off";
 		FILE_NAME = "screen_on_off.csv";
 		m_FileHeader = "TimeUnix,Value";

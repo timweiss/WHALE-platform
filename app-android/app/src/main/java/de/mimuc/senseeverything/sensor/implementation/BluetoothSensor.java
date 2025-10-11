@@ -34,7 +34,7 @@ public class BluetoothSensor extends AbstractSensor {
 	public BluetoothSensor(Context applicationContext, AppDatabase database, String salt) {
 		super(applicationContext, database, salt + "bt");
 		m_IsRunning = false;
-		TAG = getClass().getName();
+		TAG = "BluetoothSensor";
 		SENSOR_NAME = "Nearby Bluetooth";
 		FILE_NAME = "nearby_bluetooth.csv";
 		m_FileHeader = "TimeUnix,DeviceName";
@@ -94,7 +94,7 @@ public class BluetoothSensor extends AbstractSensor {
 				try {
 					String address = getSensitiveDataHash(device.getAddress(), sensitiveDataSalt);
 					// getName() required BLUETOOTH_CONNECT permission
-					WHALELog.INSTANCE.i(TAG, address);
+					WHALELog.INSTANCE.d(TAG, address);
 					onLogDataItem(t, address);
 				} catch (SecurityException e) {
 					WHALELog.INSTANCE.e(TAG, e.getMessage());

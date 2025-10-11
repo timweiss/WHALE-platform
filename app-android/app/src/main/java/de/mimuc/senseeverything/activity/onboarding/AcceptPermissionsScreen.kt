@@ -145,23 +145,21 @@ class AcceptPermissionsViewModel @Inject constructor(
     fun requestSystemWindowPermission(context: Context) {
         val activity = context.getActivity()
         if (activity != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (!Settings.canDrawOverlays(activity)) {
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            if (!Settings.canDrawOverlays(activity)) {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
 
-                        Uri.parse("package:" + context.packageName)
-                    )
-                    ActivityCompat.startActivityForResult(activity, intent, 1001, null)
-                } else {
-                    _permissions.value = _permissions.value.toMutableMap().apply {
-                        put(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
-                    }
-                    WHALELog.i(
-                        "AcceptPermissionsViewModel",
-                        "SYSTEM_ALERT_WINDOW permission already granted"
-                    )
+                    Uri.parse("package:" + context.packageName)
+                )
+                ActivityCompat.startActivityForResult(activity, intent, 1001, null)
+            } else {
+                _permissions.value = _permissions.value.toMutableMap().apply {
+                    put(Manifest.permission.SYSTEM_ALERT_WINDOW, true)
                 }
+                WHALELog.i(
+                    "AcceptPermissionsViewModel",
+                    "SYSTEM_ALERT_WINDOW permission already granted"
+                )
             }
         } else {
             WHALELog.e("AcceptPermissionsViewModel", "Could not get activity")
