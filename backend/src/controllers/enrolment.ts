@@ -1,5 +1,4 @@
 import { Express } from 'express';
-import ksuid from 'ksuid';
 import { UserPayload } from '../middleware/authenticate';
 import { Config } from '../config';
 import jwt, { JwtPayload } from 'jsonwebtoken';
@@ -13,10 +12,18 @@ import {
 import { InvalidStudyConfigurationError } from '../config/errors';
 import { Mutex } from 'async-mutex';
 import { Observability } from '../o11y';
+import { customAlphabet } from 'nanoid';
 
 const CreateEnrolment = z.object({
   enrolmentKey: z.string(),
 });
+
+function generateParticipantId() {
+  const alphabet =
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+  return customAlphabet(alphabet, 8)();
+}
 
 export function createEnrolmentController(
   enrolmentRepository: IEnrolmentRepository,
@@ -28,7 +35,7 @@ export function createEnrolmentController(
 
   // creates an enrolment and generates a token
   app.post('/v1/enrolment', async (req, res) => {
-    return await observability.tracer.startActiveSpan(
+    return observability.tracer.startActiveSpan(
       'enrolment:create',
       async (span) => {
         const body = CreateEnrolment.safeParse(req.body);
@@ -92,7 +99,7 @@ export function createEnrolmentController(
           });
         }
 
-        const participantId = (await ksuid.random()).string;
+        const participantId = generateParticipantId();
 
         try {
           // todo: this could make it really slow, but it needs to be an atomic operation
