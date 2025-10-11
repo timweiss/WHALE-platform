@@ -89,7 +89,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        setProgress(workDataOf("progress" to (totalSynced / remaining)))
+        setProgress(workDataOf("progress" to (totalSynced / (if (remaining != 0L) remaining else 1L))))
 
         val sensorReadings = data.map { logData ->
             SensorReading(

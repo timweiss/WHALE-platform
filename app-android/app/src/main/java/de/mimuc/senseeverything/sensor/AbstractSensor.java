@@ -75,8 +75,7 @@ public abstract class AbstractSensor implements Serializable  {
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){
-		WHALELog.INSTANCE.v(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
-
+		// WHALELog.INSTANCE.v(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
 		AsyncTask.execute(() -> {
 			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));
 		});
