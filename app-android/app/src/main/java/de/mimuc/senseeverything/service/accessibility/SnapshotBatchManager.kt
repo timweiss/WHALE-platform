@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit
  */
 class SnapshotBatchManager(
     private val context: Context,
-    private val batchSize: Int = 50,
-    private val flushIntervalMs: Long = TimeUnit.MINUTES.toMillis(1)
+    private val batchSize: Int = 20,
+    private val flushIntervalMs: Long = TimeUnit.SECONDS.toMillis(30)
 ) {
     companion object {
         const val TAG = "SnapshotBatchManager"

@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.workers
 
+import android.app.NotificationManager
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
@@ -19,6 +20,7 @@ import de.mimuc.senseeverything.api.model.ema.uploadQuestionnaireAnswer
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,6 +33,12 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
     private val database: AppDatabase
 ) :
     CoroutineWorker(appContext, workerParams) {
+
+    private val notificationId = 1013
+    private val notificationManager =
+        appContext.getSystemService(Context.NOTIFICATION_SERVICE) as
+                NotificationManager
+
     override suspend fun doWork(): Result {
         val questionnaireAnswers = inputData.getString("questionnaireAnswers") ?: ""
         val questionnaireId = inputData.getInt("questionnaireId", -1)
@@ -38,6 +46,10 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
         val userToken = inputData.getString("userToken") ?: ""
         val pendingQuestionnaireId =
             inputData.getString("pendingQuestionnaireId")?.let { UUID.fromString(it) }
+
+        setForeground(
+            backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
+        )
 
         if (questionnaireAnswers.isEmpty() || questionnaireId == -1 || studyId == -1 || userToken.isEmpty()) {
             return Result.failure()

@@ -12,6 +12,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.android.volley.ClientError
 import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
 import com.google.firebase.crashlytics.ktx.crashlytics
@@ -122,6 +123,16 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         } catch (e: Exception) {
             if (e is NetworkError || e is TimeoutError) {
                 return Result.retry()
+            }
+
+            if (e is ClientError) {
+                val message = e.networkResponse.data.decodeToString()
+                WHALELog.e(
+                    TAG,
+                    "Client error uploading sensor readings: $message with total $totalSynced and remaining $remaining"
+                )
+                Firebase.crashlytics.log("Client error uploading sensor readings: $message with total $totalSynced and remaining $remaining")
+                return Result.failure()
             }
 
             WHALELog.e(

@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.workers
 
+import android.app.NotificationManager
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
@@ -14,6 +15,7 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
+import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
@@ -24,8 +26,18 @@ class UpdateQuestionnaireWorker @AssistedInject constructor(
     private val dataStoreManager: DataStoreManager):
     CoroutineWorker(appContext, workerParams) {
 
+    private val notificationId = 1015
+    private val notificationManager =
+        appContext.getSystemService(Context.NOTIFICATION_SERVICE) as
+                NotificationManager
+
     override suspend fun doWork(): Result {
         val studyId = dataStoreManager.studyIdFlow.first()
+
+        setForeground(
+            backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
+        )
+
         val fullQuestionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, ApiClient.getInstance(applicationContext))
         persistQuestionnaireElementContent(applicationContext, fullQuestionnaires)
 

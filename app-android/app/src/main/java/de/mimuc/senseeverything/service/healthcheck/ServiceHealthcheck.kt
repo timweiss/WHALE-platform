@@ -6,6 +6,7 @@ import android.provider.Settings
 import android.text.TextUtils
 import androidx.core.app.NotificationManagerCompat
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.MyNotificationListenerService
 import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
 
@@ -14,6 +15,7 @@ object ServiceHealthcheck {
     fun checkServices(context: Context): HealthcheckResult {
         val notificationServiceHealthy = checkNotificationService(context)
         val accessibilityServiceHealthy = checkAccessibilityService(context)
+        val logServiceHealthy = checkLogService(context)
 
         WHALELog.i(
             TAG,
@@ -23,10 +25,12 @@ object ServiceHealthcheck {
             TAG,
             "AccessibilityService: $accessibilityServiceHealthy"
         )
+        WHALELog.i(TAG, "LogService: $logServiceHealthy")
 
         return HealthcheckResult(
             notificationServiceHealthy = notificationServiceHealthy,
             accessibilityServiceHealthy = accessibilityServiceHealthy,
+            logServiceHealthy = logServiceHealthy,
             timestamp = System.currentTimeMillis()
         )
     }
@@ -46,6 +50,16 @@ object ServiceHealthcheck {
 
         if (!serviceRunning) {
             WHALELog.w(TAG, "NotificationListener permission enabled but service not running")
+        }
+
+        return serviceRunning
+    }
+
+    private fun checkLogService(context: Context): Boolean {
+        val serviceRunning = isServiceRunning(context, LogService::class.java)
+
+        if (!serviceRunning) {
+            WHALELog.w(TAG, "LogService not running")
         }
 
         return serviceRunning
@@ -122,8 +136,9 @@ object ServiceHealthcheck {
 data class HealthcheckResult(
     val notificationServiceHealthy: Boolean,
     val accessibilityServiceHealthy: Boolean,
+    val logServiceHealthy: Boolean,
     val timestamp: Long
 ) {
     val allHealthy: Boolean
-        get() = notificationServiceHealthy && accessibilityServiceHealthy
+        get() = notificationServiceHealthy && accessibilityServiceHealthy && logServiceHealthy
 }
