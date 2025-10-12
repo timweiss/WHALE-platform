@@ -34,7 +34,8 @@ import java.util.concurrent.TimeUnit
 data class SensorReading(
     val sensorType: String,
     val timestamp: Long,
-    val data: String
+    val data: String,
+    val uniqueId: String
 )
 
 @HiltWorker
@@ -83,6 +84,11 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         totalSynced: Long,
         n: Int
     ): Result {
+        if (isStopped) {
+            WHALELog.w(TAG, "Work cancelled, stopping further sync")
+            return Result.success()
+        }
+
         val data = db.logDataDao().getNextNUnsynced(n)
         if (data.isEmpty()) {
             WHALELog.i(TAG, "Completed Sensor Reading Sync")
@@ -95,7 +101,8 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             SensorReading(
                 sensorType = logData.sensorName,
                 timestamp = logData.timestamp,
-                data = logData.data
+                data = logData.data,
+                uniqueId = logData.uniqueId
             )
         }
 
@@ -111,11 +118,6 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
 
             db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
             WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
-
-            if (isStopped) {
-                WHALELog.w(TAG, "Work cancelled, stopping further sync")
-                return Result.success()
-            }
 
             return syncNextNActivities(
                 db,

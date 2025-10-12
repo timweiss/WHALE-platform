@@ -72,6 +72,11 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 val notificationTriggers = database.notificationTriggerDao().getAll().associateBy { it.uid }
 
                 for (pendingQuestionnaire in pendingQuestionnaires) {
+                    if (isStopped) {
+                        WHALELog.w("PendingQuestionnaireUploadWorker", "Work cancelled, stopping further sync")
+                        return@withContext Result.success()
+                    }
+
                     WHALELog.i("PendingQuestionnaireUploadWorker", "Uploading pending questionnaire: ${pendingQuestionnaire.uid}")
                     val questionnaire = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pendingQuestionnaire.questionnaireJson)
 
@@ -94,18 +99,9 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                             return@withContext Result.failure()
                         }
                     }
-
-
-                    if (isStopped) {
-                        WHALELog.w("PendingQuestionnaireUploadWorker", "Work cancelled, stopping further sync")
-                        return@withContext Result.success()
-                    }
                 }
 
                 synchronizeLeftoverNotificationTriggers(notificationTriggers, pendingQuestionnaires)
-
-                // clear all expired pending questionnaires
-                database.pendingQuestionnaireDao().deleteExpired(System.currentTimeMillis())
 
                 Result.success()
             } catch (e: Exception) {
@@ -132,6 +128,11 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
 
         WHALELog.i("PendingQuestionnaireUploadWorker", "Synchronizing ${remainingNotificationTriggers.size} leftover notification triggers without pending questionnaires.")
         for ((_, trigger) in remainingNotificationTriggers) {
+            if (isStopped) {
+                WHALELog.w("PendingQuestionnaireUploadWorker", "Work cancelled while uploading triggers, stopping further sync")
+                return Result.success()
+            }
+
             // create dummy pending questionnaire for each remaining trigger
             val pendingQuestionnaireId = PendingQuestionnaire.createEntry(
                 database,
@@ -172,12 +173,10 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                     return Result.failure()
                 }
             }
-
-            if (isStopped) {
-                WHALELog.w("PendingQuestionnaireUploadWorker", "Work cancelled while uploading triggers, stopping further sync")
-                return Result.success()
-            }
         }
+
+        // clear all expired pending questionnaires
+        database.pendingQuestionnaireDao().deleteExpired(System.currentTimeMillis())
 
         return Result.success()
     }
