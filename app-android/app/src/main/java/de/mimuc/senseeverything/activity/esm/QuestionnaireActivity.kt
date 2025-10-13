@@ -7,6 +7,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -38,6 +39,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.QuestionnaireDataRepository
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.db.models.PendingQuestionnaireStatus
 import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
@@ -102,11 +104,11 @@ class QuestionnaireViewModel @Inject constructor(
         val activity = (context as? Activity)
         val intent = activity?.intent
         if (intent != null) {
-            loadFromIntent(intent)
+            loadFromIntent(activity, intent)
         }
     }
 
-    private fun loadFromIntent(intent: Intent) {
+    private fun loadFromIntent(activity: Activity?, intent: Intent) {
         val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
         if (json != null) {
             val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
@@ -146,8 +148,57 @@ class QuestionnaireViewModel @Inject constructor(
                 pendingQuestionnaire = database.pendingQuestionnaireDao()?.getById(
                     pendingQuestionnaireId!!
                 )
+
+                val pendingQuestionnaire = pendingQuestionnaire
+                if (pendingQuestionnaire == null) {
+                    close(activity, CloseReason.PendingQuestionnaireNotFound)
+                    return@launch
+                }
+
+                if (pendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
+                    close(activity, CloseReason.AlreadyCompleted)
+                    return@launch
+                }
+
                 loadFromPendingQuestionnaire()
                 _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId!!)
+            }
+        }
+    }
+
+    enum class CloseReason {
+        PendingQuestionnaireNotFound,
+        AlreadyCompleted,
+        Completed
+    }
+
+    private suspend fun close(activity: Activity?, reason: CloseReason) {
+        if (activity != null) {
+            withContext(Dispatchers.Main) {
+                when (reason) {
+                    CloseReason.PendingQuestionnaireNotFound, CloseReason.AlreadyCompleted -> WHALELog.w(
+                        "Questionnaire",
+                        "Finishing questionnaire activity, reason: $reason, pending questionnaire id: $pendingQuestionnaireId"
+                    )
+                    CloseReason.Completed -> WHALELog.i(
+                        "Questionnaire",
+                        "Completed questionnaire, pending questionnaire id: $pendingQuestionnaireId"
+                    )
+                }
+
+                activity.finishAndRemoveTask()
+
+                val message = when (reason) {
+                    CloseReason.PendingQuestionnaireNotFound -> activity.getString(R.string.questionnaire_not_found_toast)
+                    CloseReason.AlreadyCompleted -> activity.getString(R.string.questionnaire_already_completed_toast)
+                    CloseReason.Completed -> activity.getString(R.string.questionnaire_thank_you_toast)
+                }
+
+                Toast.makeText(
+                    activity,
+                    message,
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
@@ -209,16 +260,7 @@ class QuestionnaireViewModel @Inject constructor(
                     QuestionnaireRuleEvaluator.handleActions(context, actions.flatMap { it.value }, pendingQuestionnaire)
                 }
 
-                // pop activity
-                val activity = (context as? Activity)
-                activity?.finish()
-
-                // show thank you toast
-                android.widget.Toast.makeText(
-                    context,
-                    context.getString(R.string.questionnaire_thank_you_toast),
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
+                close(context as? Activity, CloseReason.Completed)
             }.collect {}
         }
     }

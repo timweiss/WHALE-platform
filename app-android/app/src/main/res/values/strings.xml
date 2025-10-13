@@ -128,6 +128,8 @@
     <string name="onboarding_start_study_finalizing">Finalizing setup, this may take a while...</string>
     <string name="onboarding_start_study_heading">All set!</string>
     <string name="questionnaire_thank_you_toast">Your answers were saved. Thank you!</string>
+    <string name="questionnaire_already_completed_toast">This questionnaire was already completed.</string>
+    <string name="questionnaire_not_found_toast">Questionnaire was not found.</string>
     <string name="questionnaire_answer_all_questions">Please answer all questions.</string>
     <string name="questionnaire_previous">Previous</string>
     <string name="questionnaire_next">Next</string>
