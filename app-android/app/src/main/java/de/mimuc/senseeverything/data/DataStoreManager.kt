@@ -60,7 +60,9 @@ data class AppSettings(
     val phases: List<ExperimentalGroupPhase>? = null,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>,
     val studyState: StudyState,
-    val sensitiveDataSalt: String? = null
+    val sensitiveDataSalt: String? = null,
+    val lastPermissionNotificationTime: Long = 0L,
+    val lastRevokedPermissions: Set<String> = emptySet()
 )
 
 @Serializable
@@ -81,7 +83,9 @@ data class OptionalAppSettings(
     val phases: List<ExperimentalGroupPhase>? = null,
     val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null,
     val studyState: StudyState? = null,
-    val sensitiveDataSalt: String? = null
+    val sensitiveDataSalt: String? = null,
+    val lastPermissionNotificationTime: Long? = null,
+    val lastRevokedPermissions: Set<String>? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -100,7 +104,9 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     study = null,
     phases = null,
     interactionWidgetTimeBucket = hashMapOf(),
-    studyState = StudyState.NOT_ENROLLED
+    studyState = StudyState.NOT_ENROLLED,
+    lastPermissionNotificationTime = 0L,
+    lastRevokedPermissions = emptySet()
 )
 
 fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): AppSettings {
@@ -127,6 +133,10 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         interactionWidgetTimeBucket = optionalAppSettings.interactionWidgetTimeBucket
             ?: defaultAppSettings.interactionWidgetTimeBucket,
         studyState = optionalAppSettings.studyState ?: defaultAppSettings.studyState,
+        lastPermissionNotificationTime = optionalAppSettings.lastPermissionNotificationTime
+            ?: defaultAppSettings.lastPermissionNotificationTime,
+        lastRevokedPermissions = optionalAppSettings.lastRevokedPermissions
+            ?: defaultAppSettings.lastRevokedPermissions
     )
 }
 
@@ -439,6 +449,32 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
                 callback(sensitiveDataSalt ?: "")
                 true
             }
+        }
+    }
+
+    val lastPermissionNotificationTimeFlow = dataStore.data.map { preferences ->
+        preferences.lastPermissionNotificationTime
+    }
+
+    suspend fun saveLastPermissionNotificationTime(timestamp: Long) {
+        dataStore.updateData {
+            it.copy(
+                lastUpdate = System.currentTimeMillis(),
+                lastPermissionNotificationTime = timestamp
+            )
+        }
+    }
+
+    val lastRevokedPermissionsFlow = dataStore.data.map { preferences ->
+        preferences.lastRevokedPermissions
+    }
+
+    suspend fun saveLastRevokedPermissions(revokedPermissions: Set<String>) {
+        dataStore.updateData {
+            it.copy(
+                lastUpdate = System.currentTimeMillis(),
+                lastRevokedPermissions = revokedPermissions
+            )
         }
     }
 }

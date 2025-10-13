@@ -13,10 +13,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.permissions.PermissionNotificationHelper
 import de.mimuc.senseeverything.sensor.AbstractSensor
 import de.mimuc.senseeverything.sensor.SingletonSensorList
 import de.mimuc.senseeverything.service.floatingWidget.NotificationTriggerFloatingWidgetService
+import de.mimuc.senseeverything.service.healthcheck.HealthcheckResult
 import de.mimuc.senseeverything.service.healthcheck.ServiceHealthcheck.checkServices
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import javax.inject.Inject
 
@@ -43,6 +48,9 @@ class LogService : AbstractService() {
 
     @Inject
     lateinit var database: AppDatabase
+
+    @Inject
+    lateinit var permissionNotificationHelper: PermissionNotificationHelper
 
     override fun onCreate() {
         TAG = javaClass.name
@@ -137,7 +145,7 @@ class LogService : AbstractService() {
                     setState(LogServiceState.SAMPLING_AFTER_UNLOCK)
 
                     // Run healthcheck on unlock
-                    runHealthcheckOnUnlock(context)
+                    runHealthcheck(context)
                 }
             }
         }
@@ -290,11 +298,24 @@ class LogService : AbstractService() {
     }
 
     /* Section: Healthcheck */
-    private fun runHealthcheckOnUnlock(context: Context) {
+    private fun runHealthcheck(context: Context): HealthcheckResult {
         val result = checkServices(context)
         if (!result.allHealthy) {
             WHALELog.w(TAG, "Healthcheck failed on unlock - services may need attention")
+
+            // Check for revoked permissions and show notification if needed
+            val revokedPerms = result.permissionsGranted.filterValues { !it }
+            if (revokedPerms.isNotEmpty()) {
+                WHALELog.w(TAG, "Found ${revokedPerms.size} revoked permissions, triggering notification")
+                CoroutineScope(Dispatchers.Main).launch {
+                    permissionNotificationHelper.showPermissionRevokedNotification(
+                        context,
+                        result.permissionsGranted
+                    )
+                }
+            }
         }
+        return result
     }
 
     /* Section: Interaction Widget */

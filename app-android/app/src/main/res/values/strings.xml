@@ -195,4 +195,17 @@
 
     <string name="permission_battery_optimization_name">Battery Optimization Exemption</string>
     <string name="permission_battery_optimization_desc">Prevents system from stopping background data collection</string>
+
+    <!-- Permission revocation notification -->
+    <string name="permission_revoked_channel_name">Permission Alerts</string>
+    <string name="permission_revoked_channel_description">Alerts when required permissions are revoked</string>
+    <string name="permission_revoked_notification_title">Permissions Required</string>
+    <plurals name="permission_revoked_notification_text">
+        <item quantity="one">%d permission was revoked. Tap to re-enable.</item>
+        <item quantity="other">%d permissions were revoked. Tap to re-enable.</item>
+    </plurals>
+    <string name="permission_revoked_title">Re-enable Permissions</string>
+    <string name="permission_revoked_description">Some required permissions were revoked. Please re-enable them to continue participating in the study.</string>
+    <string name="permission_revoked_done">Done</string>
+    <string name="permission_revoked_all_granted_toast">All permissions granted again. Thank you!</string>
 </resources>
