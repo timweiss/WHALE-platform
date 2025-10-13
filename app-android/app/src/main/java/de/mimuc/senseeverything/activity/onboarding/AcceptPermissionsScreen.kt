@@ -83,10 +83,10 @@ fun AcceptPermissionsScreen(
         Spacer(modifier = Modifier.Companion.padding(12.dp))
 
         Column(modifier = Modifier.Companion.verticalScroll(rememberScrollState())) {
-            // Render all permissions from PermissionManager
             PermissionManager.allPermissions.forEach { permDef ->
                 PermissionItem(
                     label = stringResource(permDef.nameResId),
+                    description = stringResource(permDef.descriptionResId),
                     isGranted = permissions.value[permDef.permission] ?: false,
                     onRequestPermission = {
                         viewModel.requestPermission(permDef.permission, context)

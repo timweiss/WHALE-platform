@@ -67,7 +67,7 @@ enum class OnboardingStep {
 fun OnboardingStep.startedButIncomplete(): Boolean {
     return when (this) {
         OnboardingStep.WELCOME -> false
-        OnboardingStep.DATA_PROTECTION -> false
+        OnboardingStep.DATA_PROTECTION -> true
         OnboardingStep.ACCEPT_PERMISSIONS -> true
         OnboardingStep.START_STUDY -> true
         OnboardingStep.COMPLETED -> false

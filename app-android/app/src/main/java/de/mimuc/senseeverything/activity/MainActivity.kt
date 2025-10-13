@@ -342,7 +342,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
                 when (studyState) {
                     StudyState.RUNNING, StudyState.NOT_ENROLLED -> {
-                        if (isEnrolled.value) {
+                        if (isEnrolled.value && !onboardingStep.value.startedButIncomplete()) {
                             if (!hasStudyEnded.value) {
                                 Text(
                                     stringResource(
