@@ -140,4 +140,59 @@
     <string name="onboarding_data_protection_not_available">No data protection notice was filled for this study.</string>
     <string name="onboarding_data_protection_accept">I have read and accept the data protection notice.</string>
     <string name="questionnaire_element_quantity_valid_range">Please enter a value between %1$d and %2$d.</string>
+
+    <!-- Permission names and descriptions -->
+    <string name="permission_wake_lock_name">Wake Lock</string>
+    <string name="permission_wake_lock_desc">Keeps the device awake for background data collection</string>
+
+    <string name="permission_record_audio_name">Record Audio</string>
+    <string name="permission_record_audio_desc">Records audio for ambient sound analysis</string>
+
+    <string name="permission_access_wifi_name">Access WiFi State</string>
+    <string name="permission_access_wifi_desc">Detects WiFi connection status and networks</string>
+
+    <string name="permission_receive_boot_name">Receive Boot Completed</string>
+    <string name="permission_receive_boot_desc">Starts the app automatically after device restart</string>
+
+    <string name="permission_read_phone_state_name">Read Phone State</string>
+    <string name="permission_read_phone_state_desc">Detects phone calls and connection status</string>
+
+    <string name="permission_access_network_name">Access Network State</string>
+    <string name="permission_access_network_desc">Monitors network connectivity</string>
+
+    <string name="permission_foreground_service_name">Foreground Service</string>
+    <string name="permission_foreground_service_desc">Runs background services for data collection</string>
+
+    <string name="permission_fine_location_name">Fine Location</string>
+    <string name="permission_fine_location_desc">Needs precise location for mobility patterns</string>
+
+    <string name="permission_background_location_name">Background Location</string>
+    <string name="permission_background_location_desc">Continues location tracking when app is in background</string>
+
+    <string name="permission_bluetooth_scan_name">Bluetooth Scan</string>
+    <string name="permission_bluetooth_scan_desc">Scans for nearby Bluetooth devices</string>
+
+    <string name="permission_notifications_name">Notifications</string>
+    <string name="permission_notifications_desc">Notifications for questionnaires and study updates</string>
+
+    <string name="permission_activity_recognition_name">Activity Recognition</string>
+    <string name="permission_activity_recognition_desc">Recognizes physical activities like walking or running</string>
+
+    <string name="permission_exact_alarm_name">Schedule Exact Alarms</string>
+    <string name="permission_exact_alarm_desc">Schedules exact time-based data collection and questionnaires</string>
+
+    <string name="permission_system_alert_name">Display Over Other Apps</string>
+    <string name="permission_system_alert_desc">Shows overlay windows for questionnaires</string>
+
+    <string name="permission_notification_listener_name">Notification Access</string>
+    <string name="permission_notification_listener_desc">To log when notifications are received</string>
+
+    <string name="permission_accessibility_name">Accessibility Service</string>
+    <string name="permission_accessibility_desc">For app usage and screen interactions</string>
+
+    <string name="permission_usage_stats_name">Usage Statistics</string>
+    <string name="permission_usage_stats_desc">For app usage patterns and screen time</string>
+
+    <string name="permission_battery_optimization_name">Battery Optimization Exemption</string>
+    <string name="permission_battery_optimization_desc">Prevents system from stopping background data collection</string>
 </resources>

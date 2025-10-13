@@ -16,7 +16,18 @@ class PeriodicServiceHealthcheckReceiver : BroadcastReceiver() {
         val result = ServiceHealthcheck.checkServices(context)
 
         if (!result.allHealthy) {
-            WHALELog.w(TAG, "Healthcheck failed - NotificationService: ${result.notificationServiceHealthy}, AccessibilityService: ${result.accessibilityServiceHealthy}")
+            WHALELog.w(
+                TAG,
+                "Healthcheck failed - NotificationService: ${result.notificationServiceHealthy}, " +
+                "AccessibilityService: ${result.accessibilityServiceHealthy}, " +
+                "LogService: ${result.logServiceHealthy}, " +
+                "CriticalPermissions: ${result.allCriticalPermissionsGranted}"
+            )
+
+            if (!result.allCriticalPermissionsGranted) {
+                val revokedPerms = result.permissionsGranted.filter { !it.value }
+                WHALELog.w(TAG, "Revoked critical permissions: ${revokedPerms.keys}")
+            }
         }
     }
 
