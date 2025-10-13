@@ -36,6 +36,7 @@ import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkRatingEl
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
 import de.mimuc.senseeverything.api.model.CircumplexValue
 import de.mimuc.senseeverything.api.model.ElementValue
+import de.mimuc.senseeverything.api.model.QuantityEntryValue
 import de.mimuc.senseeverything.api.model.RadioGroupValue
 import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
@@ -47,6 +48,7 @@ import de.mimuc.senseeverything.api.model.ema.CircumplexElement
 import de.mimuc.senseeverything.api.model.ema.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.LikertScaleLabelElement
+import de.mimuc.senseeverything.api.model.ema.QuantityEntryElement
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElement
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.ema.RadioGroupElement
@@ -337,6 +339,18 @@ fun QuestionnaireElement(
                     onValueChange(
                         element.id,
                         TextEntryValue(element.id, element.name, newValue)
+                    )
+                })
+        }
+
+        QuestionnaireElementType.QUANTITY_ENTRY -> {
+            QuantityEntryElementComponent(
+                element = element as QuantityEntryElement,
+                value = (elementValue as QuantityEntryValue).value,
+                onValueChange = { newValue ->
+                    onValueChange(
+                        element.id,
+                        QuantityEntryValue(element.id, element.name, newValue)
                     )
                 })
         }

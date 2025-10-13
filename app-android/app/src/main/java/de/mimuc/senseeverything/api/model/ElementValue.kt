@@ -216,6 +216,22 @@ class TextEntryValue(elementId: Int, elementName: String, var value: String) : E
     }
 }
 
+class QuantityEntryValue(elementId: Int, elementName: String, var value: String) : ElementValue(elementId, elementName, QuestionnaireElementType.QUANTITY_ENTRY) {
+    override fun isAnswered(): Boolean {
+        return value.isNotBlank()
+    }
+
+    override fun getSerializedValue(): String {
+        return value
+    }
+
+    override fun valueAsJsonObject(): JSONObject {
+        val json = JSONObject()
+        json.put("value", value)
+        return json
+    }
+}
+
 class CircumplexValue(elementId: Int, elementName: String, var value: Pair<Double, Double>) : ElementValue(elementId, elementName, QuestionnaireElementType.CIRCUMPLEX) {
     override fun isAnswered(): Boolean {
         return value.first != 0.0 || value.second != 0.0
@@ -272,6 +288,7 @@ fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
         QuestionnaireElementType.CHECKBOX_GROUP -> CheckboxGroupValue(element.id, element.name, emptyList())
         QuestionnaireElementType.SLIDER -> SliderValue(element.id, element.name, 0.0)
         QuestionnaireElementType.TEXT_ENTRY -> TextEntryValue(element.id, element.name, "")
+        QuestionnaireElementType.QUANTITY_ENTRY -> QuantityEntryValue(element.id, element.name, "")
         QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> SocialNetworkEntryValue(element.id, element.name, emptyList())
         QuestionnaireElementType.SOCIAL_NETWORK_RATING -> SocialNetworkRatingValue(element.id, element.name, emptyMap())
         QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(element.id, element.name, (0.0 to 0.0))

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
@@ -24,9 +26,13 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.fromHtml
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -35,11 +41,13 @@ import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.model.ema.CheckboxGroupElement
 import de.mimuc.senseeverything.api.model.ema.ExternalQuestionnaireLinkElement
 import de.mimuc.senseeverything.api.model.ema.GroupAlignment
 import de.mimuc.senseeverything.api.model.ema.LikertScaleLabelElement
+import de.mimuc.senseeverything.api.model.ema.QuantityEntryElement
 import de.mimuc.senseeverything.api.model.ema.RadioGroupElement
 import de.mimuc.senseeverything.api.model.ema.SliderElement
 import de.mimuc.senseeverything.api.model.ema.TextEntryElement
@@ -99,12 +107,12 @@ fun RadioGroupElementComponent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier =
                         rowModifier
-                        .selectable(
-                            selected = (index == value),
-                            onClick = { selectElement(index) },
-                            role = Role.RadioButton
-                        )
-                        .padding(6.dp)
+                            .selectable(
+                                selected = (index == value),
+                                onClick = { selectElement(index) },
+                                role = Role.RadioButton
+                            )
+                            .padding(6.dp)
                 ) {
                     RadioButton(
                         selected = value == index,
@@ -210,12 +218,76 @@ fun TextEntryElementComponent(
     value: String,
     onValueChange: (String) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+
     TextField(
         value = value,
         onValueChange = { onValueChange(it) },
         label = { Text(element.configuration.hint) },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions.Default.copy(
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                focusManager.clearFocus()
+            }
+        )
     )
+}
+
+@Composable
+fun QuantityEntryElementComponent(
+    element: QuantityEntryElement,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextField(
+                value = value,
+                onValueChange = { onValueChange(it) },
+                label = { Text(element.configuration.hint) },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                    }
+                )
+            )
+
+            if (element.configuration.unit.isNotEmpty()) {
+                Text(
+                    text = element.configuration.unit,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+    }
+
+    if (value.isNotEmpty()) {
+        val intValue = value.toIntOrNull()
+        if (intValue != null) {
+            if (intValue < element.configuration.rangeMin || intValue > element.configuration.rangeMax) {
+                Text(
+                    text = stringResource(
+                        R.string.questionnaire_element_quantity_valid_range,
+                        element.configuration.rangeMin,
+                        element.configuration.rangeMax
+                    ),
+                    color = androidx.compose.ui.graphics.Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    }
 }
 
 @HiltViewModel

@@ -4,6 +4,7 @@ import android.content.Context
 import de.mimuc.senseeverything.api.model.ButtonGroupValue
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
 import de.mimuc.senseeverything.api.model.ElementValue
+import de.mimuc.senseeverything.api.model.QuantityEntryValue
 import de.mimuc.senseeverything.api.model.RadioGroupValue
 import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
@@ -59,6 +60,7 @@ class QuestionnaireRuleEvaluator(var rules: List<QuestionnaireRule>) {
             QuestionnaireElementType.CHECKBOX_GROUP -> (value as CheckboxGroupValue).values.toString()
             QuestionnaireElementType.SLIDER -> (value as SliderValue).value.toString()
             QuestionnaireElementType.TEXT_ENTRY -> (value as TextEntryValue).value
+            QuestionnaireElementType.QUANTITY_ENTRY -> (value as QuantityEntryValue).value
             QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> (value as SocialNetworkEntryValue).values.toString()
             QuestionnaireElementType.BUTTON_GROUP -> (value as ButtonGroupValue).value
             QuestionnaireElementType.TIME_INPUT -> (value as TimeInputValue).value.toString()

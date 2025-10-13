@@ -15,6 +15,7 @@ enum class QuestionnaireElementType(val apiName: String) {
     @SerialName("checkbox_group") CHECKBOX_GROUP("checkbox_group"),
     @SerialName("slider") SLIDER("slider"),
     @SerialName("text_entry") TEXT_ENTRY("text_entry"),
+    @SerialName("quantity_entry") QUANTITY_ENTRY("quantity_entry"),
     @SerialName("external_questionnaire_link") EXTERNAL_QUESTIONNAIRE_LINK("external_questionnaire_link"),
     @SerialName("social_network_entry") SOCIAL_NETWORK_ENTRY("social_network_entry"),
     @SerialName("social_network_rating") SOCIAL_NETWORK_RATING("social_network_rating"),
@@ -54,6 +55,7 @@ sealed class QuestionnaireElement {
             is CheckboxGroupElement -> QuestionnaireElementType.CHECKBOX_GROUP
             is SliderElement -> QuestionnaireElementType.SLIDER
             is TextEntryElement -> QuestionnaireElementType.TEXT_ENTRY
+            is QuantityEntryElement -> QuestionnaireElementType.QUANTITY_ENTRY
             is ExternalQuestionnaireLinkElement -> QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK
             is SocialNetworkEntryElement -> QuestionnaireElementType.SOCIAL_NETWORK_ENTRY
             is SocialNetworkRatingElement -> QuestionnaireElementType.SOCIAL_NETWORK_RATING
@@ -122,6 +124,20 @@ data class TextEntryElement(
 @Serializable
 data class TextEntryConfiguration(
     val hint: String
+)
+
+@Serializable
+@SerialName("quantity_entry")
+data class QuantityEntryElement(
+    val configuration: QuantityEntryConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class QuantityEntryConfiguration(
+    val hint: String,
+    val unit: String,
+    val rangeMin: Int,
+    val rangeMax: Int
 )
 
 @Serializable
