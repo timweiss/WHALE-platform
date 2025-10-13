@@ -1,12 +1,13 @@
 import { Express } from 'express';
 import { authenticate, RequestUser } from '../middleware/authenticate';
 import { upload } from '../middleware/upload';
-import {
-  ISensorReadingRepository,
-  SensorReading,
-} from '../data/sensorReadingRepository';
+import { ISensorReadingRepository } from '../data/sensorReadingRepository';
 import { IEnrolmentRepository } from '../data/enrolmentRepository';
-import { HistogramSensorUpload, Logger, Observability, withDuration } from '../o11y';
+import { HistogramSensorUpload, Observability, withDuration } from '../o11y';
+import { ClientSensorReading } from '../model/sensor-reading';
+import { z } from 'zod';
+
+const ReadingBatchRequestBody = z.array(ClientSensorReading);
 
 export function createReadingController(
   sensorReadingRepository: ISensorReadingRepository,
@@ -15,10 +16,11 @@ export function createReadingController(
   observability: Observability,
 ) {
   app.post('/v1/reading', authenticate, async (req, res) => {
-    if (!req.body.sensorType || !req.body.data) {
+    const parsed = ClientSensorReading.safeParse(req.body);
+    if (!parsed.success) {
       return res
         .status(400)
-        .send({ error: 'Missing required fields (sensorType or data)' });
+        .send({ error: 'Invalid request', details: parsed.error });
     }
 
     const enrolment = await enrolmentRepository.getEnrolmentById(
@@ -30,23 +32,18 @@ export function createReadingController(
 
     const reading = await sensorReadingRepository.createSensorReading(
       enrolment.id,
-      {
-        sensorType: req.body.sensorType,
-        data: req.body.data,
-        timestamp: req.body.timestamp,
-      },
+      parsed.data,
     );
 
     res.json(reading);
   });
 
   app.post('/v1/reading/batch', authenticate, async (req, res) => {
-    if (
-      req.body.filter((r: SensorReading) => !r.sensorType || !r.data).length > 0
-    ) {
+    const parsed = ReadingBatchRequestBody.safeParse(req.body);
+    if (!parsed.success) {
       return res
         .status(400)
-        .send({ error: 'Missing required fields (sensorType or data)' });
+        .send({ error: 'Invalid request', details: parsed.error });
     }
 
     const enrolment = await enrolmentRepository.getEnrolmentById(
@@ -61,7 +58,7 @@ export function createReadingController(
         async () => {
           return await sensorReadingRepository.createSensorReadingBatched(
             enrolment.id,
-            req.body,
+            parsed.data,
           );
         },
         (duration) => HistogramSensorUpload(duration),

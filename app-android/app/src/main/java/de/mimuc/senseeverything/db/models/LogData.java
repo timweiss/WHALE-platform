@@ -3,6 +3,8 @@ package de.mimuc.senseeverything.db.models;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+import java.util.UUID;
+
 @Entity
 public class LogData {
 
@@ -21,6 +23,8 @@ public class LogData {
 
     public String filePath;
 
+    public String localId;
+
     public LogData(){}
 
     public LogData(long timestamp, String sensorName, String data){
@@ -28,6 +32,7 @@ public class LogData {
         this.sensorName = sensorName;
         this.data = data;
         this.synced = false;
+        this.localId = UUID.randomUUID().toString();
     }
 
     public LogData(long timestamp, String sensorName, String data, boolean hasFile, String filePath) {
@@ -36,5 +41,6 @@ public class LogData {
         this.data = data;
         this.hasFile = hasFile;
         this.filePath = filePath;
+        this.localId = UUID.randomUUID().toString();
     }
 }

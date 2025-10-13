@@ -35,7 +35,7 @@ data class SensorReading(
     val sensorType: String,
     val timestamp: Long,
     val data: String,
-    val uniqueId: String
+    val localId: String
 )
 
 @HiltWorker
@@ -102,7 +102,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 sensorType = logData.sensorName,
                 timestamp = logData.timestamp,
                 data = logData.data,
-                uniqueId = logData.uniqueId
+                localId = logData.localId
             )
         }
 
