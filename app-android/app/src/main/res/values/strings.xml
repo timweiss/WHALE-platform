@@ -208,4 +208,9 @@
     <string name="permission_revoked_description">Some required permissions were revoked. Please re-enable them to continue participating in the study.</string>
     <string name="permission_revoked_done">Done</string>
     <string name="permission_revoked_all_granted_toast">All permissions granted again. Thank you!</string>
+
+    <!-- Main screen permission warning -->
+    <string name="main_permission_warning_title">Permissions Required</string>
+    <string name="main_permission_warning_text">Some required permissions were revoked. The study cannot collect data properly.</string>
+    <string name="main_permission_warning_button">Fix Permissions</string>
 </resources>

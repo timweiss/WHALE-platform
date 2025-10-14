@@ -59,7 +59,18 @@ class LogService : AbstractService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val ret = super.onStartCommand(intent, flags, startId)
-        // starting sensors should only be done, once communicated by the SamplingManager
+        WHALELog.i(TAG, "onStartCommand called")
+
+        // fixme: the service might be restarted by the system, so we need to automatically start sensing
+        if (runHealthcheck(this).allCriticalPermissionsGranted) {
+            listenForLockUnlock()
+            setupPeriodicSampling()
+            setupContiunousSampling()
+        } else {
+            WHALELog.e(TAG, "Not all critical permissions granted, not starting sampling/stopping service")
+            stopSelf()
+        }
+
         return ret
     }
 

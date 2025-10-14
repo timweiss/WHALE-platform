@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -89,6 +90,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
 import de.mimuc.senseeverything.db.models.distanceMillis
 import de.mimuc.senseeverything.helpers.isServiceRunning
+import de.mimuc.senseeverything.permissions.PermissionManager
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.SEApplicationController
 import kotlinx.coroutines.Dispatchers
@@ -148,6 +150,9 @@ class StudyHomeViewModel @Inject constructor(
     private val _pendingQuestionnaires = MutableStateFlow<List<QuestionnaireInboxItem>>(emptyList())
     val pendingQuestionnaires: StateFlow<List<QuestionnaireInboxItem>> get() = _pendingQuestionnaires
 
+    private val _hasPermissionIssues = MutableStateFlow<Boolean>(false)
+    val hasPermissionIssues: StateFlow<Boolean> get() = _hasPermissionIssues
+
     init {
         load()
     }
@@ -156,6 +161,20 @@ class StudyHomeViewModel @Inject constructor(
         checkEnrolment()
         checkIfStudyIsRunning()
         getStudyDetails()
+        checkPermissions()
+    }
+
+    private fun checkPermissions() {
+        viewModelScope.launch {
+            val permissions = PermissionManager.checkAll(getApplication())
+            _hasPermissionIssues.value = permissions.values.any { !it }
+        }
+    }
+
+    fun openPermissionFix(context: Context) {
+        val intent = Intent(context, RecoverPermissionsActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
     }
 
     fun startOnboarding() {
@@ -281,6 +300,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val onboardingStep = viewModel.onboardingStep.collectAsState()
     val pendingQuestionnaires = viewModel.pendingQuestionnaires.collectAsState()
     val studyState by viewModel.studyState.collectAsState()
+    val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -358,10 +378,18 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                                 isRunning = isStudyRunning.value,
                                 isPaused = isStudyPaused.value,
                                 ended = hasStudyEnded.value,
+                                canResume = !hasPermissionIssues.value,
                                 resumeStudy = { viewModel.resumeStudy(context) },
                                 pauseStudy = { viewModel.pauseStudy(context) })
 
                             Spacer(modifier = Modifier.height(8.dp))
+
+                            if (hasPermissionIssues.value) {
+                                PermissionWarningBanner(
+                                    onFixPermissions = { viewModel.openPermissionFix(context) }
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
 
                             Text(
                                 AnnotatedString.fromHtml(study.value.description),
@@ -448,7 +476,6 @@ private fun QuestionnaireInbox(
 
     Column {
         Row(horizontalArrangement = Arrangement.Center) {
-            // inbox mat icon
             Image(
                 painter = painterResource(id = R.drawable.baseline_inbox_24),
                 contentDescription = "",
@@ -504,6 +531,7 @@ fun StudyActivity(
     isRunning: Boolean,
     isPaused: Boolean,
     ended: Boolean,
+    canResume: Boolean,
     resumeStudy: () -> Unit,
     pauseStudy: () -> Unit
 ) {
@@ -545,12 +573,51 @@ fun StudyActivity(
                 Text(stringResource(R.string.study_not_running))
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { resumeStudy() }) {
+
+            if (canResume) {
+                Button(onClick = { resumeStudy() }) {
+                    Text(
+                        stringResource(R.string.service_not_running_resume_study),
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PermissionWarningBanner(onFixPermissions: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = orange.copy(alpha = 0.15f)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.rounded_key_vertical_24),
+                contentDescription = stringResource(R.string.main_permission_warning_title),
+                modifier = Modifier
+                    .size(28.dp)
+                    .padding(end = 6.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.service_not_running_resume_study),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
+                    stringResource(R.string.main_permission_warning_title),
+                    fontWeight = FontWeight.SemiBold
                 )
+                Text(
+                    stringResource(R.string.main_permission_warning_text),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            FilledTonalButton(onClick = onFixPermissions) {
+                Text(stringResource(R.string.main_permission_warning_button))
             }
         }
     }
