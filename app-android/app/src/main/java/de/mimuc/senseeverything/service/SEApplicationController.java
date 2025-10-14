@@ -21,10 +21,6 @@ import androidx.room.Room;
 import dagger.hilt.android.HiltAndroidApp;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.service.esm.EsmHandler;
-import de.mimuc.senseeverything.service.sampling.OnUnlockAndPeriodicSamplingStrategy;
-import de.mimuc.senseeverything.service.sampling.OnUnlockSamplingStrategy;
-import de.mimuc.senseeverything.service.sampling.PeriodicSamplingStrategy;
-import de.mimuc.senseeverything.service.sampling.SamplingManager;
 
 @HiltAndroidApp
 public class SEApplicationController extends Application implements Configuration.Provider {
@@ -40,8 +36,6 @@ public class SEApplicationController extends Application implements Configuratio
      * Global request queue for Volley
      */
     private RequestQueue mRequestQueue;
-
-    private SamplingManager mSamplingManager;
 
     private EsmHandler mEsmHandler;
 
@@ -91,13 +85,6 @@ public class SEApplicationController extends Application implements Configuratio
         req.setTag(TAG);
 
         getRequestQueue().add(req);
-    }
-
-    public SamplingManager getSamplingManager() {
-        if (mSamplingManager == null) {
-            mSamplingManager = new SamplingManager(new OnUnlockAndPeriodicSamplingStrategy());
-        }
-        return mSamplingManager;
     }
 
     public EsmHandler getEsmHandler() {

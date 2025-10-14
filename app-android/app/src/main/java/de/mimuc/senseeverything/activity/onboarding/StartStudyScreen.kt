@@ -33,11 +33,11 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.LogService
-import de.mimuc.senseeverything.service.SEApplicationController
 import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
@@ -109,7 +109,7 @@ class StartStudyViewModel @Inject constructor(
 
                 // automatically start data collection
                 if (!isServiceRunning(LogService::class.java)) {
-                    SEApplicationController.getInstance().samplingManager.startSampling(context.applicationContext)
+                    LogServiceHelper.startLogService(context.applicationContext)
                 }
 
                 SamplingEventReceiver.Companion.sendBroadcast(context, "setupComplete")

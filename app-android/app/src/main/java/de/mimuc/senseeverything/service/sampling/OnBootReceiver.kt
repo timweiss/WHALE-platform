@@ -7,10 +7,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.goAsync
+import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
 import de.mimuc.senseeverything.logging.WHALELog
-import de.mimuc.senseeverything.service.SEApplicationController
+import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
 import de.mimuc.senseeverything.service.healthcheck.ServiceHealthcheck
@@ -74,9 +76,8 @@ class OnBootReceiver: BroadcastReceiver() {
     }
 
     private fun startSampling(context: Context) {
-        val samplingManager = SEApplicationController.getInstance().samplingManager
-        if (!samplingManager.isRunning(context)) {
-            samplingManager.startSampling(context)
+        if (!isServiceRunning(context, LogService::class.java)) {
+            LogServiceHelper.startLogService(context)
         }
     }
 }

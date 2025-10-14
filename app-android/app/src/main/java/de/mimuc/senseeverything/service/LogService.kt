@@ -61,7 +61,6 @@ class LogService : AbstractService() {
         val ret = super.onStartCommand(intent, flags, startId)
         WHALELog.i(TAG, "onStartCommand called")
 
-        // fixme: the service might be restarted by the system, so we need to automatically start sensing
         if (runHealthcheck(this).allCriticalPermissionsGranted) {
             listenForLockUnlock()
             setupPeriodicSampling()
@@ -312,7 +311,7 @@ class LogService : AbstractService() {
     private fun runHealthcheck(context: Context): HealthcheckResult {
         val result = checkServices(context)
         if (!result.allHealthy) {
-            WHALELog.w(TAG, "Healthcheck failed on unlock - services may need attention")
+            WHALELog.w(TAG, "Healthcheck failed - services may need attention")
 
             // Check for revoked permissions and show notification if needed
             val revokedPerms = result.permissionsGranted.filterValues { !it }

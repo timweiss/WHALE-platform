@@ -89,10 +89,10 @@ import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
 import de.mimuc.senseeverything.db.models.distanceMillis
+import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.permissions.PermissionManager
 import de.mimuc.senseeverything.service.LogService
-import de.mimuc.senseeverything.service.SEApplicationController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -184,11 +184,7 @@ class StudyHomeViewModel @Inject constructor(
     }
 
     fun resumeStudy(context: Context) {
-        if (isStudyRunning.value) {
-            SEApplicationController.getInstance().samplingManager.resumeSampling(context.applicationContext)
-        } else {
-            SEApplicationController.getInstance().samplingManager.startSampling(context.applicationContext)
-        }
+        LogServiceHelper.startLogService(context.applicationContext)
 
         viewModelScope.launch {
             delay(1000)
@@ -197,7 +193,7 @@ class StudyHomeViewModel @Inject constructor(
     }
 
     fun pauseStudy(context: Context) {
-        SEApplicationController.getInstance().samplingManager.pauseSampling(context.applicationContext)
+        LogServiceHelper.stopLogService(context.applicationContext)
         viewModelScope.launch {
             delay(1000)
             checkIfStudyIsRunning()

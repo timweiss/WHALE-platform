@@ -40,6 +40,7 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.onboarding.Heading
 import de.mimuc.senseeverything.activity.onboarding.PermissionItem
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
+import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.permissions.PermissionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -115,6 +116,9 @@ fun ReAcceptPermissionsScreen(
                 R.string.permission_revoked_all_granted_toast,
                 Toast.LENGTH_SHORT
             ).show()
+
+            // Restart LogService now that permissions are fixed
+            LogServiceHelper.startLogService(context)
 
             onAllPermissionsGranted()
         }
