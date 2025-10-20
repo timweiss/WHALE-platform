@@ -1,5 +1,5 @@
 import { Express } from 'express';
-import { UserPayload } from '../middleware/authenticate';
+import { authenticate, UserPayload } from '../middleware/authenticate';
 import { Config } from '../config';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import * as z from 'zod';
@@ -158,6 +158,23 @@ export function createEnrolmentController(
         }
       },
     );
+  });
+
+  app.get('/v1/enrolment', authenticate, async (req, res) => {
+    const enrolmentId = (req.user as UserPayload).enrolmentId;
+    if (!enrolmentId) {
+      return res.status(403).send({ error: 'Enrolment ID missing in token' });
+    }
+
+    const enrolment = await enrolmentRepository.getEnrolmentById(enrolmentId);
+    if (!enrolment) {
+      return res.status(404).send({ error: 'Enrolment not found' });
+    }
+
+    res.json({
+      enrolmentId: enrolment.id,
+      debugEnabled: enrolment.debugEnabled,
+    });
   });
 
   const pickExperimentalGroup = async (

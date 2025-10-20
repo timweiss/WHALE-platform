@@ -1,0 +1,1 @@
+alter table enrolments add column debug_enabled boolean default false not null;

@@ -7,6 +7,7 @@ export interface Enrolment {
   participantId: string;
   studyExperimentalGroupId: number;
   enrolledAt: Date;
+  debugEnabled: boolean;
 }
 
 interface EnrolmentRow {
@@ -15,6 +16,7 @@ interface EnrolmentRow {
   participant_id: string;
   study_experimental_group_id: number;
   enrolled_at: Date;
+  debug_enabled: boolean;
 }
 
 export interface IEnrolmentRepository {
@@ -125,6 +127,7 @@ export class EnrolmentRepository
       participantId: row.participant_id,
       studyExperimentalGroupId: row.study_experimental_group_id,
       enrolledAt: row.enrolled_at,
+      debugEnabled: row.debug_enabled
     };
   }
 }
