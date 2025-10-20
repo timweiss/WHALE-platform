@@ -64,7 +64,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
 		filter.addAction(Intent.ACTION_SCREEN_OFF);
 		mReceiver = new ScreenReceiver();
 		
-		try{
+		try {
 			context.unregisterReceiver(mReceiver);
 		} catch (Exception e) {
 			//Not Registered
@@ -76,7 +76,7 @@ public class ScreenOnOffSensor extends AbstractSensor {
 	
 	@Override
 	public void stop() {
-		if(m_IsRunning) {
+		if (m_IsRunning) {
 			m_IsRunning = false;
 			m_context.unregisterReceiver(mReceiver);	
 			try {
@@ -104,27 +104,4 @@ public class ScreenOnOffSensor extends AbstractSensor {
 			
 		}		
 	}
-	
-    public void onPause() {
-		Long t = System.currentTimeMillis();
-    	if(m_IsRunning) {
-        // WHEN THE SCREEN IS ABOUT TO TURN OFF
-	        if (wasScreenOn) {
-	            // THIS IS THE CASE WHEN ONPAUSE() IS CALLED BY THE SYSTEM DUE TO A SCREEN STATE CHANGE
-				onLogDataItem(System.currentTimeMillis(), "off");
-	        }
-    	}
-    }
- 
-    public void onResume() {
-		Long t = System.currentTimeMillis();
-    	if(m_IsRunning) {
-	        // ONLY WHEN SCREEN TURNS ON
-	        if (!wasScreenOn) {
-	            // THIS IS WHEN ONRESUME() IS CALLED DUE TO A SCREEN STATE CHANGE
-				onLogDataItem(System.currentTimeMillis(), "on");
-	        }
-    	}
-    }
-	
 }

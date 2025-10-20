@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -158,7 +159,7 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
 
     val constraints = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
-        .setRequiresCharging(true)
+        // .setRequiresCharging(true) --> blocks too many attempts at synchronization
         .build()
 
     val uploadWorkRequest = PeriodicWorkRequestBuilder<SensorReadingsUploadWorker>(1, TimeUnit.DAYS)
@@ -167,10 +168,12 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
         .setConstraints(constraints)
         .build()
 
-    // reset
-    WorkManager.getInstance(context).cancelAllWorkByTag("readingsUpload")
-
-    WorkManager.getInstance(context).enqueue(uploadWorkRequest)
+    // Use enqueueUniquePeriodicWork with REPLACE policy to properly replace existing work
+    WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        "sensorReadingsUpload",
+        ExistingPeriodicWorkPolicy.REPLACE,
+        uploadWorkRequest
+    )
 }
 
 fun enqueueSingleSensorReadingsUploadWorker(

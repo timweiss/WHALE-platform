@@ -1,18 +1,185 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WHALE</string>
-    <string name="notif_ticker">WHALE ist aktiv</string>
-    <string name="welcome_to_whale">Willkommen bei</string>
+
+    <string name="notif_ticker">WHALE läuft</string>
+    <string name="notif_title">Studie läuft, vielen Dank für Ihre Teilnahme!</string>
+    <string name="notif_text">Tippen, um Status zu sehen</string>
+
+    <string name="accessibility_service_description">WHALE muss als Bedienungshilfen-Dienst registriert werden, um die logische Zusammensetzung dessen, was auf Ihrem Bildschirm ist, lesen zu können.</string>
+    <string name="accessibility_service_description_dat">Detaillierte Aktivitätsverfolgung</string>
+    <string name="accessibility_button">Barrierefreiheit</string>
+    <string name="accessibility_button_On">Barrierefreiheit aktiviert</string>
+    <string name="accessibility_button_Off">Barrierefreiheit deaktiviert</string>
+    <string name="settings">Einstellungen</string>
+
+    <string name="title_activity_study_enrolment">Registrierung</string>
+    <string name="title_activity_questionnaire">Fragebogen</string>
+    <string name="questionnaire_button">Fragebogen öffnen</string>
+    <string name="yes">Ja</string>
+    <string name="no">Nein</string>
+    <string name="title_activity_onboarding">Onboarding</string>
     <string name="title_activity_main">WHALE</string>
+    <string name="notif_channel_name">WHALE-Benachrichtigungen</string>
+    <string name="welcome_to_whale">Willkommen bei</string>
     <string name="day_of">Tag %1$s von %2$s in %3$s</string>
-    <string name="dataprotection_email">whale@charlotte-fresenius-uni.de</string>
-    <string name="service_not_running_resume_study">Studie starten</string>
-    <string name="is_same_interaction">Einstellungen</string>
-    <string name="main_questionnaire_inbox">Aktuelle Fragebögen</string>
-    <string name="main_questionnaire_inbox_completion_hint">Beantworten Sie die Fragebögen sobald wie möglich</string>
-    <string name="main_questionnaire_inbox_element_duration_validitiy">In den nächsten %1$s Minuten</string>
-    <string name="main_questionnaire_inbox_element_duration_indefinite">Antworten Sie, wenn es Ihnen passt</string>
-    <string name="study_is_running">Studie ist aktiv</string>
-    <string name="study_not_running">Studie ist aktuell inaktiv</string>
     <string name="study_settings">Einstellungen</string>
+    <string name="enroll_in_study">An Studie teilnehmen</string>
+    <string name="study_is_running">Studie läuft</string>
+    <string name="study_is_paused">Studie ist pausiert und wird morgen fortgesetzt</string>
+    <string name="resume_study">Studie jetzt fortsetzen</string>
+    <string name="study_not_running">Studie läuft nicht</string>
+    <string name="service_not_running_resume_study">Studie fortsetzen</string>
+    <string name="is_same_interaction">Ist dies dieselbe Interaktion?</string>
+    <string name="continue_registration">Registrierung fortsetzen</string>
+    <string name="onboarding_start_study_everything_setup">Es wurde alles eingerichtet. Sie können nun mit der Teilnahme an der Studie beginnen.</string>
+    <string name="onboarding_start_study_start">Studie starten</string>
+    <string name="background_work_channel_id">BACKGROUND_WORK_CHANNEL</string>
+    <string name="background_work_title">Es werden Arbeiten im Hintergrund durchgeführt.</string>
+    <string name="background_work_detail">Bitte schließen Sie WHALE nicht.</string>
+    <string name="background_work_channel_name">Hintergrundarbeit</string>
+    <string name="title_activity_study_debug_info">Studien-Debug-Info</string>
+    <string name="title_activity_study_info">Informationen</string>
+    <string name="study_has_ended">Die Studie ist beendet. Vielen Dank für Ihre Teilnahme!</string>
+    <string name="gen_cancel">Abbrechen</string>
+    <string name="gen_add">Hinzufügen</string>
+    <string name="social_network_person_name">Name</string>
+    <string name="social_network_add_new_person">Neue Person hinzufügen</string>
+    <string name="gen_confirm">Bestätigen</string>
+    <string name="social_network_choose_person">Person auswählen</string>
+    <string name="gen_remove">Entfernen</string>
+    <string name="social_network_selected_people">Gewählte Personen</string>
+    <string name="social_network_no_person_selected">Keine Person ausgewählt</string>
+    <string name="social_network_add_person">Person hinzufügen</string>
+    <string name="abort">Abbrechen</string>
+    <string name="studyinfo_cancelling_pending">Teilnahme wird abgebrochen, bitte warten...</string>
+    <string name="studyinfo_open_debug">Debug-Info öffnen</string>
+    <string name="studyinfo_request_data_export">Datenexport anfordern</string>
+    <string name="studyinfo_request_data_deletion">Datenlöschung anfordern</string>
+    <string name="studyinfo_cancel_participation_deletion_hint">Wenn Sie die Löschung von Daten beantragen möchten, können Sie dies nach dem Abbruch Ihrer Teilnahme tun.</string>
+    <string name="studyinfo_cancel_participation">Teilnahme abbrechen</string>
+    <string name="studyinfo_cancel_participation_confirm_title">Abbruch bestätigen</string>
+    <string name="studyinfo_cancel_participation_confirm_text">Sind Sie sicher, dass Sie Ihre Teilnahme an der Studie abbrechen möchten?\n\nWenn Sie Ihre Daten löschen lassen möchten, können Sie dies nach dem Abbruch über die Studieneinstellungen beantragen.</string>
+    <string name="n_days">%1$s Tage</string>
+    <string name="studyinfo_last_day">Letzter Studientag</string>
+    <string name="studyinfo_no_information_available">Derzeit keine Informationen verfügbar</string>
+    <string name="studyinfo_your_id">Ihre Teilnehmer-ID</string>
+    <string name="studyinfo_data_export_title">Datenexport bestätigen</string>
+    <string name="studyinfo_data_export_description">Um einen Export Ihrer Studiendaten anzufordern, senden Sie bitte eine E-Mail mit Ihrer Teilnahme-Kennung: %1$s.\n\n</string>
+    <string name="studyinfo_data_export_proceed_email">Möchten Sie fortfahren und Ihre E-Mail-App öffnen?</string>
+    <string name="studyinfo_send_email">E-Mail senden</string>
+    <string name="studyinfo_data_deletion_description">Um die Löschung Ihrer Studiendaten anzufordern, senden Sie bitte eine E-Mail mit Ihrer Teilnahme-Kennung: %1$s.\n\n</string>
+    <string name="studyinfo_data_deletion_title">Datenlöschung bestätigen</string>
+    <string name="dataprotection_email">whale@charlotte-fresenius-uni.de</string>
+    <string name="studyinfo_data_deletion_email_subject">Anfrage zur Datenlöschung</string>
+    <string name="studyinfo_data_deletion_email_body">Hallo,\n\nich möchte die Löschung meiner Studiendaten beantragen.\nMeine Teilnahme-Kennung ist: %1$s\n\nVielen Dank.</string>
+    <string name="studyinfo_intent_send_email">E-Mail senden...</string>
+    <string name="studyinfo_data_export_email_subject">Anfrage zum Datenexport</string>
+    <string name="studyinfo_data_export_email_body">Hallo,\n\nich möchte einen Export meiner Studiendaten beantragen.\nMeine Teilnahme-Kennung ist: %1$s\n\nVielen Dank.</string>
+    <string name="studyinfo_title">Einstellungen</string>
+    <string name="main_study_cancelled_uninstall_hint">Die Teilnahme wurde abgebrochen. Sie können die App jetzt deinstallieren.</string>
+    <string name="main_study_ended_last_questionnaire_hint">Die Studie ist beendet. Möglicherweise müssen Sie den letzten Fragebogen noch ausfüllen, bevor Sie die App deinstallieren.</string>
+    <string name="main_questionnaire_inbox">Aktuelle Fragebögen</string>
+    <string name="main_questionnaire_inbox_completion_hint">So bald wie möglich ausfüllen</string>
+    <string name="main_questionnaire_inbox_element_duration_validitiy">In den nächsten %1$s Min. ausfüllen</string>
+    <string name="main_questionnaire_inbox_element_duration_indefinite">Bitte schnellstmöglich ausfüllen</string>
+    <string name="onboarding_welcome">Willkommen</string>
+    <string name="onboarding_join_study">An Studie teilnehmen</string>
+    <string name="onboarding_permissions">Berechtigungen</string>
+    <string name="onboarding_start_study">Studie starten</string>
+    <string name="onboarding_completed">Abgeschlossen</string>
+    <string name="onboarding_app_explanation">Hier können wir einen Text darstellen, um die App zu erklären.</string>
+    <string name="onboarding_continue">Weiter</string>
+    <string name="onboarding_permissions_necessary">Notwendige Berechtigungen</string>
+    <string name="onboarding_permissions_hint">Um an der Studie teilnehmen zu können, benötigen wir Zugriff auf einige Sensoren Ihres Telefons. Alle Daten werden pseudonymisiert und sicher gespeichert.</string>
+    <string name="onboarding_grant_permission">Berechtigung anfordern</string>
+    <string name="onboarding_permissions_accept_all_hint">Bitte akzeptieren Sie alle Berechtigungen, um fortzufahren. Sie können die Studie jederzeit abbrechen und haben die Möglichkeit, alle gesammelten Daten zu löschen.</string>
+    <string name="onboarding_start_study_finalizing">Einrichtung wird abgeschlossen, dies kann einen Moment dauern...</string>
+    <string name="onboarding_start_study_heading">Alles bereit!</string>
+    <string name="questionnaire_thank_you_toast">Ihre Antworten wurden gespeichert. Vielen Dank!</string>
+    <string name="questionnaire_already_completed_toast">Dieser Fragebogen wurde bereits ausgefüllt.</string>
+    <string name="questionnaire_not_found_toast">Fragebogen wurde nicht gefunden.</string>
+    <string name="questionnaire_answer_all_questions">Bitte beantworten Sie alle Fragen.</string>
+    <string name="questionnaire_previous">Zurück</string>
+    <string name="questionnaire_next">Weiter</string>
+    <string name="questionnaire_save">Speichern</string>
+    <string name="questionnaire_empty_error">Es wurden keine Fragen bereitgestellt. Dies ist wahrscheinlich ein Fehler des Studienerstellers.</string>
+    <string name="onboarding_data_protection">Datenschutz</string>
+    <string name="onboarding_data_protection_header">Bitte sorgfältig lesen</string>
+    <string name="onboarding_data_protection_not_available">Für diese Studie wurde kein Datenschutzhinweis ausgefüllt.</string>
+    <string name="onboarding_data_protection_accept">Ich habe den Datenschutzhinweis gelesen und akzeptiere ihn.</string>
+    <string name="questionnaire_element_quantity_valid_range">Bitte geben Sie einen Wert zwischen %1$d und %2$d ein.</string>
+
+    <!-- Permission names and descriptions -->
+    <string name="permission_wake_lock_name">Wake Lock</string>
+    <string name="permission_wake_lock_desc">Hält das Gerät für die Hintergrunddatenerfassung wach</string>
+
+    <string name="permission_record_audio_name">Audio aufnehmen</string>
+    <string name="permission_record_audio_desc">Nimmt Audio für die Umgebungsgeräuschanalyse auf</string>
+
+    <string name="permission_access_wifi_name">WLAN-Status</string>
+    <string name="permission_access_wifi_desc">Erkennt WLAN-Verbindungsstatus und Netzwerke</string>
+
+    <string name="permission_receive_boot_name">Autostart</string>
+    <string name="permission_receive_boot_desc">Startet die App automatisch nach dem Geräteneustart</string>
+
+    <string name="permission_read_phone_state_name">Telefonstatus</string>
+    <string name="permission_read_phone_state_desc">Erkennt Telefonanrufe und Verbindungsstatus</string>
+
+    <string name="permission_access_network_name">Netzwerkstatus</string>
+    <string name="permission_access_network_desc">Überwacht die Netzwerkverbindung</string>
+
+    <string name="permission_foreground_service_name">Hintergrunddienste</string>
+    <string name="permission_foreground_service_desc">Führt Hintergrunddienste für die Datenerfassung aus</string>
+
+    <string name="permission_fine_location_name">Standortbestimmung</string>
+    <string name="permission_fine_location_desc">Benötigt genaue Standortdaten für Mobilitätsmuster</string>
+
+    <string name="permission_background_location_name">Hintergrundstandort</string>
+    <string name="permission_background_location_desc">Setzt die Standortverfolgung fort, wenn die App im Hintergrund ist</string>
+
+    <string name="permission_bluetooth_scan_name">Bluetooth-Scan</string>
+    <string name="permission_bluetooth_scan_desc">Scannt nach Bluetooth-Geräten in der Nähe</string>
+
+    <string name="permission_notifications_name">Benachrichtigungen</string>
+    <string name="permission_notifications_desc">Benachrichtigungen für Fragebögen und Studienaktualisierungen</string>
+
+    <string name="permission_activity_recognition_name">Aktivitätserkennung</string>
+    <string name="permission_activity_recognition_desc">Erkennt körperliche Aktivitäten wie Gehen oder Laufen</string>
+
+    <string name="permission_exact_alarm_name">Genaue Alarme</string>
+    <string name="permission_exact_alarm_desc">Plant zeitgenaue Datenerfassung und Fragebögen</string>
+
+    <string name="permission_system_alert_name">Über anderen Apps anzeigen</string>
+    <string name="permission_system_alert_desc">Zeigt Overlay-Fenster für Fragebögen an</string>
+
+    <string name="permission_notification_listener_name">Benachrichtigungszugriff</string>
+    <string name="permission_notification_listener_desc">Protokolliert, wann Benachrichtigungen empfangen werden</string>
+
+    <string name="permission_accessibility_name">Bedienungshilfen-Dienst</string>
+    <string name="permission_accessibility_desc">Für App-Nutzung und Bildschirminteraktionen</string>
+
+    <string name="permission_usage_stats_name">Nutzungsstatistiken</string>
+    <string name="permission_usage_stats_desc">Für App-Nutzungsmuster und Bildschirmzeit</string>
+
+    <string name="permission_battery_optimization_name">Ausnahme der Akku-Optimierung</string>
+    <string name="permission_battery_optimization_desc">Verhindert, dass das System die Hintergrunddatenerfassung stoppt. Für die erfolgreiche Studienteilnahme ist es erforderlich, dass keine Batteriebeschärnkungen bestehen.</string>
+
+    <!-- Permission revocation notification -->
+    <string name="permission_revoked_channel_name">Berechtigungsbenachrichtigungen</string>
+    <string name="permission_revoked_channel_description">Alarme, wenn erforderliche Berechtigungen widerrufen werden</string>
+    <string name="permission_revoked_notification_title">Berechtigungen erforderlich</string>
+    <plurals name="permission_revoked_notification_text">
+        <item quantity="one">%d Berechtigung wurde widerrufen. Tippen Sie, um sie erneut zu aktivieren.</item>
+        <item quantity="other">%d Berechtigungen wurden widerrufen. Tippen Sie, um sie erneut zu aktivieren.</item>
+    </plurals>
+    <string name="permission_revoked_title">Berechtigungen erneut aktivieren</string>
+    <string name="permission_revoked_description">Einige erforderliche Berechtigungen wurden widerrufen. Bitte aktivieren Sie diese erneut, um weiterhin an der Studie teilzunehmen.</string>
+    <string name="permission_revoked_done">Fertig</string>
+    <string name="permission_revoked_all_granted_toast">Alle Berechtigungen erneut erteilt. Vielen Dank!</string>
+
+    <!-- Main screen permission warning -->
+    <string name="main_permission_warning_title">Berechtigungen erforderlich</string>
+    <string name="main_permission_warning_text">Einige erforderliche Berechtigungen wurden widerrufen. Die Studie kann daher nicht ordnungsgemäß fortgeführt werden.</string>
+    <string name="main_permission_warning_button">Beheben</string>
 </resources>

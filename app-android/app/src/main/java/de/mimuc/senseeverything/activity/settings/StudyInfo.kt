@@ -113,6 +113,9 @@ class StudyInfoViewModel @Inject constructor(
     private val _showDataExportDialog = MutableStateFlow(false)
     val showDataExportDialog: StateFlow<Boolean> get() = _showDataExportDialog
 
+    private val _showCancelParticipationDialog = MutableStateFlow(false)
+    val showCancelParticipationDialog: StateFlow<Boolean> get() = _showCancelParticipationDialog
+
     private val _isCancellingParticipation = MutableStateFlow(false)
     val isCancellingParticipation: StateFlow<Boolean> get() = _isCancellingParticipation
 
@@ -147,6 +150,10 @@ class StudyInfoViewModel @Inject constructor(
         context.startActivity(Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         })
+    }
+
+    fun requestCancelParticipation() {
+        _showCancelParticipationDialog.value = true
     }
 
     fun requestDataDeletion(context: Context) {
@@ -203,6 +210,10 @@ class StudyInfoViewModel @Inject constructor(
     fun hideDataDeletionDialog() {
         _showDataDeletionDialog.value = false
     }
+
+    fun hideCancelParticipationDialog() {
+        _showCancelParticipationDialog.value = false
+    }
 }
 
 @Composable
@@ -216,9 +227,25 @@ fun StudyInfoView(
     val currentDay = viewModel.currentDay.collectAsState()
     val showDataDeletionDialog by viewModel.showDataDeletionDialog.collectAsState()
     val showDataExportDialog by viewModel.showDataExportDialog.collectAsState()
+    val showCancelParticipationDialog by viewModel.showCancelParticipationDialog.collectAsState()
     val isCancellingParticipation by viewModel.isCancellingParticipation.collectAsState()
     val studyState by viewModel.studyState.collectAsState()
     val context = LocalContext.current
+
+    if (showCancelParticipationDialog) {
+        ConfirmationDialog(
+            title = stringResource(R.string.studyinfo_cancel_participation_confirm_title),
+            text = stringResource(R.string.studyinfo_cancel_participation_confirm_text),
+            confirmButtonText = stringResource(R.string.studyinfo_cancel_participation),
+            onConfirm = {
+                viewModel.hideCancelParticipationDialog()
+                viewModel.cancelParticipation(context)
+            },
+            onDismiss = {
+                viewModel.hideCancelParticipationDialog()
+            }
+        )
+    }
 
     if (showDataDeletionDialog) {
         ConfirmationDialog(
@@ -277,14 +304,12 @@ fun StudyInfoView(
             if (studyState == StudyState.RUNNING) {
                 Button(
                     onClick = {
-                        viewModel.cancelParticipation(context)
+                        viewModel.requestCancelParticipation()
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.studyinfo_cancel_participation))
                 }
-
-                Text(stringResource(R.string.studyinfo_cancel_participation_deletion_hint))
 
                 SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
             }

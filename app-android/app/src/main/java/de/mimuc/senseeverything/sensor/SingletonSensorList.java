@@ -9,7 +9,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import de.mimuc.senseeverything.db.AppDatabase;
-import de.mimuc.senseeverything.db.SensorDatabaseHelper;
 import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
 import de.mimuc.senseeverything.sensor.implementation.ActivityRecognitionSensor;
 import de.mimuc.senseeverything.sensor.implementation.BluetoothSensor;
@@ -50,16 +49,6 @@ public class SingletonSensorList {
 		this.list.add(new ConnectedWifiSensor(aContext, database, sensitiveDataSalt));
 		this.list.add(new UsageStatsSensor(aContext, database));
 		this.list.add(new ActivityRecognitionSensor(aContext, database));
-
-		SensorDatabaseHelper db = new SensorDatabaseHelper(pContext);
-
-		for (AbstractSensor s : this.list)
-			db.addIfNotExists(s);
-
-		for (AbstractSensor s : this.list)
-			s.setEnabled(db.getSensorData(s));
-
-		db.close();
 	}
 
 	public List<AbstractSensor> getOrInitializeList(Context pContext, AppDatabase database, String sensitiveDataSalt) {
