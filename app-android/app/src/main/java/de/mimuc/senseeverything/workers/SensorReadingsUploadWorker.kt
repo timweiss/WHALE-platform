@@ -72,6 +72,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 val total = db.logDataDao().getUnsyncedCount()
                 syncNextNActivities(db, applicationContext, token, total, 0, 200)
             } catch (e: Exception) {
+                WHALELog.e(TAG, "Unexpected error during sensor readings upload: $e")
                 Result.retry()
             }
         }

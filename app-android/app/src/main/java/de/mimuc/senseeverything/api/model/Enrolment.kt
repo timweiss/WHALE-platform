@@ -1,19 +1,27 @@
 package de.mimuc.senseeverything.api.model
 
+import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.ApiResources
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class EnrolmentRequest(
+data class CreateEnrolmentRequest(
     val enrolmentKey: String
 )
 
 @Serializable
-data class EnrolmentResponse(
+data class CreateEnrolmentResponse(
     val studyId: Int,
     val token: String,
     val participantId: String,
     val phases: List<ExperimentalGroupPhase>,
+)
+
+@Serializable
+data class EnrolmentResponse(
+    val enrolmentId: Int,
+    val debugEnabled: Boolean
 )
 
 @Serializable
@@ -31,3 +39,13 @@ data class ExperimentalGroupPhase(
     val durationDays: Int,
     val interactionWidgetStrategy: InteractionWidgetDisplayStrategy
 )
+
+suspend fun getEnrolmentInfo(
+    client: ApiClient,
+    token: String
+): EnrolmentResponse {
+    return client.getSerialized<EnrolmentResponse>(
+        endpoint = ApiResources.enrolment(),
+        token = token
+    )
+}

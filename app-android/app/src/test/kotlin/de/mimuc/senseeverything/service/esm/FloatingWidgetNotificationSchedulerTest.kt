@@ -357,4 +357,71 @@ class FloatingWidgetNotificationSchedulerTest {
             assert(latest.name == "Last Bucket Trigger") { "Expected 'Last Bucket Trigger', but got '${latest.name}'" }
         }
     }
+
+    /**
+     * When there are two triggers in the same time bucket:
+     * 1. An unanswered non-wave breaking trigger
+     * 2. An answered non-wave breaking trigger that is valid 5 minutes after the first one
+     *
+     * The wave should be considered "completed" because a later trigger in the same bucket
+     * has been answered. Therefore, selectLastValidTrigger should return null.
+     */
+    @Test
+    fun returnsNullWhenLaterTriggerInSameBucketIsAnswered() {
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 12)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+
+        val firstTriggerTime = calendar.clone() as Calendar
+        firstTriggerTime.set(Calendar.HOUR_OF_DAY, 11)
+        firstTriggerTime.set(Calendar.MINUTE, 30)
+        firstTriggerTime.set(Calendar.SECOND, 0)
+        firstTriggerTime.set(Calendar.MILLISECOND, 0)
+
+        val secondTriggerTime = calendar.clone() as Calendar
+        secondTriggerTime.set(Calendar.HOUR_OF_DAY, 11)
+        secondTriggerTime.set(Calendar.MINUTE, 35)
+        secondTriggerTime.set(Calendar.SECOND, 0)
+        secondTriggerTime.set(Calendar.MILLISECOND, 0)
+
+        val triggers = listOf(
+            NotificationTrigger(
+                uid = java.util.UUID.randomUUID(),
+                addedAt = System.currentTimeMillis(),
+                name = "First Trigger (Unanswered)",
+                status = NotificationTriggerStatus.Displayed,
+                validFrom = firstTriggerTime.timeInMillis,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "11:30-13:59",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 1,
+                triggerJson = "{}",
+                updatedAt = System.currentTimeMillis()
+            ),
+            NotificationTrigger(
+                uid = java.util.UUID.randomUUID(),
+                addedAt = System.currentTimeMillis(),
+                name = "Second Trigger (Answered)",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = secondTriggerTime.timeInMillis,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "11:30-13:59",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 1,
+                triggerJson = "{}",
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+
+        val latest = FloatingWidgetNotificationScheduler.selectLastValidTrigger(triggers, calendar)
+
+        assert(latest == null) {
+            "Expected null because wave is completed (later trigger in same bucket was answered), but got '${latest?.name}'"
+        }
+    }
+
 }

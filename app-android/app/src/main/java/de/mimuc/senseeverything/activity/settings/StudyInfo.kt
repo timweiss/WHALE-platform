@@ -45,11 +45,15 @@ import de.mimuc.senseeverything.activity.MainActivity
 import de.mimuc.senseeverything.activity.SpacerLine
 import de.mimuc.senseeverything.activity.StudyDebugInfo
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
+import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.model.EnrolmentResponse
 import de.mimuc.senseeverything.api.model.Study
+import de.mimuc.senseeverything.api.model.getEnrolmentInfo
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.currentStudyDay
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.study.runStudyLifecycleCleanup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -122,6 +126,9 @@ class StudyInfoViewModel @Inject constructor(
     private val _studyState = MutableStateFlow(StudyState.RUNNING)
     val studyState: StateFlow<StudyState> get() = _studyState
 
+    private val _enrolmentInfo = MutableStateFlow<EnrolmentResponse?>(null)
+    val enrolmentInfo: StateFlow<EnrolmentResponse?> get() = _enrolmentInfo
+
     init {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -130,6 +137,13 @@ class StudyInfoViewModel @Inject constructor(
                 _currentDay.value = dataStoreManager.currentStudyDay()
                 _study.value = dataStoreManager.studyFlow.first()
                 _studyState.value = dataStoreManager.studyStateFlow.first() ?: StudyState.NOT_ENROLLED
+
+                try {
+                    _enrolmentInfo.value = getEnrolmentInfo(ApiClient.getInstance(getApplication()), dataStoreManager.tokenFlow.first())
+                } catch (e: Exception) {
+                    // ignore, enrolment info is optional
+                    WHALELog.w("StudyInfoViewModel", "Failed to fetch enrolment info: ${e.localizedMessage}" )
+                }
             }
         }
     }
@@ -230,6 +244,7 @@ fun StudyInfoView(
     val showCancelParticipationDialog by viewModel.showCancelParticipationDialog.collectAsState()
     val isCancellingParticipation by viewModel.isCancellingParticipation.collectAsState()
     val studyState by viewModel.studyState.collectAsState()
+    val enrolmentInfo by viewModel.enrolmentInfo.collectAsState()
     val context = LocalContext.current
 
     if (showCancelParticipationDialog) {
@@ -285,7 +300,7 @@ fun StudyInfoView(
             Text(enrolmentId)
         }
 
-        Text("Remaining Days", fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.studyinfo_remaining_days), fontWeight = FontWeight.Bold)
         if (study.value == null) {
             Text(stringResource(R.string.studyinfo_no_information_available))
         } else {
@@ -336,7 +351,7 @@ fun StudyInfoView(
                 Text(stringResource(R.string.studyinfo_request_data_export))
             }
 
-            if (BuildConfig.DEBUG) {
+            if (enrolmentInfo?.debugEnabled == true || BuildConfig.DEBUG) {
                 Button(
                     onClick = {
                         // open enrolment settings

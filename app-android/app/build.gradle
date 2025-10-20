@@ -20,8 +20,8 @@ android {
         applicationId "de.mimuc.whale"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
-        versionCode 21
-        versionName "1.0.0"
+        versionCode 22
+        versionName "1.0.22"
 
         multiDexEnabled true
         vectorDrawables {

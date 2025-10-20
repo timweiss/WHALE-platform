@@ -54,17 +54,16 @@
     <string name="abort">Abbrechen</string>
     <string name="studyinfo_cancelling_pending">Teilnahme wird abgebrochen, bitte warten...</string>
     <string name="studyinfo_open_debug">Debug-Info öffnen</string>
-    <string name="studyinfo_request_data_export">Datenexport anfordern</string>
+    <string name="studyinfo_request_data_export">Meine Daten anfordern</string>
     <string name="studyinfo_request_data_deletion">Datenlöschung anfordern</string>
     <string name="studyinfo_cancel_participation_deletion_hint">Wenn Sie die Löschung von Daten beantragen möchten, können Sie dies nach dem Abbruch Ihrer Teilnahme tun.</string>
     <string name="studyinfo_cancel_participation">Teilnahme abbrechen</string>
-    <string name="studyinfo_cancel_participation_confirm_title">Abbruch bestätigen</string>
     <string name="studyinfo_cancel_participation_confirm_text">Sind Sie sicher, dass Sie Ihre Teilnahme an der Studie abbrechen möchten?\n\nWenn Sie Ihre Daten löschen lassen möchten, können Sie dies nach dem Abbruch über die Studieneinstellungen beantragen.</string>
     <string name="n_days">%1$s Tage</string>
     <string name="studyinfo_last_day">Letzter Studientag</string>
     <string name="studyinfo_no_information_available">Derzeit keine Informationen verfügbar</string>
     <string name="studyinfo_your_id">Ihre Teilnehmer-ID</string>
-    <string name="studyinfo_data_export_title">Datenexport bestätigen</string>
+    <string name="studyinfo_data_export_title">Datenanforderung bestätigen</string>
     <string name="studyinfo_data_export_description">Um einen Export Ihrer Studiendaten anzufordern, senden Sie bitte eine E-Mail mit Ihrer Teilnahme-Kennung: %1$s.\n\n</string>
     <string name="studyinfo_data_export_proceed_email">Möchten Sie fortfahren und Ihre E-Mail-App öffnen?</string>
     <string name="studyinfo_send_email">E-Mail senden</string>
@@ -91,7 +90,7 @@
     <string name="onboarding_app_explanation">Hier können wir einen Text darstellen, um die App zu erklären.</string>
     <string name="onboarding_continue">Weiter</string>
     <string name="onboarding_permissions_necessary">Notwendige Berechtigungen</string>
-    <string name="onboarding_permissions_hint">Um an der Studie teilnehmen zu können, benötigen wir Zugriff auf einige Sensoren Ihres Telefons. Alle Daten werden pseudonymisiert und sicher gespeichert.</string>
+    <string name="onboarding_permissions_hint">Um an der Studie teilnehmen zu können, benötigen wir Zugriff auf einige Sensoren Ihres Telefons. Alle Daten werden pseudonymisiert und auf geschützten Severn sicher gespeichert.</string>
     <string name="onboarding_grant_permission">Berechtigung anfordern</string>
     <string name="onboarding_permissions_accept_all_hint">Bitte akzeptieren Sie alle Berechtigungen, um fortzufahren. Sie können die Studie jederzeit abbrechen und haben die Möglichkeit, alle gesammelten Daten zu löschen.</string>
     <string name="onboarding_start_study_finalizing">Einrichtung wird abgeschlossen, dies kann einen Moment dauern...</string>
@@ -151,7 +150,7 @@
     <string name="permission_exact_alarm_desc">Plant zeitgenaue Datenerfassung und Fragebögen</string>
 
     <string name="permission_system_alert_name">Über anderen Apps anzeigen</string>
-    <string name="permission_system_alert_desc">Zeigt Overlay-Fenster für Fragebögen an</string>
+    <string name="permission_system_alert_desc">Zeigt Fenster für Fragebögen im Vordergrund an</string>
 
     <string name="permission_notification_listener_name">Benachrichtigungszugriff</string>
     <string name="permission_notification_listener_desc">Protokolliert, wann Benachrichtigungen empfangen werden</string>
@@ -163,7 +162,7 @@
     <string name="permission_usage_stats_desc">Für App-Nutzungsmuster und Bildschirmzeit</string>
 
     <string name="permission_battery_optimization_name">Ausnahme der Akku-Optimierung</string>
-    <string name="permission_battery_optimization_desc">Verhindert, dass das System die Hintergrunddatenerfassung stoppt. Für die erfolgreiche Studienteilnahme ist es erforderlich, dass keine Batteriebeschärnkungen bestehen.</string>
+    <string name="permission_battery_optimization_desc">Verhindert, dass das System die Hintergrunddatenerfassung stoppt. Für die erfolgreiche Studienteilnahme ist es erforderlich, dass keine Akkubeschränkungen bestehen.</string>
 
     <!-- Permission revocation notification -->
     <string name="permission_revoked_channel_name">Berechtigungsbenachrichtigungen</string>
@@ -182,4 +181,6 @@
     <string name="main_permission_warning_title">Berechtigungen erforderlich</string>
     <string name="main_permission_warning_text">Einige erforderliche Berechtigungen wurden widerrufen. Die Studie kann daher nicht ordnungsgemäß fortgeführt werden.</string>
     <string name="main_permission_warning_button">Beheben</string>
+    <string name="studyinfo_remaining_days">Verbleibende Tage</string>
+    <string name="studyinfo_cancel_participation_confirm_title">Abbruch bestätigen</string>
 </resources>

@@ -157,7 +157,19 @@ class ApiClient private constructor(context: Context) {
                 }
             }
         }
-        
+
         addToRequestQueue(request)
+    }
+
+    /**
+     * GET request with kotlinx.serialization support using endpoint and token
+     * Automatically constructs the full URL from baseUrl + endpoint and adds Authorization header
+     */
+    suspend inline fun <reified T> getSerialized(
+        endpoint: String,
+        token: String
+    ): T {
+        val headers = mapOf("Authorization" to "Bearer $token")
+        return getSerialized(endpoint, headers)
     }
 }

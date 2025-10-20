@@ -36,8 +36,8 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.api.decodeError
-import de.mimuc.senseeverything.api.model.EnrolmentRequest
-import de.mimuc.senseeverything.api.model.EnrolmentResponse
+import de.mimuc.senseeverything.api.model.CreateEnrolmentRequest
+import de.mimuc.senseeverything.api.model.CreateEnrolmentResponse
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.logging.WHALELog
@@ -96,19 +96,19 @@ class DataProtectionViewModel @Inject constructor(
         viewModelScope.launch {
             _isEnrolling.value = true
             val client = ApiClient.getInstance(context)
-            val request = EnrolmentRequest(currentStudy.enrolmentKey)
+            val request = CreateEnrolmentRequest(currentStudy.enrolmentKey)
 
             try {
-                val enrolmentResponse = client.postSerialized<EnrolmentRequest, EnrolmentResponse>(
+                val createEnrolmentResponse = client.postSerialized<CreateEnrolmentRequest, CreateEnrolmentResponse>(
                     url = ApiResources.enrolment(),
                     requestData = request
                 )
 
                 dataStoreManager.saveEnrolment(
-                    enrolmentResponse.token,
-                    enrolmentResponse.participantId,
-                    enrolmentResponse.studyId,
-                    enrolmentResponse.phases
+                    createEnrolmentResponse.token,
+                    createEnrolmentResponse.participantId,
+                    createEnrolmentResponse.studyId,
+                    createEnrolmentResponse.phases
                 )
 
                 _isEnrolling.value = false
