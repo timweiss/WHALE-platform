@@ -61,6 +61,7 @@ export function createReadingController(
 
       res.json({});
     } catch (e) {
+      observability.logger.error(`Error creating readings ${e}`, { error: e });
       res.status(500).send({ error: 'Error creating readings' });
     }
   });
