@@ -3,7 +3,7 @@ import { authenticate, RequestUser } from '../middleware/authenticate';
 import { upload } from '../middleware/upload';
 import { ISensorReadingRepository } from '../data/sensorReadingRepository';
 import { IEnrolmentRepository } from '../data/enrolmentRepository';
-import { HistogramSensorUpload, Observability, withDuration } from '../o11y';
+import { Observability } from '../o11y';
 import { ClientSensorReading } from '../model/sensor-reading';
 import { z } from 'zod';
 
@@ -54,15 +54,11 @@ export function createReadingController(
     }
 
     try {
-      await withDuration(
-        async () => {
-          return await sensorReadingRepository.createSensorReadingBatched(
-            enrolment.id,
-            parsed.data,
-          );
-        },
-        (duration) => HistogramSensorUpload(duration),
+      await sensorReadingRepository.createSensorReadingBatched(
+        enrolment.id,
+        parsed.data,
       );
+
       res.json({});
     } catch (e) {
       res.status(500).send({ error: 'Error creating readings' });
