@@ -54,7 +54,7 @@ export function createReadingController(
     }
 
     try {
-      const readings = withDuration(
+      await withDuration(
         async () => {
           return await sensorReadingRepository.createSensorReadingBatched(
             enrolment.id,
@@ -63,7 +63,7 @@ export function createReadingController(
         },
         (duration) => HistogramSensorUpload(duration),
       );
-      res.json(readings);
+      res.json({});
     } catch (e) {
       res.status(500).send({ error: 'Error creating readings' });
     }

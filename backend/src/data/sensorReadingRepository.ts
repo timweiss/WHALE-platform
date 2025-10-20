@@ -9,7 +9,7 @@ export interface SensorReading {
   enrolmentId: number;
   sensorType: SensorType;
   data: SensorData;
-  timestamp: string;
+  timestamp: number;
   localId: string;
 }
 
@@ -32,7 +32,7 @@ export interface ISensorReadingRepository {
   createSensorReadingBatched(
     enrolmentId: number,
     readings: Pick<SensorReading, 'sensorType' | 'timestamp' | 'data'>[],
-  ): Promise<SensorReading[]>;
+  ): Promise<void>;
 
   createFile(
     readingId: number,
@@ -106,9 +106,9 @@ export class SensorReadingRepository
       SensorReading,
       'sensorType' | 'timestamp' | 'data' | 'localId'
     >[],
-  ): Promise<SensorReading[]> {
+  ): Promise<void> {
     try {
-      const batched = await Promise.all(
+      await Promise.all(
         readings.map((reading) =>
           this.pool.query(
             'INSERT INTO sensor_readings (enrolment_id, local_id, sensor_type, timestamp, data) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (enrolment_id, local_id) DO NOTHING RETURNING *',
@@ -123,16 +123,7 @@ export class SensorReadingRepository
         ),
       );
 
-      return batched
-        .filter((res) => res.rows.length > 0)
-        .map((res) => ({
-          id: res.rows[0].id,
-          localId: res.rows[0].local_id,
-          enrolmentId: res.rows[0].enrolment_id,
-          sensorType: res.rows[0].sensor_type,
-          timestamp: res.rows[0].timestamp,
-          data: res.rows[0].data,
-        }));
+      return;
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }
