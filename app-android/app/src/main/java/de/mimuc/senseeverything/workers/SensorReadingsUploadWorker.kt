@@ -69,8 +69,9 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
 
         return withContext(Dispatchers.IO) {
             try {
-                val total = db.logDataDao().getUnsyncedCount()
-                syncNextNActivities(db, applicationContext, token, total, 0, 200)
+                val cutoffTimestamp = System.currentTimeMillis()
+                val total = db.logDataDao().getUnsyncedCountBefore(cutoffTimestamp)
+                syncNextNActivities(db, applicationContext, token, total, cutoffTimestamp, 0, 200)
             } catch (e: Exception) {
                 WHALELog.e(TAG, "Unexpected error during sensor readings upload: $e")
                 Result.retry()
@@ -82,7 +83,8 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         db: AppDatabase,
         context: Context,
         token: String,
-        remaining: Long,
+        initialTotal: Long,
+        cutoffTimestamp: Long,
         totalSynced: Long,
         n: Int
     ): Result {
@@ -91,13 +93,11 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        val data = db.logDataDao().getNextNUnsynced(n)
+        val data = db.logDataDao().getNextNUnsyncedBefore(n, cutoffTimestamp)
         if (data.isEmpty()) {
             WHALELog.i(TAG, "Completed Sensor Reading Sync")
             return Result.success()
         }
-
-        setProgress(workDataOf("progress" to (totalSynced / (if (remaining != 0L) remaining else 1L))))
 
         val sensorReadings = data.map { logData ->
             SensorReading(
@@ -121,12 +121,22 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
             WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
 
+            val newTotalSynced = totalSynced + data.size
+
+            val progressPercentage = if (initialTotal > 0) {
+                ((newTotalSynced.toDouble() / initialTotal) * 100).toInt()
+            } else {
+                100
+            }
+            setProgress(workDataOf("progress" to progressPercentage))
+
             return syncNextNActivities(
                 db,
                 context,
                 token,
-                remaining - data.size,
-                totalSynced + data.size,
+                initialTotal,
+                cutoffTimestamp,
+                newTotalSynced,
                 n
             )
         } catch (e: Exception) {
@@ -138,17 +148,17 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 val message = e.networkResponse.data.decodeToString()
                 WHALELog.e(
                     TAG,
-                    "Client error uploading sensor readings: $message with total $totalSynced and remaining $remaining"
+                    "Client error uploading sensor readings: $message with total $totalSynced"
                 )
-                Firebase.crashlytics.log("Client error uploading sensor readings: $message with total $totalSynced and remaining $remaining")
+                Firebase.crashlytics.log("Client error uploading sensor readings: $message with total $totalSynced")
                 return Result.failure()
             }
 
             WHALELog.e(
                 TAG,
-                "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining"
+                "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced"
             )
-            Firebase.crashlytics.log("Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced and remaining $remaining")
+            Firebase.crashlytics.log("Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced")
 
             return Result.failure()
         }

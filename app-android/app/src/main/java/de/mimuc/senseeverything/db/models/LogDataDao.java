@@ -20,8 +20,14 @@ public interface LogDataDao {
     @Query("SELECT * FROM logdata WHERE synced = FALSE ORDER BY timestamp ASC LIMIT :n")
     List<LogData> getNextNUnsynced(int n);
 
+    @Query("SELECT * FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC LIMIT :n")
+    List<LogData> getNextNUnsyncedBefore(int n, long cutoffTimestamp);
+
     @Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE")
     long getUnsyncedCount();
+
+    @Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp")
+    long getUnsyncedCountBefore(long cutoffTimestamp);
 
     @Query("SELECT * FROM logdata ORDER BY timestamp DESC LIMIT 1")
     LogData getLastItem();
