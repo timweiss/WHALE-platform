@@ -41,6 +41,10 @@ export function createReadingController(
   app.post('/v1/reading/batch', authenticate, async (req, res) => {
     const parsed = ReadingBatchRequestBody.safeParse(req.body);
     if (!parsed.success) {
+      observability.logger.error('Invalid format for batched readings', {
+        validation: parsed.error.message,
+      });
+
       return res
         .status(400)
         .send({ error: 'Invalid request', details: parsed.error });
@@ -61,7 +65,9 @@ export function createReadingController(
 
       res.json({});
     } catch (e) {
-      observability.logger.error(`Error creating readings ${e}`, { error: e });
+      observability.logger.error(`Error creating readings ${e}`, {
+        error: JSON.stringify(e),
+      });
       res.status(500).send({ error: 'Error creating readings' });
     }
   });
