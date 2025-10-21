@@ -74,7 +74,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 syncNextNActivities(db, applicationContext, token, total, cutoffTimestamp, 0, 200)
             } catch (e: Exception) {
                 WHALELog.e(TAG, "Unexpected error during sensor readings upload: $e")
-                Result.retry()
+                return@withContext Result.retry()
             }
         }
     }
@@ -88,80 +88,72 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         totalSynced: Long,
         n: Int
     ): Result {
-        if (isStopped) {
-            WHALELog.w(TAG, "Work cancelled, stopping further sync")
-            return Result.success()
-        }
-
-        val data = db.logDataDao().getNextNUnsyncedBefore(n, cutoffTimestamp)
-        if (data.isEmpty()) {
-            WHALELog.i(TAG, "Completed Sensor Reading Sync")
-            return Result.success()
-        }
-
-        val sensorReadings = data.map { logData ->
-            SensorReading(
-                sensorType = logData.sensorName,
-                timestamp = logData.timestamp,
-                data = logData.data,
-                localId = logData.localId
-            )
-        }
-
+        var currentTotalSynced = totalSynced
         val client = ApiClient.getInstance(context)
         val headers = mapOf("Authorization" to "Bearer $token")
 
-        try {
-            client.postSerialized<List<SensorReading>, Unit>(
-                url = ApiResources.sensorReadingsBatched(),
-                requestData = sensorReadings,
-                headers = headers
-            )
-
-            db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
-            WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
-
-            val newTotalSynced = totalSynced + data.size
-
-            val progressPercentage = if (initialTotal > 0) {
-                ((newTotalSynced.toDouble() / initialTotal) * 100).toInt()
-            } else {
-                100
-            }
-            setProgress(workDataOf("progress" to progressPercentage))
-
-            return syncNextNActivities(
-                db,
-                context,
-                token,
-                initialTotal,
-                cutoffTimestamp,
-                newTotalSynced,
-                n
-            )
-        } catch (e: Exception) {
-            if (e is NetworkError || e is TimeoutError) {
-                return Result.retry()
+        while (!isStopped) {
+            val data = db.logDataDao().getNextNUnsyncedBefore(n, cutoffTimestamp)
+            if (data.isEmpty()) {
+                WHALELog.i(TAG, "Completed Sensor Reading Sync")
+                return Result.success()
             }
 
-            if (e is ClientError) {
-                val message = e.networkResponse.data.decodeToString()
+            val sensorReadings = data.map { logData ->
+                SensorReading(
+                    sensorType = logData.sensorName,
+                    timestamp = logData.timestamp,
+                    data = logData.data,
+                    localId = logData.localId
+                )
+            }
+
+            try {
+                client.postSerialized<List<SensorReading>, Unit>(
+                    url = ApiResources.sensorReadingsBatched(),
+                    requestData = sensorReadings,
+                    headers = headers
+                )
+
+                db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
+                WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
+
+                currentTotalSynced += data.size
+
+                val progressPercentage = if (initialTotal > 0) {
+                    ((currentTotalSynced.toDouble() / initialTotal) * 100).toInt()
+                } else {
+                    100
+                }
+                setProgress(workDataOf("progress" to progressPercentage))
+
+            } catch (e: Exception) {
+                if (e is NetworkError || e is TimeoutError) {
+                    return Result.retry()
+                }
+
+                if (e is ClientError) {
+                    val message = e.networkResponse.data.decodeToString()
+                    WHALELog.e(
+                        TAG,
+                        "Client error uploading sensor readings: $message with total $currentTotalSynced"
+                    )
+                    Firebase.crashlytics.log("Client error uploading sensor readings: $message with total $currentTotalSynced")
+                    return Result.failure()
+                }
+
                 WHALELog.e(
                     TAG,
-                    "Client error uploading sensor readings: $message with total $totalSynced"
+                    "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $currentTotalSynced"
                 )
-                Firebase.crashlytics.log("Client error uploading sensor readings: $message with total $totalSynced")
+                Firebase.crashlytics.log("Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $currentTotalSynced")
+
                 return Result.failure()
             }
-
-            WHALELog.e(
-                TAG,
-                "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced"
-            )
-            Firebase.crashlytics.log("Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $totalSynced")
-
-            return Result.failure()
         }
+
+        WHALELog.w(TAG, "Work cancelled, stopping further sync")
+        return Result.success()
     }
 }
 
