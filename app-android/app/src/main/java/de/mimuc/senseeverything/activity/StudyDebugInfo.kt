@@ -47,6 +47,8 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.helpers.DatabaseExporter
+import de.mimuc.senseeverything.helpers.ExportStatus
 import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
 import de.mimuc.senseeverything.workers.enqueueSinglePendingQuestionnaireUploadWorker
@@ -95,7 +97,8 @@ class StudyDebugInfo : ComponentActivity() {
 class StudyDebugInfoViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val databaseExporter: DatabaseExporter
 ) : AndroidViewModel(application) {
     private val _currentStudyPhase = MutableStateFlow<ExperimentalGroupPhase?>(ExperimentalGroupPhase(0, "", 0,0,InteractionWidgetDisplayStrategy.DEFAULT))
     val currentStudyPhase: StateFlow<ExperimentalGroupPhase?> get() = _currentStudyPhase
@@ -123,6 +126,8 @@ class StudyDebugInfoViewModel @Inject constructor(
 
     private val _sensorRunning = MutableStateFlow(false)
     val sensorRunning: StateFlow<Boolean> get() = _sensorRunning
+
+    val exportStatus: StateFlow<ExportStatus> = databaseExporter.exportStatus
 
     private var conversationSensor: ConversationSensor? = null
 
@@ -171,6 +176,18 @@ class StudyDebugInfoViewModel @Inject constructor(
     fun stopConversationRecording(context: Context) {
         conversationSensor?.stop()
         _sensorRunning.value = false
+    }
+
+    fun exportDatabase(context: Context) {
+        viewModelScope.launch {
+            databaseExporter.exportDatabase(context) { zipFile ->
+                // Clean up after a delay to allow sharing to complete
+                viewModelScope.launch {
+                    kotlinx.coroutines.delay(1000 * 60 * 2) // 2 minutes
+                    zipFile.delete()
+                }
+            }
+        }
     }
 
     fun pushNotificationTrigger() {
@@ -227,6 +244,7 @@ fun StudyDebugInfoView(
     val lastLogDataItem = viewModel.lastLogDataItem.collectAsState()
     val studyEnded = viewModel.studyEnded.collectAsState()
     val sensorRunning = viewModel.sensorRunning.collectAsState()
+    val exportStatus = viewModel.exportStatus.collectAsState()
     val context = LocalContext.current
 
     Column(modifier = modifier
@@ -262,6 +280,21 @@ fun StudyDebugInfoView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sync questionnaires now")
+        }
+
+        Button(
+            onClick = {
+                viewModel.exportDatabase(context)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = exportStatus.value !is ExportStatus.Exporting
+        ) {
+            when (exportStatus.value) {
+                is ExportStatus.Exporting -> Text("Exporting...")
+                is ExportStatus.Success -> Text("Export Database (Success!)")
+                is ExportStatus.Error -> Text("Export Database (Error)")
+                else -> Text("Export Database")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
