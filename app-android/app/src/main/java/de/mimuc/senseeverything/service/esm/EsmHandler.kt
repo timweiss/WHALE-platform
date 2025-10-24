@@ -630,14 +630,14 @@ class NotificationPushHelper(private val context: Context) {
         notificationManager.notify(triggerId, notification)
     }
 
-    fun pushNotificationTrigger(notificationTrigger: NotificationTrigger) {
+    fun pushNotificationTrigger(notificationTrigger: NotificationTrigger, timeoutMillis: Long? = null) {
         try {
             val trigger: EMAFloatingWidgetNotificationTrigger =
                 notificationTrigger.triggerJson.let { fullQuestionnaireJson.decodeFromString<EMAFloatingWidgetNotificationTrigger>(it) }
 
             // start the floating widget service when notification is tapped
             val intent = Intent(context, NotificationTriggerFloatingWidgetService::class.java)
-            val notification = buildServiceNotification(trigger.configuration.notificationText, intent)
+            val notification = buildServiceNotification(trigger.configuration.notificationText, intent, timeoutMillis)
 
             notificationManager.notify(notificationTrigger.uid.hashCode(), notification)
         } catch (e: Exception) {
@@ -655,18 +655,22 @@ class NotificationPushHelper(private val context: Context) {
         return buildNotificationBase(title, pendingIntent)
     }
 
-    private fun buildServiceNotification(title: String, intent: Intent): Notification {
+    private fun buildServiceNotification(title: String, intent: Intent, timeoutMillis: Long? = null): Notification {
         val pendingIntent = PendingIntent.getService(
             context,
             0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        return buildNotificationBase(title, pendingIntent)
+        return buildNotificationBase(title, pendingIntent, timeoutMillis)
     }
 
-    private fun buildNotificationBase(title: String, pendingIntent: PendingIntent): Notification {
-        return NotificationCompat.Builder(context, "SEChannel")
+    private fun buildNotificationBase(
+        title: String,
+        pendingIntent: PendingIntent,
+        timeoutMillis: Long? = null
+    ): Notification {
+        val builder = NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
             .setContentTitle(title)
             .setSmallIcon(R.drawable.notification_silhouette_q)
@@ -683,7 +687,12 @@ class NotificationPushHelper(private val context: Context) {
             )
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .build()
+
+        if (timeoutMillis != null) {
+            builder.setTimeoutAfter(timeoutMillis)
+        }
+
+        return builder.build()
     }
 
     private fun Context.bitmapFromResource(
