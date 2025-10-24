@@ -121,6 +121,20 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 WHALELog.i(TAG, "Uploaded ${uploadResult.totalItems} items in ${uploadResult.chunksUploaded} chunk(s), " +
                         "total size: ${uploadResult.totalBytesUploaded} bytes, fast path: ${uploadResult.usedFastPath}")
 
+                // Log if any items were dropped as unuploadable
+                if (uploadResult.errors.isNotEmpty()) {
+                    val droppedCount = uploadResult.errors.size
+                    val successfulCount = data.size - droppedCount
+
+                    WHALELog.w(TAG, "Upload completed with $droppedCount dropped item(s) out of ${data.size} total ($successfulCount successful)")
+                    Firebase.crashlytics.log("Dropped $droppedCount unuploadable items out of ${data.size} during sync")
+
+                    uploadResult.errors.forEach { error ->
+                        WHALELog.e(TAG, "Dropped item: $error")
+                        Firebase.crashlytics.log("Dropped item: $error")
+                    }
+                }
+
                 db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
                 WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
 

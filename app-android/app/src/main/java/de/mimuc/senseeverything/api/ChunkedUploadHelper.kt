@@ -151,9 +151,22 @@ object ChunkedUploadHelper {
                     itemsPerChunk = (itemsPerChunk / 2).coerceAtLeast(MINIMUM_CHUNK_SIZE)
                     // Don't drop the data, retry with smaller chunk on next iteration
                     continue
+                } else if (isPayloadTooLargeError(e) && chunk.size == MINIMUM_CHUNK_SIZE) {
+                    // Last resort: single item (size 1) still fails with 413
+                    // This item is too large, drop it and continue
+                    val errorMsg = "Failed to upload chunk of ${chunk.size} item(s): ${e.javaClass.simpleName} - ${e.message}"
+                    WHALELog.e(TAG, "Dropping unuploadable chunk as last resort (payload too large): $errorMsg")
+                    errors.add(errorMsg)
+
+                    // Drop the failed chunk by advancing past it
+                    remainingData = remainingData.drop(chunk.size)
+
+                    // Continue processing remaining chunks
+                    continue
                 } else {
-                    // Unrecoverable error or chunk already at minimum size
-                    WHALELog.e(TAG, "Failed to upload chunk: ${e.message}")
+                    // Non-size-related error (network, timeout, auth, etc.)
+                    // Don't drop data, propagate the error to let worker handle retry logic
+                    WHALELog.e(TAG, "Non-recoverable error uploading chunk: ${e.javaClass.simpleName} - ${e.message}")
                     throw e
                 }
             }
