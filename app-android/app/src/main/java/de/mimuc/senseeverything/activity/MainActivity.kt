@@ -42,7 +42,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,25 +80,26 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
-import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
 import de.mimuc.senseeverything.db.models.distanceMillis
+import de.mimuc.senseeverything.db.models.toInboxItem
 import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.permissions.PermissionManager
 import de.mimuc.senseeverything.service.LogService
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -147,8 +147,8 @@ class StudyHomeViewModel @Inject constructor(
     private val _studyState = MutableStateFlow(StudyState.RUNNING)
     val studyState: StateFlow<StudyState> get() = _studyState
 
-    private val _pendingQuestionnaires = MutableStateFlow<List<QuestionnaireInboxItem>>(emptyList())
-    val pendingQuestionnaires: StateFlow<List<QuestionnaireInboxItem>> get() = _pendingQuestionnaires
+    val pendingQuestionnairesFlow: StateFlow<List<PendingQuestionnaire>> = database.pendingQuestionnaireDao().getAllNotExpiredFlow(
+        System.currentTimeMillis()).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _hasPermissionIssues = MutableStateFlow<Boolean>(false)
     val hasPermissionIssues: StateFlow<Boolean> get() = _hasPermissionIssues
@@ -258,20 +258,6 @@ class StudyHomeViewModel @Inject constructor(
                     dataStoreManager.saveStudy(study)
                 }
             }
-
-            withContext(Dispatchers.IO) {
-                val pendingQuestionnaires =
-                    database.pendingQuestionnaireDao().getAllNotExpired(System.currentTimeMillis())
-                _pendingQuestionnaires.value = pendingQuestionnaires
-                    .map { pq ->
-                        val fullQuestionnaire = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pq.questionnaireJson)
-                        QuestionnaireInboxItem(
-                            fullQuestionnaire.questionnaire.name,
-                            pq.validUntil,
-                            pq
-                        )
-                    }
-            }
         }
     }
 
@@ -294,7 +280,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val currentDay = viewModel.currentDay.collectAsState()
     val study = viewModel.study.collectAsState()
     val onboardingStep = viewModel.onboardingStep.collectAsState()
-    val pendingQuestionnaires = viewModel.pendingQuestionnaires.collectAsState()
+    val pendingQuestionnairesFlow = viewModel.pendingQuestionnairesFlow.collectAsState()
     val studyState by viewModel.studyState.collectAsState()
     val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
     val context = LocalContext.current
@@ -392,8 +378,9 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                                 style = MaterialTheme.typography.bodyLarge
                             )
 
-                            if (pendingQuestionnaires.value.isNotEmpty()) {
-                                QuestionnaireInbox(pendingQuestionnaires, viewModel)
+                            if (pendingQuestionnairesFlow.value.isNotEmpty()) {
+                                val inboxItems = pendingQuestionnairesFlow.value.map { it.toInboxItem() }
+                                QuestionnaireInbox(inboxItems, viewModel)
                             }
 
                             SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
@@ -431,8 +418,9 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         Text(stringResource(R.string.main_study_ended_last_questionnaire_hint))
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        if (pendingQuestionnaires.value.isNotEmpty()) {
-                            QuestionnaireInbox(pendingQuestionnaires, viewModel)
+                        if (pendingQuestionnairesFlow.value.isNotEmpty()) {
+                            val inboxItems = pendingQuestionnairesFlow.value.map { it.toInboxItem() }
+                            QuestionnaireInbox(inboxItems, viewModel)
                         }
 
                         SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
@@ -463,7 +451,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
 @Composable
 private fun QuestionnaireInbox(
-    pendingQuestionnaires: State<List<QuestionnaireInboxItem>>,
+    pendingQuestionnaires: List<QuestionnaireInboxItem>,
     viewModel: StudyHomeViewModel
 ) {
     val context = LocalContext.current
@@ -493,7 +481,7 @@ private fun QuestionnaireInbox(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.padding(vertical = 12.dp)
     ) {
-        pendingQuestionnaires.value.forEach { pq ->
+        pendingQuestionnaires.forEach { pq ->
             Card(
                 shape = RoundedCornerShape(4.dp),
                 modifier = Modifier

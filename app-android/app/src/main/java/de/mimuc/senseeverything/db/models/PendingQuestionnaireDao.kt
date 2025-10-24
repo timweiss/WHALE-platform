@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
 @Dao
@@ -13,7 +14,7 @@ interface PendingQuestionnaireDao {
     fun getAll(): List<PendingQuestionnaire>
 
     @Query("SELECT * FROM pending_questionnaire WHERE (valid_until > :now OR valid_until = -1) AND status != 'COMPLETED'")
-    fun getAllNotExpired(now: Long): List<PendingQuestionnaire>
+    fun getAllNotExpiredFlow(now: Long): Flow<List<PendingQuestionnaire>>
 
     @Query("SELECT * FROM pending_questionnaire WHERE uid = :uid")
     fun getById(uid: UUID): PendingQuestionnaire?

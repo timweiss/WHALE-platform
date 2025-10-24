@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.ForeignKey.Companion.SET_NULL
 import androidx.room.PrimaryKey
 import de.mimuc.senseeverything.api.model.ElementValue
+import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -142,4 +143,14 @@ fun QuestionnaireInboxItem.distanceMillis(): Duration {
     val now = System.currentTimeMillis()
     val diff = this.validUntil - now
     return diff.milliseconds
+}
+
+fun PendingQuestionnaire.toInboxItem(): QuestionnaireInboxItem {
+    val fullQuestionnaire =
+        fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(this.questionnaireJson)
+    return QuestionnaireInboxItem(
+        fullQuestionnaire.questionnaire.name,
+        this.validUntil,
+        this
+    )
 }
