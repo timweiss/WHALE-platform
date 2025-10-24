@@ -87,8 +87,8 @@ import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
-import de.mimuc.senseeverything.db.models.distanceMillis
 import de.mimuc.senseeverything.db.models.toInboxItem
+import de.mimuc.senseeverything.db.models.validDistance
 import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.permissions.PermissionManager
@@ -494,7 +494,7 @@ private fun QuestionnaireInbox(
                         Text(
                             stringResource(
                                 R.string.main_questionnaire_inbox_element_duration_validitiy,
-                                pq.distanceMillis().inWholeMinutes
+                                pq.validDistance.inWholeMinutes
                             ))
                     } else {
                         Text(stringResource(R.string.main_questionnaire_inbox_element_duration_indefinite))

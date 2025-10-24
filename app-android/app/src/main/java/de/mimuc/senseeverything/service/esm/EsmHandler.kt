@@ -40,6 +40,7 @@ import kotlinx.serialization.encodeToString
 import java.util.Calendar
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 class EsmHandler {
     companion object {
@@ -300,7 +301,7 @@ class EsmHandler {
                         trigger,
                         notificationTriggerUid = null,
                         sourcePendingNotificationId = sourceId
-                    )
+                    )?.uid
                 }
             }
 
@@ -616,7 +617,7 @@ class NotificationPushHelper(private val context: Context) {
 
     private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: UUID?, title: String?, questionnaireName: String? = "") {
+    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: UUID?, title: String?, questionnaireName: String? = "", timeout: Duration? = null) {
         val intent = Intent(context, QuestionnaireActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, triggerId)
@@ -625,19 +626,19 @@ class NotificationPushHelper(private val context: Context) {
             )
         }
 
-        val notification = buildActivityNotification(title ?: "It's time for $questionnaireName", intent)
+        val notification = buildActivityNotification(title ?: "It's time for $questionnaireName", intent, timeout)
 
         notificationManager.notify(triggerId, notification)
     }
 
-    fun pushNotificationTrigger(notificationTrigger: NotificationTrigger, timeoutMillis: Long? = null) {
+    fun pushNotificationTrigger(notificationTrigger: NotificationTrigger, timeout: Duration? = null) {
         try {
             val trigger: EMAFloatingWidgetNotificationTrigger =
                 notificationTrigger.triggerJson.let { fullQuestionnaireJson.decodeFromString<EMAFloatingWidgetNotificationTrigger>(it) }
 
             // start the floating widget service when notification is tapped
             val intent = Intent(context, NotificationTriggerFloatingWidgetService::class.java)
-            val notification = buildServiceNotification(trigger.configuration.notificationText, intent, timeoutMillis)
+            val notification = buildServiceNotification(trigger.configuration.notificationText, intent, timeout)
 
             notificationManager.notify(notificationTrigger.uid.hashCode(), notification)
         } catch (e: Exception) {
@@ -645,30 +646,30 @@ class NotificationPushHelper(private val context: Context) {
         }
     }
 
-    private fun buildActivityNotification(title: String, intent: Intent): Notification {
+    private fun buildActivityNotification(title: String, intent: Intent, timeout: Duration? = null): Notification {
         val pendingIntent = PendingIntent.getActivity(
             context,
             0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        return buildNotificationBase(title, pendingIntent)
+        return buildNotificationBase(title, pendingIntent, timeout)
     }
 
-    private fun buildServiceNotification(title: String, intent: Intent, timeoutMillis: Long? = null): Notification {
+    private fun buildServiceNotification(title: String, intent: Intent, timeout: Duration? = null): Notification {
         val pendingIntent = PendingIntent.getService(
             context,
             0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        return buildNotificationBase(title, pendingIntent, timeoutMillis)
+        return buildNotificationBase(title, pendingIntent, timeout)
     }
 
     private fun buildNotificationBase(
         title: String,
         pendingIntent: PendingIntent,
-        timeoutMillis: Long? = null
+        timeout: Duration? = null
     ): Notification {
         val builder = NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
@@ -688,8 +689,8 @@ class NotificationPushHelper(private val context: Context) {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
 
-        if (timeoutMillis != null) {
-            builder.setTimeoutAfter(timeoutMillis)
+        if (timeout != null && timeout != Duration.INFINITE) {
+            builder.setTimeoutAfter(timeout.inWholeMilliseconds)
         }
 
         return builder.build()

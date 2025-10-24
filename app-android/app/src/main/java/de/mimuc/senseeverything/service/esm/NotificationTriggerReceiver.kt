@@ -15,8 +15,9 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.helpers.goAsync
 import kotlinx.coroutines.flow.first
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 @AndroidEntryPoint
 class NotificationTriggerReceiver: BroadcastReceiver() {
@@ -48,7 +49,7 @@ class NotificationTriggerReceiver: BroadcastReceiver() {
      * Workaround to find a timeout, as the trigger responsible does not provide a duration, but the linked timeout trigger does.
      * Practically, this allows us to dismiss the notification once a new NotificationTrigger is valid.
      */
-    private suspend fun getTimeout(notificationTrigger: NotificationTrigger): Long? {
+    private suspend fun getTimeout(notificationTrigger: NotificationTrigger): Duration? {
         val trigger =
             fullQuestionnaireJson.decodeFromString<QuestionnaireTrigger>(notificationTrigger.triggerJson)
 
@@ -58,7 +59,7 @@ class NotificationTriggerReceiver: BroadcastReceiver() {
                     .find { it.id == trigger.configuration.timeoutNotificationTriggerId }
 
                 if (trigger != null && trigger is EMAFloatingWidgetNotificationTrigger) {
-                    return TimeUnit.MINUTES.toMillis(trigger.configuration.delayMinutes.toLong())
+                    return trigger.configuration.delayMinutes.minutes
                 }
             }
         }

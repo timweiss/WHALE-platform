@@ -153,13 +153,6 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 }
 
                 if (e is ClientError) {
-                    // 413 Payload Too Large
-                    if (e.networkResponse?.statusCode == 413) {
-                        WHALELog.e(TAG, "413 Payload Too Large error - this should be prevented by chunking logic!")
-                        Firebase.crashlytics.log("413 error occurred despite chunking. Batch size: ${data.size}, " +
-                                "investigate threshold settings. Total synced: $currentTotalSynced")
-                    }
-
                     val message = e.networkResponse.data.decodeToString()
                     WHALELog.e(
                         TAG,

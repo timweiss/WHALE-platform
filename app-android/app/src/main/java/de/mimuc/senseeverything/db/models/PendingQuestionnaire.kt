@@ -69,7 +69,7 @@ data class PendingQuestionnaire(
             trigger: QuestionnaireTrigger,
             notificationTriggerUid: UUID? = null,
             sourcePendingNotificationId: UUID? = null
-        ): UUID? {
+        ): PendingQuestionnaire? {
             val questionnaire = dataStoreManager.questionnairesFlow.first()
                 .find { q -> q.questionnaire.id == trigger.questionnaireId }
             if (questionnaire == null) return null
@@ -97,7 +97,7 @@ data class PendingQuestionnaire(
             )
 
             database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
-            return pendingQuestionnaire.uid
+            return pendingQuestionnaire
         }
     }
 
@@ -139,10 +139,18 @@ data class QuestionnaireInboxItem(
     val pendingQuestionnaire: PendingQuestionnaire
 )
 
-fun QuestionnaireInboxItem.distanceMillis(): Duration {
+val PendingQuestionnaire.validDistance get(): Duration {
+    if (this.validUntil == -1L) {
+        return Duration.INFINITE
+    }
+
     val now = System.currentTimeMillis()
     val diff = this.validUntil - now
     return diff.milliseconds
+}
+
+val QuestionnaireInboxItem.validDistance get(): Duration {
+    return this.pendingQuestionnaire.validDistance
 }
 
 fun PendingQuestionnaire.toInboxItem(): QuestionnaireInboxItem {

@@ -139,7 +139,7 @@ class PendingQuestionnaireUploadWorker @AssistedInject constructor(
                 dataStoreManager,
                 trigger = questionnaireJson.decodeFromString<QuestionnaireTrigger>(trigger.triggerJson),
                 notificationTriggerUid = trigger.uid
-            )
+            )?.uid
 
             if (pendingQuestionnaireId == null) {
                 WHALELog.e("PendingQuestionnaireUploadWorker", "Failed to create pending questionnaire for trigger: ${trigger.uid}")

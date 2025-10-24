@@ -115,11 +115,13 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
                             dataStore,
                             currentQuestionnaireTrigger as QuestionnaireTrigger,
                             currentNotificationTrigger.uid
-                        )
+                        )?.uid
                         pendingQuestionnaire =
                             database.pendingQuestionnaireDao().getById(pendingQuestionnaireId!!)
 
-                        textReplacements = questionnaireData.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId)
+                        textReplacements = questionnaireData.getTextReplacementsForPendingQuestionnaire(
+                            pendingQuestionnaireId
+                        )
                     }
 
                     // Render the dynamic questionnaire widget

@@ -10,6 +10,7 @@ import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.db.models.validDistance
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.logging.WHALELog
 import java.util.Calendar
@@ -38,8 +39,14 @@ class RandomNotificationReceiver: BroadcastReceiver() {
 
         // deliver notification to user
         if (triggerId != 0 && trigger != null) {
-            val pendingQuestionnaireId = PendingQuestionnaire.createEntry(database, dataStoreManager, trigger)
-            scheduleNotificationService?.sendReminderNotification(triggerId, pendingQuestionnaireId, title, questionnaireName)
+            val pendingQuestionnaire = PendingQuestionnaire.createEntry(database, dataStoreManager, trigger)
+            scheduleNotificationService?.sendReminderNotification(
+                triggerId,
+                pendingQuestionnaire?.uid,
+                title,
+                questionnaireName,
+                pendingQuestionnaire?.validDistance
+            )
         }
 
         // schedule next notification
