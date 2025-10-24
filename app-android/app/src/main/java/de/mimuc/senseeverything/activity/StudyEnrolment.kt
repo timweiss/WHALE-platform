@@ -186,7 +186,7 @@ class EnrolmentViewModel @Inject constructor(
     fun openQuestionnaire(context: Context, questionnaire: FullQuestionnaire) {
         viewModelScope.launch {
             val pendingQuestionnaireId = withContext(IO) {
-                PendingQuestionnaire.createEntry(database, dataStoreManager, questionnaire.triggers.first())
+                PendingQuestionnaire.createEntry(database, dataStoreManager, questionnaire.triggers.first())?.uid
             }
 
             val activity = Intent(context, QuestionnaireActivity::class.java)

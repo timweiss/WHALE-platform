@@ -379,7 +379,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                             )
 
                             if (pendingQuestionnairesFlow.value.isNotEmpty()) {
-                                val inboxItems = pendingQuestionnairesFlow.value.map { it.toInboxItem() }
+                                val inboxItems = pendingQuestionnairesFlow.value.filter { it.validDistance > kotlin.time.Duration.ZERO } .map { it.toInboxItem() }
                                 QuestionnaireInbox(inboxItems, viewModel)
                             }
 
@@ -455,6 +455,10 @@ private fun QuestionnaireInbox(
     viewModel: StudyHomeViewModel
 ) {
     val context = LocalContext.current
+
+    if (pendingQuestionnaires.isEmpty()) {
+        return
+    }
 
     SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
 
