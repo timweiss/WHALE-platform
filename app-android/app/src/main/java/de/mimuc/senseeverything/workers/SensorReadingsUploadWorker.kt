@@ -22,6 +22,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.ApiResources
+import de.mimuc.senseeverything.api.ChunkedUploadHelper
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
@@ -109,11 +110,16 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             }
 
             try {
-                client.postSerialized<List<SensorReading>, Unit>(
+                val uploadResult = ChunkedUploadHelper.uploadWithSizeBasedChunking(
+                    data = sensorReadings,
+                    maxBatchSize = n,
+                    client = client,
                     url = ApiResources.sensorReadingsBatched(),
-                    requestData = sensorReadings,
                     headers = headers
                 )
+
+                WHALELog.i(TAG, "Uploaded ${uploadResult.totalItems} items in ${uploadResult.chunksUploaded} chunk(s), " +
+                        "total size: ${uploadResult.totalBytesUploaded} bytes, fast path: ${uploadResult.usedFastPath}")
 
                 db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
                 WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
@@ -133,6 +139,13 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 }
 
                 if (e is ClientError) {
+                    // 413 Payload Too Large
+                    if (e.networkResponse?.statusCode == 413) {
+                        WHALELog.e(TAG, "413 Payload Too Large error - this should be prevented by chunking logic!")
+                        Firebase.crashlytics.log("413 error occurred despite chunking. Batch size: ${data.size}, " +
+                                "investigate threshold settings. Total synced: $currentTotalSynced")
+                    }
+
                     val message = e.networkResponse.data.decodeToString()
                     WHALELog.e(
                         TAG,

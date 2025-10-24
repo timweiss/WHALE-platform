@@ -108,6 +108,49 @@ class ApiClient private constructor(context: Context) {
     }
 
     /**
+     * POST request with pre-serialized JSON string
+     */
+    suspend fun postJsonString(
+        url: String,
+        jsonBody: String,
+        headers: Map<String, String> = emptyMap()
+    ): String = suspendCoroutine { continuation ->
+        val request = object : Request<String>(Method.POST, url, Response.ErrorListener { error ->
+            continuation.resumeWithException(error)
+        }) {
+            override fun getHeaders(): Map<String, String> {
+                val requestHeaders = HashMap<String, String>()
+                requestHeaders["Content-Type"] = "application/json"
+                requestHeaders["Accept"] = "application/json"
+                if (headers.isNotEmpty()) {
+                    requestHeaders.putAll(headers)
+                }
+                return requestHeaders
+            }
+
+            override fun getBody(): ByteArray {
+                return jsonBody.toByteArray(Charsets.UTF_8)
+            }
+
+            override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
+                return try {
+                    val charset = HttpHeaderParser.parseCharset(response.headers, "utf-8")
+                    val responseString = String(response.data, Charset.forName(charset))
+                    Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response))
+                } catch (e: Exception) {
+                    Response.error(ParseError(e))
+                }
+            }
+
+            override fun deliverResponse(response: String) {
+                continuation.resume(response)
+            }
+        }
+
+        addToRequestQueue(request)
+    }
+
+    /**
      * GET request with kotlinx.serialization support
      * Deserializes the JSON response to the specified type
      */
