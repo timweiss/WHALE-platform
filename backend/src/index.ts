@@ -17,7 +17,7 @@ export function makeExpressApp(
   observability: Observability,
 ) {
   const app = express();
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '100mb' }));
 
   app.get('/', (req, res) => {
     res.send('Social Interaction Sensing!');
