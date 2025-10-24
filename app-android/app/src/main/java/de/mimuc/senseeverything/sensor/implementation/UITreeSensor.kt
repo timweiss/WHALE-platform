@@ -1,88 +1,122 @@
-package de.mimuc.senseeverything.sensor.implementation;
+package de.mimuc.senseeverything.sensor.implementation
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-
-import de.mimuc.senseeverything.db.AppDatabase;
-import de.mimuc.senseeverything.sensor.AbstractSensor;
-import de.mimuc.senseeverything.service.accessibility.SnapshotBatchManager;
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
+import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.sensor.AbstractSensor
+import de.mimuc.senseeverything.service.accessibility.SnapshotBatchManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Sensor that listens to UI tree snapshot batches broadcast by the accessibility service.
- * Logs the batched JSON data to the database for later analysis.
+ * Queries snapshot data from Room database using broadcast IDs to avoid TransactionTooLargeException.
  */
-public class UITreeSensor extends AbstractSensor {
+class UITreeSensor(applicationContext: Context, database: AppDatabase) :
+    AbstractSensor(applicationContext, database) {
 
-    private static final long serialVersionUID = 1L;
-
-    private Context m_Context = null;
-    private DataUpdateReceiver m_Receiver;
-
-    public UITreeSensor(Context applicationContext, AppDatabase database) {
-        super(applicationContext, database);
-        m_IsRunning = false;
-        TAG = "UITreeSensor";
-        SENSOR_NAME = "UITree";
-        FILE_NAME = "ui_tree.json";
-        m_FileHeader = ""; // JSON format, no CSV header needed
+    companion object {
+        private const val serialVersionUID = 1L
     }
 
-    @Override
-    public boolean isAvailable(Context context) {
-        return true;
+    private var context: Context? = null
+    private var receiver: DataUpdateReceiver? = null
+
+    init {
+        m_IsRunning = false
+        this.TAG = "UITreeSensor"
+        SENSOR_NAME = "UITree"
+        FILE_NAME = "ui_tree.json"
+        m_FileHeader = "" // JSON format, no CSV header needed
     }
 
-    @Override
-    public boolean availableForPeriodicSampling() {
-        return false;
-    }
+    override fun isAvailable(context: Context): Boolean = true
 
-    @Override
-    public boolean availableForContinuousSampling() {
-        return true;
-    }
+    override fun availableForPeriodicSampling(): Boolean = false
 
-    @Override
-    public void start(Context context) {
-        super.start(context);
-        if (!m_isSensorAvailable)
-            return;
+    override fun availableForContinuousSampling(): Boolean = true
 
-        m_Context = context;
+    override fun start(context: Context) {
+        super.start(context)
+        if (!m_isSensorAvailable) return
 
-        if (m_Receiver == null)
-            m_Receiver = new DataUpdateReceiver();
+        this.context = context
 
-        IntentFilter intentFilter = new IntentFilter(SnapshotBatchManager.BROADCAST_ACTION);
-        m_Context.registerReceiver(m_Receiver, intentFilter);
-
-        m_IsRunning = true;
-    }
-
-    @Override
-    public void stop() {
-        m_IsRunning = false;
-        if (m_Context == null)
-            return;
-        m_Context.unregisterReceiver(m_Receiver);
-    }
-
-    private class DataUpdateReceiver extends BroadcastReceiver {
-        public DataUpdateReceiver() {
-            super();
+        if (receiver == null) {
+            receiver = DataUpdateReceiver()
         }
 
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(SnapshotBatchManager.BROADCAST_ACTION)) {
+        val intentFilter = IntentFilter(SnapshotBatchManager.BROADCAST_ACTION)
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            intentFilter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        m_IsRunning = true
+    }
+
+    override fun stop() {
+        m_IsRunning = false
+        context?.let {
+            receiver?.let { rcv ->
+                it.unregisterReceiver(rcv)
+            }
+        }
+    }
+
+    private inner class DataUpdateReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == SnapshotBatchManager.BROADCAST_ACTION) {
                 if (m_IsRunning) {
-                    String batchJson = intent.getStringExtra(SnapshotBatchManager.EXTRA_BATCH_JSON);
-                    if (batchJson != null) {
-                        onLogDataItem(System.currentTimeMillis(), batchJson);
+                    val batchId = intent.getLongExtra(SnapshotBatchManager.EXTRA_BATCH_ID, -1)
+                    val count = intent.getIntExtra(SnapshotBatchManager.EXTRA_COUNT, 0)
+
+                    if (batchId == -1L) {
+                        WHALELog.e(TAG, "Received broadcast without valid batch ID")
+                        return
+                    }
+
+                    WHALELog.d(TAG, "Received broadcast for batch ID: $batchId ($count snapshots)")
+
+                    // Launch coroutine to fetch from database
+                    CoroutineScope(Dispatchers.IO).launch {
+                        fetchAndProcessBatch(batchId)
                     }
                 }
+            }
+        }
+
+        private suspend fun fetchAndProcessBatch(batchId: Long) {
+            try {
+                val dao = database.snapshotBatchDao()
+
+                // Query database
+                val batch = dao.getById(batchId)
+
+                if (batch == null) {
+                    WHALELog.e(TAG, "Batch ID $batchId not found in database")
+                    return
+                }
+
+                WHALELog.i(TAG, "Fetched batch ID $batchId: ${batch.jsonData.length} bytes")
+
+                // Log the data to permanent storage
+                onLogDataItem(System.currentTimeMillis(), batch.jsonData)
+
+                // Delete from staging table (cleanup)
+                dao.deleteById(batchId)
+
+                WHALELog.d(TAG, "Processed and deleted batch ID $batchId")
+
+            } catch (e: Exception) {
+                WHALELog.e(TAG, "Failed to fetch batch from database: ${e.message}")
             }
         }
     }

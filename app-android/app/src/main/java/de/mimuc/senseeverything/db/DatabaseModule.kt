@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.mimuc.senseeverything.db.models.LogDataDao
 import de.mimuc.senseeverything.db.models.PendingQuestionnaireDao
+import de.mimuc.senseeverything.db.models.SnapshotBatchDao
 import javax.inject.Singleton
 
 @Module()
@@ -35,5 +36,10 @@ object DatabaseModule {
     @Provides
     fun providePendingQuestionnaireDao(appDatabase: AppDatabase): PendingQuestionnaireDao {
         return appDatabase.pendingQuestionnaireDao()
+    }
+
+    @Provides
+    fun provideSnapshotBatchDao(appDatabase: AppDatabase): SnapshotBatchDao {
+        return appDatabase.snapshotBatchDao()
     }
 }

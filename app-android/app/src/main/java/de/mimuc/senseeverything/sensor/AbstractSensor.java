@@ -20,8 +20,6 @@ public abstract class AbstractSensor implements Serializable  {
 	protected String FILE_NAME;
 	protected String m_FileHeader;
 
-	private String m_Settings = "";
-
 	protected boolean m_isSensorAvailable = false;
 
 	private final AppDatabase db;
@@ -50,14 +48,6 @@ public abstract class AbstractSensor implements Serializable  {
 	public void setEnabled(boolean selected) {
 		this.m_IsEnabled = selected;
 	}
-	
-	public int getSettingsState() {
-		return 0;
-	}
-	
-	public String getSettings() {
-		return m_Settings;
-	}
 
 	abstract public boolean isAvailable(Context context);
 
@@ -75,7 +65,6 @@ public abstract class AbstractSensor implements Serializable  {
 	}
 
 	protected void onLogDataItem(Long timestamp, String data){
-		// WHALELog.INSTANCE.v(TAG, "onLogDataItem from " + SENSOR_NAME + ": " + data + " at " + timestamp);
 		AsyncTask.execute(() -> {
 			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));
 		});
@@ -104,5 +93,6 @@ public abstract class AbstractSensor implements Serializable  {
 	public boolean isRunning() {
 		return m_IsRunning;
 	}
-	
+
+	protected AppDatabase getDatabase() { return db; }
 }

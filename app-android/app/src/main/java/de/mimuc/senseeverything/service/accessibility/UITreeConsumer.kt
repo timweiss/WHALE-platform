@@ -40,7 +40,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         val windowManager = service.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
         windowManager.defaultDisplay.getSize(screenSize)
 
-        batchManager = SnapshotBatchManager(service)
+        batchManager = SnapshotBatchManager(service, service.database)
 
         WHALELog.i(TAG, "Initialized with screen size: ${screenSize.x}x${screenSize.y}")
     }
@@ -428,9 +428,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
     private fun processSnapshot(snapshot: ScreenSnapshot) {
         batchManager.addSnapshot(snapshot)
-
-        val stats = batchManager.getStats()
-        WHALELog.d(TAG, "Snapshot added. Queue: ${stats.queueSize}")
+        WHALELog.d(TAG, "Snapshot added to batch manager")
     }
 
     override fun shutdown() {

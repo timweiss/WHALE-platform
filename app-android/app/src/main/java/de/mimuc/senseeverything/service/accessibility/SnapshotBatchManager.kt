@@ -2,6 +2,8 @@ package de.mimuc.senseeverything.service.accessibility
 
 import android.content.Context
 import android.content.Intent
+import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.SnapshotBatch
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.accessibility.model.ScreenSnapshot
 import kotlinx.coroutines.CoroutineScope
@@ -19,24 +21,30 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Manages batching of screen snapshots and broadcasts them for sensor collection.
+ * Uses Room database for cross-process IPC to avoid TransactionTooLargeException.
  */
 class SnapshotBatchManager(
     private val context: Context,
+    private val database: AppDatabase,
     private val batchSize: Int = 6,
     private val flushIntervalMs: Long = TimeUnit.SECONDS.toMillis(30)
 ) {
     companion object {
         const val TAG = "SnapshotBatchManager"
         const val BROADCAST_ACTION = "de.mimuc.senseeverything.ACCESSIBILITY_SNAPSHOT_BATCH"
-        const val EXTRA_BATCH_JSON = "batch_json"
+        const val EXTRA_BATCH_ID = "batch_id"
+        const val EXTRA_COUNT = "count"
+        const val EXTRA_TIMESTAMP = "timestamp"
     }
 
     private val batchQueue = ConcurrentLinkedQueue<ScreenSnapshot>()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var flushJob: Job? = null
+    private var cleanupJob: Job? = null
 
     init {
         startPeriodicFlush()
+        startPeriodicCleanup()
     }
 
     fun addSnapshot(snapshot: ScreenSnapshot) {
@@ -76,13 +84,36 @@ class SnapshotBatchManager(
     }
 
     private fun broadcastBatch(batch: JSONObject) {
-        try {
-            val intent = Intent(BROADCAST_ACTION)
-            intent.putExtra(EXTRA_BATCH_JSON, batch.toString())
-            context.sendBroadcast(intent)
-            WHALELog.i(TAG, "Broadcast batch with ${batch.getInt("count")} snapshots")
-        } catch (e: Exception) {
-            WHALELog.e(TAG, "Failed to broadcast batch", e)
+        scope.launch {
+            try {
+                val jsonString = batch.toString()
+                val sizeBytes = jsonString.toByteArray(Charsets.UTF_8).size
+
+                // Insert into database
+                val snapshotBatch = SnapshotBatch(
+                    timestamp = batch.getLong("timestamp"),
+                    jsonData = jsonString,
+                    count = batch.getInt("count"),
+                    createdAt = System.currentTimeMillis()
+                )
+
+                val batchId = database.snapshotBatchDao().insert(snapshotBatch)
+
+                WHALELog.i(TAG, "Inserted batch ID $batchId ($sizeBytes bytes, ${batch.getInt("count")} snapshots) into database")
+
+                // Broadcast lightweight Intent with ID only
+                val intent = Intent(BROADCAST_ACTION).apply {
+                    putExtra(EXTRA_BATCH_ID, batchId)
+                    putExtra(EXTRA_COUNT, batch.getInt("count"))
+                    putExtra(EXTRA_TIMESTAMP, batch.getLong("timestamp"))
+                }
+
+                context.sendBroadcast(intent)
+                WHALELog.d(TAG, "Broadcast sent with batch ID $batchId")
+
+            } catch (e: Exception) {
+                WHALELog.e(TAG, "Failed to store and broadcast batch: ${e.message}", e)
+            }
         }
     }
 
@@ -97,22 +128,47 @@ class SnapshotBatchManager(
         }
     }
 
+    private fun startPeriodicCleanup() {
+        cleanupJob = scope.launch {
+            while (isActive) {
+                delay(TimeUnit.MINUTES.toMillis(5))
+                cleanupOldBatches()
+            }
+        }
+    }
+
+    private suspend fun cleanupOldBatches() {
+        try {
+            val cutoffTime = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(5)
+            val deleted = database.snapshotBatchDao().deleteOlderThan(cutoffTime)
+            if (deleted > 0) {
+                WHALELog.i(TAG, "Cleaned up $deleted old snapshot batches")
+            }
+        } catch (e: Exception) {
+            WHALELog.e(TAG, "Failed to cleanup old batches: ${e.message}", e)
+        }
+    }
+
     /**
      * Get statistics about current batching state
      */
-    fun getStats(): BatchStats {
+    suspend fun getStats(): BatchStats {
+        val stagingCount = database.snapshotBatchDao().getCount()
         return BatchStats(
-            queueSize = batchQueue.size
+            queueSize = batchQueue.size,
+            stagingTableSize = stagingCount
         )
     }
 
     fun shutdown() {
         flushJob?.cancel()
+        cleanupJob?.cancel()
         flushBatch()
         scope.cancel()
     }
 }
 
 data class BatchStats(
-    val queueSize: Int
+    val queueSize: Int,
+    val stagingTableSize: Int
 )

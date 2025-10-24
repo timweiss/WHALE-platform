@@ -14,6 +14,8 @@ import de.mimuc.senseeverything.db.models.PendingQuestionnaire;
 import de.mimuc.senseeverything.db.models.PendingQuestionnaireDao;
 import de.mimuc.senseeverything.db.models.ScheduledAlarm;
 import de.mimuc.senseeverything.db.models.ScheduledAlarmDao;
+import de.mimuc.senseeverything.db.models.SnapshotBatch;
+import de.mimuc.senseeverything.db.models.SnapshotBatchDao;
 import de.mimuc.senseeverything.db.models.SocialNetworkContact;
 import de.mimuc.senseeverything.db.models.SocialNetworkContactDao;
 
@@ -23,8 +25,9 @@ import de.mimuc.senseeverything.db.models.SocialNetworkContactDao;
         GeneratedKey.class,
         SocialNetworkContact.class,
         NotificationTrigger.class,
-        ScheduledAlarm.class
-}, version = 17, autoMigrations = {@AutoMigration(from = 1, to = 17)}, exportSchema = true)
+        ScheduledAlarm.class,
+        SnapshotBatch.class
+}, version = 18, autoMigrations = {@AutoMigration(from = 17, to = 18)}, exportSchema = true)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract LogDataDao logDataDao();
 
@@ -37,4 +40,6 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract NotificationTriggerDao notificationTriggerDao();
 
     public abstract ScheduledAlarmDao scheduledAlarmDao();
+
+    public abstract SnapshotBatchDao snapshotBatchDao();
 }

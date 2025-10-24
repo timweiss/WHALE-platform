@@ -4,9 +4,16 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import dagger.hilt.android.AndroidEntryPoint
+import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class AccessibilityLogService : AccessibilityService() {
+    @Inject
+    lateinit var database: AppDatabase;
+
     private val info = AccessibilityServiceInfo()
 
     private val consumers = listOf(
