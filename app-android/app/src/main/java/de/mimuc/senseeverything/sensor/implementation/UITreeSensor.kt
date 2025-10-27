@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Base64
 import androidx.core.content.ContextCompat
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
@@ -12,6 +13,8 @@ import de.mimuc.senseeverything.service.accessibility.SnapshotBatchManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+import java.util.zip.GZIPOutputStream
 
 /**
  * Sensor that listens to UI tree snapshot batches broadcast by the accessibility service.
@@ -107,8 +110,10 @@ class UITreeSensor(applicationContext: Context, database: AppDatabase) :
 
                 WHALELog.i(TAG, "Fetched batch ID $batchId: ${batch.jsonData.length} bytes")
 
-                // Log the data to permanent storage
-                onLogDataItem(System.currentTimeMillis(), batch.jsonData)
+                val compressedData = compressJson(batch.jsonData)
+
+                // Log the compressed data to permanent storage
+                onLogDataItem(System.currentTimeMillis(), compressedData)
 
                 // Delete from staging table (cleanup)
                 dao.deleteById(batchId)
@@ -116,8 +121,22 @@ class UITreeSensor(applicationContext: Context, database: AppDatabase) :
                 WHALELog.d(TAG, "Processed and deleted batch ID $batchId")
 
             } catch (e: Exception) {
-                WHALELog.e(TAG, "Failed to fetch batch from database: ${e.message}")
+                WHALELog.e(TAG, "Failed to fetch batch from database: ${e.message}", e)
             }
+        }
+
+        /**
+         * Compresses JSON string with gzip and encodes as Base64.
+         * @param json The JSON string to compress
+         * @return Base64-encoded compressed data
+         */
+        private fun compressJson(json: String): String {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            GZIPOutputStream(byteArrayOutputStream).use { gzipStream ->
+                gzipStream.write(json.toByteArray(Charsets.UTF_8))
+            }
+            val compressedBytes = byteArrayOutputStream.toByteArray()
+            return Base64.encodeToString(compressedBytes, Base64.NO_WRAP)
         }
     }
 }
