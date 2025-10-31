@@ -110,13 +110,14 @@ class OnboardingViewModel @Inject constructor(
         // save that we've finished onboarding
         viewModelScope.launch {
             dataStoreManager.saveOnboardingStep(OnboardingStep.COMPLETED)
-        }
-        // pop and open the mainactivity again
-        val activity = context.getActivity()
-        if (activity != null) {
-            activity.finish()
-        } else {
-            WHALELog.e("OnboardingViewModel", "Could not get activity")
+
+            // pop and open the mainactivity again
+            val activity = context.getActivity()
+            if (activity != null) {
+                activity.finish()
+            } else {
+                WHALELog.e("OnboardingViewModel", "Could not get activity")
+            }
         }
     }
 }

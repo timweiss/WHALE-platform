@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -138,19 +139,13 @@ class StudyHomeViewModel @Inject constructor(
     private val _study = MutableStateFlow(Study.empty)
     val study: StateFlow<Study> get() = _study
 
-    private val _onboardingStep = MutableStateFlow(OnboardingStep.WELCOME)
-    val onboardingStep: StateFlow<OnboardingStep> get() = _onboardingStep
-
-    private val _hasStudyEnded = MutableStateFlow(false)
-    val hasStudyEnded: StateFlow<Boolean> get() = _hasStudyEnded
-
-    private val _studyState = MutableStateFlow(StudyState.RUNNING)
-    val studyState: StateFlow<StudyState> get() = _studyState
+    val onboardingStepFlow = dataStoreManager.onboardingStepFlow.stateIn(viewModelScope, SharingStarted.Lazily, OnboardingStep.WELCOME)
+    val studyStateFlow = dataStoreManager.studyStateFlow.stateIn(viewModelScope, SharingStarted.Lazily, StudyState.LOADING)
 
     val pendingQuestionnairesFlow: StateFlow<List<PendingQuestionnaire>> = database.pendingQuestionnaireDao().getAllNotExpiredFlow(
         System.currentTimeMillis()).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    private val _hasPermissionIssues = MutableStateFlow<Boolean>(false)
+    private val _hasPermissionIssues = MutableStateFlow(false)
     val hasPermissionIssues: StateFlow<Boolean> get() = _hasPermissionIssues
 
     init {
@@ -221,9 +216,7 @@ class StudyHomeViewModel @Inject constructor(
     private fun checkEnrolment() {
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
-            val onboardingStep = dataStoreManager.onboardingStepFlow.first()
             _isEnrolled.value = token.isNotEmpty()
-            _onboardingStep.value = onboardingStep
         }
     }
 
@@ -231,9 +224,6 @@ class StudyHomeViewModel @Inject constructor(
         viewModelScope.launch {
             val isRunning = isServiceRunning(LogService::class.java)
             _isStudyRunning.value = isRunning
-
-            _studyState.value = dataStoreManager.studyStateFlow.first() ?: StudyState.NOT_ENROLLED
-            _hasStudyEnded.value = _studyState.value == StudyState.ENDED
 
             dataStoreManager.studyPausedFlow.collect { paused ->
                 _isStudyPaused.value = paused
@@ -276,12 +266,11 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val isEnrolled = viewModel.isEnrolled.collectAsState()
     val isStudyRunning = viewModel.isStudyRunning.collectAsState()
     val isStudyPaused = viewModel.isStudyPaused.collectAsState()
-    val hasStudyEnded = viewModel.hasStudyEnded.collectAsState()
     val currentDay = viewModel.currentDay.collectAsState()
     val study = viewModel.study.collectAsState()
-    val onboardingStep = viewModel.onboardingStep.collectAsState()
-    val pendingQuestionnairesFlow = viewModel.pendingQuestionnairesFlow.collectAsState()
-    val studyState by viewModel.studyState.collectAsState()
+    val onboardingStep = viewModel.onboardingStepFlow.collectAsState()
+    val pendingQuestionnaires = viewModel.pendingQuestionnairesFlow.collectAsState()
+    val studyState by viewModel.studyStateFlow.collectAsState()
     val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
     val context = LocalContext.current
 
@@ -345,21 +334,19 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                 when (studyState) {
                     StudyState.RUNNING, StudyState.NOT_ENROLLED -> {
                         if (isEnrolled.value && !onboardingStep.value.startedButIncomplete()) {
-                            if (!hasStudyEnded.value) {
-                                Text(
-                                    stringResource(
-                                        R.string.day_of,
-                                        currentDay.value,
-                                        study.value.durationDays,
-                                        study.value.name
-                                    )
+                            Text(
+                                stringResource(
+                                    R.string.day_of,
+                                    currentDay.value,
+                                    study.value.durationDays,
+                                    study.value.name
                                 )
-                            }
+                            )
 
                             StudyActivity(
                                 isRunning = isStudyRunning.value,
                                 isPaused = isStudyPaused.value,
-                                ended = hasStudyEnded.value,
+                                ended = false,
                                 canResume = !hasPermissionIssues.value,
                                 resumeStudy = { viewModel.resumeStudy(context) },
                                 pauseStudy = { viewModel.pauseStudy(context) })
@@ -378,8 +365,8 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                                 style = MaterialTheme.typography.bodyLarge
                             )
 
-                            if (pendingQuestionnairesFlow.value.isNotEmpty()) {
-                                val inboxItems = pendingQuestionnairesFlow.value.filter { it.validDistance > kotlin.time.Duration.ZERO } .map { it.toInboxItem() }
+                            if (pendingQuestionnaires.value.isNotEmpty()) {
+                                val inboxItems = pendingQuestionnaires.value.filter { it.validDistance > kotlin.time.Duration.ZERO } .map { it.toInboxItem() }
                                 QuestionnaireInbox(inboxItems, viewModel)
                             }
 
@@ -418,8 +405,8 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         Text(stringResource(R.string.main_study_ended_last_questionnaire_hint))
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        if (pendingQuestionnairesFlow.value.isNotEmpty()) {
-                            val inboxItems = pendingQuestionnairesFlow.value.map { it.toInboxItem() }
+                        if (pendingQuestionnaires.value.isNotEmpty()) {
+                            val inboxItems = pendingQuestionnaires.value.map { it.toInboxItem() }
                             QuestionnaireInbox(inboxItems, viewModel)
                         }
 
@@ -431,8 +418,23 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                             Text(stringResource(R.string.study_settings))
                         }
                     }
+                    StudyState.LOADING -> {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .width(64.dp)
+                                    .height(64.dp),
+                                color = MaterialTheme.colorScheme.secondary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                            Text(stringResource(R.string.main_loading))
+                        }
+                    }
                 }
-
             }
         }
 

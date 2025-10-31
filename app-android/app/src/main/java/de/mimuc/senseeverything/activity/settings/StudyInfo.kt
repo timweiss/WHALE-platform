@@ -156,14 +156,19 @@ class StudyInfoViewModel @Inject constructor(
         // 2. save enrolmentId to dataStoreManager
         viewModelScope.launch {
             val enrolmentId = dataStoreManager.participantIdFlow.first()
+            val study = dataStoreManager.studyFlow.first()
             dataStoreManager.eraseAllData()
             dataStoreManager.saveParticipantId(enrolmentId)
             dataStoreManager.saveStudyState(StudyState.CANCELLED)
+            if (study != null) {
+                dataStoreManager.saveStudy(study)
+            }
+
+            // 3. pop back to main activity after all operations are complete
+            context.startActivity(Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            })
         }
-        // 3. pop back to main activity, it should show the end study
-        context.startActivity(Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        })
     }
 
     fun requestCancelParticipation() {
@@ -195,7 +200,6 @@ class StudyInfoViewModel @Inject constructor(
         } catch (ex: android.content.ActivityNotFoundException) {
         }
         hideDataDeletionDialog()
-        cancelParticipation(context)
     }
 
     fun sendDataExportEmail(context: Context, enrolmentId: String) {
@@ -267,7 +271,7 @@ fun StudyInfoView(
             title = stringResource(R.string.studyinfo_data_deletion_title),
             text = stringResource(R.string.studyinfo_data_deletion_description, enrolmentId) +
                     stringResource(R.string.studyinfo_data_export_proceed_email),
-            confirmButtonText = stringResource(R.string.studyinfo_cancel_participation),
+            confirmButtonText = stringResource(R.string.studyinfo_send_email),
             onConfirm = {
                 viewModel.sendDataDeletionEmail(context, enrolmentId)
             },
@@ -302,7 +306,17 @@ fun StudyInfoView(
 
         Text(stringResource(R.string.studyinfo_remaining_days), fontWeight = FontWeight.Bold)
         if (study.value == null) {
-            Text(stringResource(R.string.studyinfo_no_information_available))
+            when (studyState) {
+                StudyState.CANCELLED -> {
+                    Text(stringResource(R.string.studyinfo_study_cancelled))
+                }
+                StudyState.ENDED -> {
+                    Text(stringResource(R.string.studyinfo_study_ended))
+                }
+                else -> {
+                    Text(stringResource(R.string.studyinfo_no_information_available))
+                }
+            }
         } else {
             val remainingDays = study.value!!.durationDays - currentDay.value
             if (remainingDays == 0L) {

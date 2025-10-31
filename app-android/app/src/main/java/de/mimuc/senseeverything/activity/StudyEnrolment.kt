@@ -120,6 +120,7 @@ class EnrolmentViewModel @Inject constructor(
             }
 
             if (participantId.isNotEmpty()) {
+                _isEnrolled.value = true
                 _participantId.value = participantId
             }
         }

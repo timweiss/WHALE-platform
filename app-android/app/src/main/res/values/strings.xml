@@ -183,5 +183,10 @@
     <string name="main_permission_warning_title">Permissions Required</string>
     <string name="main_permission_warning_text">Some required permissions were revoked. The study cannot collect data properly.</string>
     <string name="main_permission_warning_button">Fix Permissions</string>
+
     <string name="studyinfo_remaining_days">Remaining Days</string>
+    <string name="studyinfo_study_ended">Study ended</string>
+    <string name="studyinfo_study_cancelled">Study has been cancelled</string>
+
+    <string name="main_loading">Loading…</string>
 </resources>

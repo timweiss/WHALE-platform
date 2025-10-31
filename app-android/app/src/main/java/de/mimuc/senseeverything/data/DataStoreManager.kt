@@ -9,7 +9,6 @@ import androidx.datastore.dataStoreFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
-import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
@@ -36,6 +35,7 @@ fun Context.appSettingsDataStoreFile(name: String): File =
     this.dataStoreFile("$name.appsettings.json")
 
 enum class StudyState {
+    LOADING,
     NOT_ENROLLED,
     RUNNING,
     ENDED,
@@ -58,7 +58,6 @@ data class AppSettings(
     val onboardingStep: OnboardingStep,
     val study: Study?,
     val phases: List<ExperimentalGroupPhase>? = null,
-    val interactionWidgetTimeBucket: HashMap<String, Boolean>,
     val studyState: StudyState,
     val sensitiveDataSalt: String? = null,
     val lastPermissionNotificationTime: Long = 0L,
@@ -81,7 +80,6 @@ data class OptionalAppSettings(
     val onboardingStep: OnboardingStep? = null,
     val study: Study? = null,
     val phases: List<ExperimentalGroupPhase>? = null,
-    val interactionWidgetTimeBucket: HashMap<String, Boolean>? = null,
     val studyState: StudyState? = null,
     val sensitiveDataSalt: String? = null,
     val lastPermissionNotificationTime: Long? = null,
@@ -103,7 +101,6 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     onboardingStep = OnboardingStep.WELCOME,
     study = null,
     phases = null,
-    interactionWidgetTimeBucket = hashMapOf(),
     studyState = StudyState.NOT_ENROLLED,
     lastPermissionNotificationTime = 0L,
     lastRevokedPermissions = emptySet()
@@ -130,8 +127,6 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep,
         study = optionalAppSettings.study ?: defaultAppSettings.study,
         phases = optionalAppSettings.phases ?: defaultAppSettings.phases,
-        interactionWidgetTimeBucket = optionalAppSettings.interactionWidgetTimeBucket
-            ?: defaultAppSettings.interactionWidgetTimeBucket,
         studyState = optionalAppSettings.studyState ?: defaultAppSettings.studyState,
         lastPermissionNotificationTime = optionalAppSettings.lastPermissionNotificationTime
             ?: defaultAppSettings.lastPermissionNotificationTime,
@@ -187,23 +182,8 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         }
     }
 
-    suspend fun saveToken(token: String) {
-        dataStore.updateData { preferences ->
-            preferences.copy(lastUpdate = System.currentTimeMillis(), token = token)
-        }
-    }
-
     val tokenFlow = dataStore.data.map { preferences ->
         preferences.token ?: ""
-    }
-
-    fun getTokenSync(callback: (String) -> Unit) {
-        runBlocking {
-            tokenFlow.first { token ->
-                callback(token)
-                true
-            }
-        }
     }
 
     suspend fun saveParticipantId(participantId: String) {
@@ -217,15 +197,6 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.participantId ?: ""
     }
 
-    fun getParticipantIdSync(callback: (String) -> Unit) {
-        runBlocking {
-            participantIdFlow.first { participantId ->
-                callback(participantId)
-                true
-            }
-        }
-    }
-
     suspend fun saveStudyId(studyId: Int) {
         dataStore.updateData { preferences ->
             preferences.copy(lastUpdate = System.currentTimeMillis(), studyId = studyId)
@@ -233,7 +204,7 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     }
 
     val studyIdFlow = dataStore.data.map { preferences ->
-        preferences.studyId ?: -1
+        preferences.studyId
     }
 
     suspend fun saveEnrolment(
@@ -272,40 +243,6 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         return@map parsed
     }
 
-    fun getQuestionnairesSync(callback: (List<FullQuestionnaire>) -> Unit) {
-        runBlocking {
-            questionnairesFlow.first { fullQuestionnaires ->
-                callback(fullQuestionnaires)
-                true
-            }
-        }
-    }
-
-    suspend fun setInInteraction(inInteraction: Boolean) {
-        dataStore.updateData {
-            it.copy(lastUpdate = System.currentTimeMillis(), inInteraction = inInteraction)
-        }
-    }
-
-    val inInteractionFlow = dataStore.data.map { preferences ->
-        preferences.inInteraction
-    }
-
-    fun getInInteractionSync(callback: (Boolean) -> Unit) {
-        runBlocking {
-            inInteractionFlow.first { inInteraction ->
-                callback(inInteraction)
-                true
-            }
-        }
-    }
-
-    fun setInInteractionSync(inInteraction: Boolean) {
-        runBlocking {
-            setInInteraction(inInteraction)
-        }
-    }
-
     suspend fun saveStudyDays(studyDays: Int) {
         dataStore.updateData { preferences ->
             preferences.copy(lastUpdate = System.currentTimeMillis(), studyDays = studyDays)
@@ -323,10 +260,6 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
                 remainingStudyDays = remainingStudyDays
             )
         }
-    }
-
-    val remainingStudyDaysFlow = dataStore.data.map { preferences ->
-        preferences.remainingStudyDays
     }
 
     suspend fun saveTimestampStudyStarted(timestamp: Long) {
@@ -386,40 +319,9 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.phases
     }
 
-    fun getStudyPhasesSync(callback: (List<ExperimentalGroupPhase>?) -> Unit) {
-        runBlocking {
-            studyPhasesFlow.first { phases ->
-                callback(phases)
-                true
-            }
-        }
-    }
-
     suspend fun saveStudyPhases(phases: List<ExperimentalGroupPhase>) {
         dataStore.updateData {
             it.copy(lastUpdate = System.currentTimeMillis(), phases = phases)
-        }
-    }
-
-    val interactionWidgetTimeBucketFlow = dataStore.data.map { preferences ->
-        preferences.interactionWidgetTimeBucket
-    }
-
-    suspend fun setInteractionWidgetTimeBucket(interactionWidgetTimeBucket: HashMap<String, Boolean>) {
-        dataStore.updateData {
-            it.copy(
-                lastUpdate = System.currentTimeMillis(),
-                interactionWidgetTimeBucket = interactionWidgetTimeBucket
-            )
-        }
-    }
-
-    fun getInteractionWidgetTimeBucketSync(callback: (HashMap<String, Boolean>) -> Unit) {
-        runBlocking {
-            interactionWidgetTimeBucketFlow.first { interactionWidgetTimeBucket ->
-                callback(interactionWidgetTimeBucket)
-                true
-            }
         }
     }
 
@@ -500,18 +402,5 @@ suspend fun DataStoreManager.getQuestionnaireById(id: Int): FullQuestionnaire? {
     val questionnaires = questionnairesFlow.first()
     return questionnaires.firstOrNull { questionnaire ->
         questionnaire.questionnaire.id == id
-    }
-}
-
-fun DataStoreManager.getCurrentInteractionWidgetDisplayStrategySync(callback: (InteractionWidgetDisplayStrategy?) -> Unit) {
-    runBlocking {
-        val currentPhase = getCurrentStudyPhase()
-        if (currentPhase != null) {
-            callback(currentPhase.interactionWidgetStrategy)
-            true
-        } else {
-            callback(null)
-            true
-        }
     }
 }
