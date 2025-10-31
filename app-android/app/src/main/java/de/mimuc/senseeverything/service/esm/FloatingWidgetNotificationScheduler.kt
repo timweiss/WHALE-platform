@@ -117,10 +117,12 @@ class FloatingWidgetNotificationScheduler {
 
             // Find which bucket the current time falls into
             var currentBucket: String? = null
+            var currentBucketStart: Long? = null
             for ((bucket, _) in triggersByBucket) {
                 val (start, end) = parseTimebucket(bucket, currentTime)
                 if (currentTime >= start && currentTime <= end) {
                     currentBucket = bucket
+                    currentBucketStart = start.timeInMillis
                     break
                 }
             }
@@ -154,6 +156,28 @@ class FloatingWidgetNotificationScheduler {
             // Return the latest wave-breaking trigger if found
             if (latestWaveBreakingTrigger != null) {
                 return latestWaveBreakingTrigger
+            }
+
+            // Check if there are answered wave-breaking triggers from previous buckets
+            // that extend into the current bucket (validFrom >= currentBucketStart)
+            // This indicates the wave was completed and should override the current bucket
+            if (currentBucket != null && currentBucketStart != null) {
+                for ((bucketName, _, bucketEnd) in sortedBuckets) {
+                    if (bucketEnd < currentTime.timeInMillis) {
+                        val bucketTriggers = triggersByBucket[bucketName] ?: continue
+                        val answeredWaveBreakingInCurrentBucket = bucketTriggers
+                            .filter { it.priority == NotificationTriggerPriority.WaveBreaking }
+                            .filter { it.status == NotificationTriggerStatus.Answered }
+                            .filter { it.validFrom >= currentBucketStart }
+                            .maxByOrNull { it.validFrom }
+
+                        // If we found an answered wave-breaking trigger from a previous bucket
+                        // that extends into the current bucket, the wave is completed
+                        if (answeredWaveBreakingInCurrentBucket != null) {
+                            return null
+                        }
+                    }
+                }
             }
 
             // If no unanswered wave-breaking trigger from previous buckets, return the latest trigger from current bucket

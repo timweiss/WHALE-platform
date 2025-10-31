@@ -42,7 +42,8 @@ enum class NotificationTriggerStatus {
     Planned,
     Pushed,
     Displayed,
-    Answered
+    Answered,
+    Cancelled
 }
 
 /**
