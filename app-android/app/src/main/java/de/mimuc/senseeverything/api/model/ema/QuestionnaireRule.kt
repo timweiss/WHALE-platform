@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.api.model.ema
 
+import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -55,6 +56,13 @@ data class PutNotificationTrigger(
 @SerialName("open_questionnaire")
 data class OpenQuestionnaire(
     val eventQuestionnaireTriggerId: Int
+) : Action()
+
+@Serializable
+@SerialName("update_next_notification_trigger")
+data class UpdateNextNotificationTrigger(
+    val triggerName: String,
+    val toStatus: NotificationTriggerStatus
 ) : Action()
 
 val ruleJson = Json {

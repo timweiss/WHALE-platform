@@ -17,6 +17,9 @@ interface NotificationTriggerDao {
     @Query("SELECT * FROM notification_trigger WHERE modality = :modality AND valid_from > :timestamp ORDER BY valid_from ASC")
     fun getNextForModality(modality: NotificationTriggerModality, timestamp: Long): List<NotificationTrigger>
 
+    @Query("SELECT * FROM notification_trigger WHERE valid_from > :timestamp AND name=:name ORDER BY valid_from ASC")
+    fun getNextForName(name: String, timestamp: Long): List<NotificationTrigger>
+
     @Query("SELECT * FROM notification_trigger WHERE valid_from BETWEEN :from AND :to ORDER BY valid_from ASC")
     fun getForInterval(from: Long, to: Long): List<NotificationTrigger>
 

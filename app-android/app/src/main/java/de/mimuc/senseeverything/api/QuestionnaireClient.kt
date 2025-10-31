@@ -4,6 +4,7 @@ import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.Questionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.logging.WHALELog
 
 suspend fun fetchAndPersistQuestionnaires(studyId: Int, dataStoreManager: DataStoreManager, client: ApiClient): List<FullQuestionnaire> {
     val questionnaires = fetchQuestionnairesForStudy(studyId, client)
@@ -19,6 +20,7 @@ suspend fun fetchAndPersistQuestionnaires(studyId: Int, dataStoreManager: DataSt
             fullQuestionnaires.add(fullQuestionnaire)
         } catch (e: Exception) {
             // could not load full questionnaire
+            WHALELog.e("QuestionnaireClient", "Could not load full questionnaire with id ${questionnaire.id}: ${e.message}")
             return emptyList()
         }
     }

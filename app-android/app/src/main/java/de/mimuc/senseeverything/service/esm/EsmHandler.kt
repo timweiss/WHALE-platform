@@ -20,6 +20,7 @@ import de.mimuc.senseeverything.api.model.ema.OneTimeQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.PeriodicQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.RandomEMAQuestionnaireTrigger
+import de.mimuc.senseeverything.api.model.ema.UpdateNextNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
@@ -386,6 +387,46 @@ class EsmHandler {
 
                     WHALELog.i("EsmHandler", "Created notification trigger for trigger ${trigger.id} with modality ${trigger.configuration.modality}")
                 }
+            }
+        }
+
+        suspend fun handleUpdateNextNotificationTrigger(
+            action: UpdateNextNotificationTrigger,
+            pendingQuestionnaireId: UUID?,
+            context: Context,
+            database: AppDatabase
+        ) {
+            withContext(Dispatchers.IO) {
+                val pendingQuestionnaire = database.pendingQuestionnaireDao().getById(pendingQuestionnaireId!!)
+
+                if (pendingQuestionnaire == null) {
+                    WHALELog.e("EsmHandler", "Pending questionnaire not found for UpdateNextNotificationTrigger")
+                    return@withContext
+                }
+
+                val notificationTriggerId = pendingQuestionnaire.notificationTriggerUid
+                if (notificationTriggerId == null) {
+                    WHALELog.e("EsmHandler", "Pending questionnaire does not have a notification trigger UID for UpdateNextNotificationTrigger")
+                    return@withContext
+                }
+
+                val currentNotificationTrigger = database.notificationTriggerDao().getById(notificationTriggerId)
+                if (currentNotificationTrigger == null) {
+                    WHALELog.e("EsmHandler", "Notification trigger not found in database for UpdateNextNotificationTrigger")
+                    return@withContext
+                }
+
+                val nextNotificationTriggers = database.notificationTriggerDao().getNextForName(action.triggerName, currentNotificationTrigger.validFrom)
+                if (nextNotificationTriggers.isEmpty()) {
+                    WHALELog.e("EsmHandler", "Next notification trigger not found in database for UpdateNextNotificationTrigger")
+                    return@withContext
+                }
+
+                val nextNotificationTrigger = nextNotificationTriggers.first()
+                nextNotificationTrigger.status = action.toStatus
+                nextNotificationTrigger.updatedAt = System.currentTimeMillis()
+                database.notificationTriggerDao().update(nextNotificationTrigger)
+                WHALELog.i("EsmHandler", "Updated notification trigger ${nextNotificationTrigger.uid} to status ${action.toStatus}")
             }
         }
 
