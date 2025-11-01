@@ -189,4 +189,7 @@
     <string name="studyinfo_study_cancelled">Study has been cancelled</string>
 
     <string name="main_loading">Loading…</string>
+    <string name="main_lastsync_title">Upload pending</string>
+    <string name="main_lastsync_subtitle">Not all data has been uploaded yet. Please upload all items before uninstalling the app.</string>
+    <string name="main_lastsync_button">Upload now</string>
 </resources>

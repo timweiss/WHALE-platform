@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -67,6 +68,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -94,6 +96,8 @@ import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.permissions.PermissionManager
 import de.mimuc.senseeverything.service.LogService
+import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -101,6 +105,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import javax.inject.Inject
@@ -148,6 +153,9 @@ class StudyHomeViewModel @Inject constructor(
     private val _hasPermissionIssues = MutableStateFlow(false)
     val hasPermissionIssues: StateFlow<Boolean> get() = _hasPermissionIssues
 
+    private val _unsyncedCountBeforeStudyEnd = MutableStateFlow<Long>(0)
+    val unsyncedCountBeforeStudyEnd: StateFlow<Long> get() = _unsyncedCountBeforeStudyEnd
+
     init {
         load()
     }
@@ -157,12 +165,22 @@ class StudyHomeViewModel @Inject constructor(
         checkIfStudyIsRunning()
         getStudyDetails()
         checkPermissions()
+        checkUnsyncedBeforeEnd()
     }
 
     private fun checkPermissions() {
         viewModelScope.launch {
             val permissions = PermissionManager.checkAll(getApplication())
             _hasPermissionIssues.value = permissions.values.any { !it }
+        }
+    }
+
+    private fun checkUnsyncedBeforeEnd() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val studyEndTimestamp = dataStoreManager.timestampStudyEndFlow.first()
+                _unsyncedCountBeforeStudyEnd.value = database.logDataDao().getUnsyncedCountBefore(studyEndTimestamp)
+            }
         }
     }
 
@@ -258,6 +276,13 @@ class StudyHomeViewModel @Inject constructor(
         val days = today.toEpochDay() - date.toEpochDay() + 1
         _currentDay.value = days.toInt()
     }
+
+    fun enqueueUploadJob() {
+        viewModelScope.launch {
+            val token = dataStoreManager.tokenFlow.first()
+            enqueueSingleSensorReadingsUploadWorker(this@StudyHomeViewModel.application, token, "finalReadingsUploadUserInitiated", true)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -272,6 +297,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val pendingQuestionnaires = viewModel.pendingQuestionnairesFlow.collectAsState()
     val studyState by viewModel.studyStateFlow.collectAsState()
     val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
+    val unsyncedBeforeEnd = viewModel.unsyncedCountBeforeStudyEnd.collectAsState()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -404,6 +430,10 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                     StudyState.ENDED -> {
                         Text(stringResource(R.string.main_study_ended_last_questionnaire_hint))
                         Spacer(modifier = Modifier.height(8.dp))
+
+                        if (unsyncedBeforeEnd.value > 0) {
+                            DataSyncWarningBanner(onSyncItems = { viewModel.enqueueUploadJob() })
+                        }
 
                         if (pendingQuestionnaires.value.isNotEmpty()) {
                             val inboxItems = pendingQuestionnaires.value.map { it.toInboxItem() }
@@ -578,7 +608,29 @@ fun StudyActivity(
 }
 
 @Composable
+fun DataSyncWarningBanner(onSyncItems: () -> Unit) {
+    StudyWarningBanner(
+        imagePainter = painterResource(id = R.drawable.rounded_key_vertical_24),
+        title = stringResource(R.string.main_lastsync_title),
+        subtitle = stringResource(R.string.main_lastsync_subtitle),
+        actionText = stringResource(R.string.main_lastsync_button),
+        action = onSyncItems
+    )
+}
+
+@Composable
 fun PermissionWarningBanner(onFixPermissions: () -> Unit) {
+    StudyWarningBanner(
+        imagePainter = painterResource(id = R.drawable.rounded_key_vertical_24),
+        title = stringResource(R.string.main_permission_warning_title),
+        subtitle = stringResource(R.string.main_permission_warning_text),
+        actionText = stringResource(R.string.main_permission_warning_button),
+        action = onFixPermissions
+    )
+}
+
+@Composable
+fun StudyWarningBanner(imagePainter: Painter, title: String, subtitle: String, actionText: String, action: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = orange.copy(alpha = 0.15f)),
         modifier = Modifier.fillMaxWidth(),
@@ -589,25 +641,25 @@ fun PermissionWarningBanner(onFixPermissions: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
-                painter = painterResource(id = R.drawable.rounded_key_vertical_24),
-                contentDescription = stringResource(R.string.main_permission_warning_title),
+                painter = imagePainter,
+                contentDescription = title,
                 modifier = Modifier
                     .size(28.dp)
                     .padding(end = 6.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.main_permission_warning_title),
+                    title,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    stringResource(R.string.main_permission_warning_text),
+                    subtitle,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
-            FilledTonalButton(onClick = onFixPermissions) {
-                Text(stringResource(R.string.main_permission_warning_button))
+            FilledTonalButton(onClick = action) {
+                Text(actionText)
             }
         }
     }

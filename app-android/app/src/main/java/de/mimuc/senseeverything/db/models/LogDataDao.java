@@ -17,9 +17,6 @@ public interface LogDataDao {
     @Insert
     void insertAll(LogData... logDatas);
 
-    @Query("SELECT * FROM logdata WHERE synced = FALSE ORDER BY timestamp ASC LIMIT :n")
-    List<LogData> getNextNUnsynced(int n);
-
     @Query("SELECT * FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC LIMIT :n")
     List<LogData> getNextNUnsyncedBefore(int n, long cutoffTimestamp);
 

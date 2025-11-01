@@ -187,4 +187,7 @@
     <string name="studyinfo_study_ended">Teilnahme abgeschlossen</string>
     <string name="studyinfo_study_cancelled">Teilnahme wurde abgebrochen</string>
     <string name="main_loading">Lädt…</string>
+    <string name="main_lastsync_title">Upload ausstehend</string>
+    <string name="main_lastsync_subtitle">Es wurden noch nicht alle Daten synchronisiert. Bitte warten Sie die Synchronisierung der Daten ab, bevor Sie die App deinstallieren.</string>
+    <string name="main_lastsync_button">Synchronisieren</string>
 </resources>
