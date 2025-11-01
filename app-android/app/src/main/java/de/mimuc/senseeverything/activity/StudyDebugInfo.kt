@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,10 +49,12 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
+import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.DatabaseExporter
 import de.mimuc.senseeverything.helpers.ExportStatus
 import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
+import de.mimuc.senseeverything.study.setStudyEndAlarm
 import de.mimuc.senseeverything.workers.enqueueSinglePendingQuestionnaireUploadWorker
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +66,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 @AndroidEntryPoint
 class StudyDebugInfo : ComponentActivity() {
@@ -229,6 +234,26 @@ class StudyDebugInfoViewModel @Inject constructor(
             }
         }
     }
+
+    fun scheduleStudyEnd() {
+        viewModelScope.launch {
+            val timestamp = System.currentTimeMillis() + 30.seconds.inWholeMilliseconds
+            val scheduledAlarm = ScheduledAlarm.getOrCreateScheduledAlarm(
+                database,
+                "EndStudyReceiver",
+                "EndDebug",
+                timestamp
+            )
+            val context = this@StudyDebugInfoViewModel.application
+            setStudyEndAlarm(context, scheduledAlarm)
+
+            Toast.makeText(
+                context,
+                "Scheduled study end alarm on $timestamp",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 }
 
 @Composable
@@ -306,6 +331,17 @@ fun StudyDebugInfoView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Add notification trigger")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                viewModel.scheduleStudyEnd()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Schedule Study End")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

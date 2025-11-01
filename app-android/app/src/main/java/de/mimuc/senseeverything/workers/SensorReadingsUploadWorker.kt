@@ -31,6 +31,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.toJavaDuration
 
 @Serializable
 data class SensorReading(
@@ -203,7 +206,8 @@ fun enqueueSingleSensorReadingsUploadWorker(
     context: Context,
     token: String,
     tag: String,
-    expedited: Boolean
+    expedited: Boolean,
+    delay: Duration = 0.milliseconds
 ) {
     val data = workDataOf("token" to token)
 
@@ -215,6 +219,7 @@ fun enqueueSingleSensorReadingsUploadWorker(
     val uploadWorkRequestBuilder = OneTimeWorkRequestBuilder<SensorReadingsUploadWorker>()
         .addTag(tag)
         .setInputData(data)
+        .setInitialDelay(delay.toJavaDuration())
         .setConstraints(constraintsBuilder.build())
 
     if (expedited) {
