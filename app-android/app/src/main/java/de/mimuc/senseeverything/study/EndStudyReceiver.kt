@@ -16,7 +16,6 @@ import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.minutes
 
@@ -44,9 +43,7 @@ class EndStudyReceiver : BroadcastReceiver() {
     }
 }
 
-suspend fun scheduleStudyEndAlarm(context: Context, startedTimestamp: Long, afterDays: Int, database: AppDatabase) {
-    val timestamp = startedTimestamp + TimeUnit.DAYS.toMillis(afterDays.toLong())
-
+suspend fun scheduleStudyEndAlarm(context: Context, timestamp: Long, database: AppDatabase) {
     val scheduledAlarm = ScheduledAlarm.getOrCreateScheduledAlarm(
         database,
         "EndStudyReceiver",

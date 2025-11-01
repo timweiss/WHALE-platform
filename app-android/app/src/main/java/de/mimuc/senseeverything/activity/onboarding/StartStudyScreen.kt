@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.days
 
 @HiltViewModel
 class StartStudyViewModel @Inject constructor(
@@ -84,13 +85,13 @@ class StartStudyViewModel @Inject constructor(
                     WHALELog.e("StartStudyViewModel", "Could not load questionnaires", exception)
                 }
 
-                EsmHandler.Companion.schedulePeriodicQuestionnaires(
+                EsmHandler.schedulePeriodicQuestionnaires(
                     context,
                     dataStoreManager,
                     database
                 )
 
-                EsmHandler.Companion.scheduleOneTimeQuestionnaires(
+                EsmHandler.scheduleOneTimeQuestionnaires(
                     context,
                     dataStoreManager,
                     database
@@ -103,8 +104,14 @@ class StartStudyViewModel @Inject constructor(
 
                 val startedTimestamp = System.currentTimeMillis()
                 dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
-                scheduleStudyEndAlarm(context, startedTimestamp, study.durationDays, database)
-                reschedulePhaseChanges(context, database, dataStoreManager)
+
+                val phaseSchedules = reschedulePhaseChanges(context, database, dataStoreManager)
+                dataStoreManager.savePhaseSchedules(phaseSchedules)
+
+                val studyEndTimestamp = phaseSchedules.lastOrNull()?.endTimestamp
+                    ?: (startedTimestamp + study.durationDays.days.inWholeMilliseconds)
+                scheduleStudyEndAlarm(context, studyEndTimestamp, database)
+                dataStoreManager.saveTimestampStudyEnd(studyEndTimestamp)
                 PeriodicServiceHealthcheckReceiver.schedule(context)
 
                 // automatically start data collection
@@ -112,7 +119,7 @@ class StartStudyViewModel @Inject constructor(
                     LogServiceHelper.startLogService(context.applicationContext)
                 }
 
-                SamplingEventReceiver.Companion.sendBroadcast(context, "setupComplete")
+                SamplingEventReceiver.sendBroadcast(context, "setupComplete")
             } else {
                 WHALELog.e("StartStudyViewModel", "Could not load study")
             }
@@ -133,7 +140,7 @@ fun StartStudyScreen(
     val pending = viewModel.pending.collectAsState()
 
     Column(
-        modifier = Modifier.Companion
+        modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
             .padding(16.dp)
@@ -143,16 +150,16 @@ fun StartStudyScreen(
             description = "Happy face",
             text = stringResource(R.string.onboarding_start_study_heading)
         )
-        Spacer(modifier = Modifier.Companion.padding(12.dp))
+        Spacer(modifier = Modifier.padding(12.dp))
         Text(stringResource(R.string.onboarding_start_study_everything_setup))
 
         if (pending.value) {
             Column(
-                horizontalAlignment = Alignment.Companion.CenterHorizontally,
-                modifier = Modifier.Companion.fillMaxWidth()
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .width(64.dp)
                         .height(64.dp),
                     color = MaterialTheme.colorScheme.secondary,
@@ -162,10 +169,10 @@ fun StartStudyScreen(
             }
         }
 
-        Spacer(modifier = Modifier.Companion.padding(16.dp))
+        Spacer(modifier = Modifier.padding(16.dp))
         Button(onClick = {
             viewModel.prepareStudy(context, finish)
-        }, modifier = Modifier.Companion.fillMaxWidth(), enabled = !pending.value) {
+        }, modifier = Modifier.fillMaxWidth(), enabled = !pending.value) {
             Text(stringResource(R.string.onboarding_start_study_start))
         }
     }

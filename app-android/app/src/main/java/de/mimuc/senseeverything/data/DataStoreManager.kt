@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.Study
+import de.mimuc.senseeverything.study.PhaseScheduleInfo
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.logging.WHALELog
@@ -53,6 +54,7 @@ data class AppSettings(
     val studyDays: Int,
     val remainingStudyDays: Int,
     val timestampStudyStarted: Long,
+    val timestampStudyEnd: Long,
     val studyPaused: Boolean,
     val studyPausedUntil: Long,
     val onboardingStep: OnboardingStep,
@@ -61,7 +63,8 @@ data class AppSettings(
     val studyState: StudyState,
     val sensitiveDataSalt: String? = null,
     val lastPermissionNotificationTime: Long = 0L,
-    val lastRevokedPermissions: Set<String> = emptySet()
+    val lastRevokedPermissions: Set<String> = emptySet(),
+    val phaseSchedules: List<PhaseScheduleInfo>? = null
 )
 
 @Serializable
@@ -75,6 +78,7 @@ data class OptionalAppSettings(
     val studyDays: Int? = null,
     val remainingStudyDays: Int? = null,
     val timestampStudyStarted: Long? = null,
+    val timestampStudyEnd: Long? = null,
     val studyPaused: Boolean? = null,
     val studyPausedUntil: Long? = null,
     val onboardingStep: OnboardingStep? = null,
@@ -83,7 +87,8 @@ data class OptionalAppSettings(
     val studyState: StudyState? = null,
     val sensitiveDataSalt: String? = null,
     val lastPermissionNotificationTime: Long? = null,
-    val lastRevokedPermissions: Set<String>? = null
+    val lastRevokedPermissions: Set<String>? = null,
+    val phaseSchedules: List<PhaseScheduleInfo>? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -96,6 +101,7 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     studyDays = -1,
     remainingStudyDays = -1,
     timestampStudyStarted = -1,
+    timestampStudyEnd = -1,
     studyPaused = false,
     studyPausedUntil = -1,
     onboardingStep = OnboardingStep.WELCOME,
@@ -121,6 +127,7 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
             ?: defaultAppSettings.remainingStudyDays,
         timestampStudyStarted = optionalAppSettings.timestampStudyStarted
             ?: defaultAppSettings.timestampStudyStarted,
+        timestampStudyEnd = optionalAppSettings.timestampStudyEnd ?: defaultAppSettings.timestampStudyEnd,
         studyPaused = optionalAppSettings.studyPaused ?: defaultAppSettings.studyPaused,
         studyPausedUntil = optionalAppSettings.studyPausedUntil
             ?: defaultAppSettings.studyPausedUntil,
@@ -131,7 +138,8 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         lastPermissionNotificationTime = optionalAppSettings.lastPermissionNotificationTime
             ?: defaultAppSettings.lastPermissionNotificationTime,
         lastRevokedPermissions = optionalAppSettings.lastRevokedPermissions
-            ?: defaultAppSettings.lastRevokedPermissions
+            ?: defaultAppSettings.lastRevokedPermissions,
+        phaseSchedules = optionalAppSettings.phaseSchedules ?: defaultAppSettings.phaseSchedules
     )
 }
 
@@ -275,6 +283,19 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
         preferences.timestampStudyStarted
     }
 
+    suspend fun saveTimestampStudyEnd(timestamp: Long) {
+        dataStore.updateData { preferences ->
+            preferences.copy(
+                lastUpdate = System.currentTimeMillis(),
+                timestampStudyEnd = timestamp
+            )
+        }
+    }
+
+    val timestampStudyEndFlow = dataStore.data.map { preferences ->
+        preferences.timestampStudyEnd
+    }
+
     suspend fun saveStudyPaused(studyPaused: Boolean) {
         dataStore.updateData {
             it.copy(lastUpdate = System.currentTimeMillis(), studyPaused = studyPaused)
@@ -376,6 +397,19 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
             it.copy(
                 lastUpdate = System.currentTimeMillis(),
                 lastRevokedPermissions = revokedPermissions
+            )
+        }
+    }
+
+    val phaseSchedulesFlow = dataStore.data.map { preferences ->
+        preferences.phaseSchedules
+    }
+
+    suspend fun savePhaseSchedules(schedules: List<PhaseScheduleInfo>) {
+        dataStore.updateData {
+            it.copy(
+                lastUpdate = System.currentTimeMillis(),
+                phaseSchedules = schedules
             )
         }
     }
