@@ -71,6 +71,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
@@ -103,6 +105,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -155,6 +158,11 @@ class StudyHomeViewModel @Inject constructor(
 
     private val _unsyncedCountBeforeStudyEnd = MutableStateFlow<Long>(0)
     val unsyncedCountBeforeStudyEnd: StateFlow<Long> get() = _unsyncedCountBeforeStudyEnd
+
+    val uploadWorkInfo: StateFlow<WorkInfo?> = WorkManager.getInstance(application)
+        .getWorkInfosByTagFlow("finalReadingsUploadUserInitiated")
+        .map { workInfos -> workInfos.firstOrNull() }
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     init {
         load()
@@ -298,6 +306,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val studyState by viewModel.studyStateFlow.collectAsState()
     val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
     val unsyncedBeforeEnd = viewModel.unsyncedCountBeforeStudyEnd.collectAsState()
+    val uploadWorkInfo = viewModel.uploadWorkInfo.collectAsState()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -431,7 +440,15 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         Text(stringResource(R.string.main_study_ended_last_questionnaire_hint))
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        if (unsyncedBeforeEnd.value > 0) {
+                        val workState = uploadWorkInfo.value?.state
+                        val isUploadActive = workState == WorkInfo.State.ENQUEUED || workState == WorkInfo.State.RUNNING
+
+                        if (uploadWorkInfo.value != null && (isUploadActive || workState == WorkInfo.State.SUCCEEDED || workState == WorkInfo.State.FAILED)) {
+                            DataSyncProgressBanner(
+                                workInfo = uploadWorkInfo.value,
+                                onRetry = { viewModel.enqueueUploadJob() }
+                            )
+                        } else if (unsyncedBeforeEnd.value > 0) {
                             DataSyncWarningBanner(onSyncItems = { viewModel.enqueueUploadJob() })
                         }
 
@@ -610,13 +627,102 @@ fun StudyActivity(
 @Composable
 fun DataSyncWarningBanner(onSyncItems: () -> Unit) {
     StudyWarningBanner(
-        imagePainter = painterResource(id = R.drawable.rounded_key_vertical_24),
+        imagePainter = painterResource(id = R.drawable.outline_arrow_warm_up_24),
         title = stringResource(R.string.main_lastsync_title),
         subtitle = stringResource(R.string.main_lastsync_subtitle),
         actionText = stringResource(R.string.main_lastsync_button),
         action = onSyncItems
     )
 }
+
+@Composable
+fun DataSyncProgressBanner(workInfo: WorkInfo?, onRetry: () -> Unit) {
+    val state = workInfo?.state
+
+    val (backgroundColor, title, subtitle, showProgress, showRetry) = when (state) {
+        WorkInfo.State.ENQUEUED -> DataSyncProgress(
+            orange.copy(alpha = 0.15f),
+            stringResource(R.string.main_upload_enqueued_title),
+            stringResource(R.string.main_upload_enqueued_subtitle),
+            false,
+            false
+        )
+        WorkInfo.State.RUNNING -> DataSyncProgress(
+            Color(0xFF2196F3).copy(alpha = 0.15f),
+            stringResource(R.string.main_upload_running_title),
+            stringResource(R.string.main_upload_running_subtitle),
+            true,
+            false
+        )
+        WorkInfo.State.SUCCEEDED -> DataSyncProgress(
+            Color(0xFF4CAF50).copy(alpha = 0.15f),
+            stringResource(R.string.main_upload_success_title),
+            stringResource(R.string.main_upload_success_subtitle),
+            false,
+            false
+        )
+        WorkInfo.State.FAILED -> DataSyncProgress(
+            Color(0xFFF44336).copy(alpha = 0.15f),
+            stringResource(R.string.main_upload_failed_title),
+            stringResource(R.string.main_upload_failed_subtitle),
+            false,
+            true
+        )
+        else -> return
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (showProgress) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .padding(end = 6.dp),
+                    strokeWidth = 3.dp
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.outline_arrow_warm_up_24),
+                    contentDescription = title,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .padding(end = 6.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            if (showRetry) {
+                Spacer(modifier = Modifier.width(8.dp))
+                FilledTonalButton(onClick = onRetry) {
+                    Text(stringResource(R.string.main_upload_retry_button))
+                }
+            }
+        }
+    }
+}
+
+private data class DataSyncProgress(
+    val color: Color,
+    val title: String,
+    val subtitle: String,
+    val showProgress: Boolean,
+    val showRetry: Boolean
+)
 
 @Composable
 fun PermissionWarningBanner(onFixPermissions: () -> Unit) {

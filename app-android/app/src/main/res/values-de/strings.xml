@@ -190,4 +190,13 @@
     <string name="main_lastsync_title">Upload ausstehend</string>
     <string name="main_lastsync_subtitle">Es wurden noch nicht alle Daten synchronisiert. Bitte warten Sie die Synchronisierung der Daten ab, bevor Sie die App deinstallieren.</string>
     <string name="main_lastsync_button">Synchronisieren</string>
+    <string name="main_upload_enqueued_title">Upload in Warteschlange</string>
+    <string name="main_upload_enqueued_subtitle">Der Upload wurde geplant und wird bald starten.</string>
+    <string name="main_upload_running_title">Daten werden hochgeladen</string>
+    <string name="main_upload_running_subtitle">Die Daten werden gerade auf den Server hochgeladen.</string>
+    <string name="main_upload_success_title">Upload abgeschlossen</string>
+    <string name="main_upload_success_subtitle">Alle Daten wurden erfolgreich hochgeladen.</string>
+    <string name="main_upload_failed_title">Upload fehlgeschlagen</string>
+    <string name="main_upload_failed_subtitle">Beim Hochladen der Daten ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.</string>
+    <string name="main_upload_retry_button">Erneut versuchen</string>
 </resources>

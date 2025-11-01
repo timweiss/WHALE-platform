@@ -192,4 +192,13 @@
     <string name="main_lastsync_title">Upload pending</string>
     <string name="main_lastsync_subtitle">Not all data has been uploaded yet. Please upload all items before uninstalling the app.</string>
     <string name="main_lastsync_button">Upload now</string>
+    <string name="main_upload_enqueued_title">Upload queued</string>
+    <string name="main_upload_enqueued_subtitle">Your data upload has been scheduled and will start soon.</string>
+    <string name="main_upload_running_title">Uploading data</string>
+    <string name="main_upload_running_subtitle">Your data is currently being uploaded to the server.</string>
+    <string name="main_upload_success_title">Upload complete</string>
+    <string name="main_upload_success_subtitle">All data has been successfully uploaded.</string>
+    <string name="main_upload_failed_title">Upload failed</string>
+    <string name="main_upload_failed_subtitle">The data upload encountered an error. Please try again.</string>
+    <string name="main_upload_retry_button">Retry</string>
 </resources>
