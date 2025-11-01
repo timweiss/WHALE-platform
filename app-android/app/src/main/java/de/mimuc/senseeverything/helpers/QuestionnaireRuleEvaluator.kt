@@ -75,9 +75,7 @@ class QuestionnaireRuleEvaluator(var rules: List<QuestionnaireRule>) {
         fun handleActions(context: Context, actions: List<Action>, source: PendingQuestionnaire) {
             if (actions.isEmpty()) return
 
-            for (action in actions) {
-                QuestionnaireRuleActionReceiver.sendBroadcast(context, action, source)
-            }
+            actions.forEach { QuestionnaireRuleActionReceiver.sendBroadcast(context, it, source) }
         }
     }
 }

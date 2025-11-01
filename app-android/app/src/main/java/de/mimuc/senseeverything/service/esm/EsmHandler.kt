@@ -1,15 +1,9 @@
 package de.mimuc.senseeverything.service.esm
 
 import android.app.AlarmManager
-import android.app.Notification
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
-import androidx.annotation.DrawableRes
-import androidx.core.app.NotificationCompat
-import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
@@ -31,7 +25,6 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.logging.WHALELog
-import de.mimuc.senseeverything.service.floatingWidget.NotificationTriggerFloatingWidgetService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -41,7 +34,7 @@ import kotlinx.serialization.encodeToString
 import java.util.Calendar
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 class EsmHandler {
     companion object {
@@ -423,6 +416,20 @@ class EsmHandler {
                 }
 
                 val nextNotificationTrigger = nextNotificationTriggers.first()
+
+                // check if in same time bucket
+                val sameTimeBucket = nextNotificationTrigger.timeBucket == currentNotificationTrigger.timeBucket
+                if (action.requireSameTimeBucket && !sameTimeBucket) {
+                    return@withContext
+                }
+
+                // check if next trigger is too far away
+                if (action.maxDistanceMinutes != -1) {
+                    val distanceMillis = nextNotificationTrigger.validFrom - currentNotificationTrigger.validFrom
+                    val exceedsDistance = distanceMillis.milliseconds.inWholeMinutes > action.maxDistanceMinutes
+                    if (exceedsDistance) return@withContext
+                }
+
                 nextNotificationTrigger.status = action.toStatus
                 nextNotificationTrigger.updatedAt = System.currentTimeMillis()
                 database.notificationTriggerDao().update(nextNotificationTrigger)
@@ -652,95 +659,4 @@ class EsmHandler {
             }
         }
     }
-}
-
-class NotificationPushHelper(private val context: Context) {
-
-    private val notificationManager = context.getSystemService(NotificationManager::class.java)
-
-    fun sendReminderNotification(triggerId: Int, pendingQuestionnaireId: UUID?, title: String?, questionnaireName: String? = "", timeout: Duration? = null) {
-        val intent = Intent(context, QuestionnaireActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, triggerId)
-            putExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID,
-                pendingQuestionnaireId?.toString()
-            )
-        }
-
-        val notification = buildActivityNotification(title ?: "It's time for $questionnaireName", intent, timeout)
-
-        notificationManager.notify(triggerId, notification)
-    }
-
-    fun pushNotificationTrigger(notificationTrigger: NotificationTrigger, timeout: Duration? = null) {
-        try {
-            val trigger: EMAFloatingWidgetNotificationTrigger =
-                notificationTrigger.triggerJson.let { fullQuestionnaireJson.decodeFromString<EMAFloatingWidgetNotificationTrigger>(it) }
-
-            // start the floating widget service when notification is tapped
-            val intent = Intent(context, NotificationTriggerFloatingWidgetService::class.java)
-            val notification = buildServiceNotification(trigger.configuration.notificationText, intent, timeout)
-
-            notificationManager.notify(notificationTrigger.uid.hashCode(), notification)
-        } catch (e: Exception) {
-            WHALELog.e(NotificationPushHelper::class.simpleName!!, e.message ?: "Error pushing notification trigger")
-        }
-    }
-
-    private fun buildActivityNotification(title: String, intent: Intent, timeout: Duration? = null): Notification {
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        return buildNotificationBase(title, pendingIntent, timeout)
-    }
-
-    private fun buildServiceNotification(title: String, intent: Intent, timeout: Duration? = null): Notification {
-        val pendingIntent = PendingIntent.getService(
-            context,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        return buildNotificationBase(title, pendingIntent, timeout)
-    }
-
-    private fun buildNotificationBase(
-        title: String,
-        pendingIntent: PendingIntent,
-        timeout: Duration? = null
-    ): Notification {
-        val builder = NotificationCompat.Builder(context, "SEChannel")
-            .setContentText(context.getString(R.string.app_name))
-            .setContentTitle(title)
-            .setSmallIcon(R.drawable.notification_silhouette_q)
-            .setLargeIcon(
-                BitmapFactory.decodeResource(
-                    context.resources,
-                    R.drawable.ic_launcher_whale_foreground
-                )
-            )
-            .setPriority(NotificationManager.IMPORTANCE_HIGH)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(title)
-            )
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-
-        if (timeout != null && timeout != Duration.INFINITE) {
-            builder.setTimeoutAfter(timeout.inWholeMilliseconds)
-        }
-
-        return builder.build()
-    }
-
-    private fun Context.bitmapFromResource(
-        @DrawableRes resId: Int
-    ) = BitmapFactory.decodeResource(
-        resources,
-        resId
-    )
 }

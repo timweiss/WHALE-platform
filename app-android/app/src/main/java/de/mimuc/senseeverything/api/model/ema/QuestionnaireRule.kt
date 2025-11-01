@@ -62,7 +62,9 @@ data class OpenQuestionnaire(
 @SerialName("update_next_notification_trigger")
 data class UpdateNextNotificationTrigger(
     val triggerName: String,
-    val toStatus: NotificationTriggerStatus
+    val toStatus: NotificationTriggerStatus,
+    val requireSameTimeBucket: Boolean,
+    val maxDistanceMinutes: Int
 ) : Action()
 
 val ruleJson = Json {
