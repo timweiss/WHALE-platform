@@ -117,7 +117,7 @@ suspend fun schedulePhaseChanges(context: Context, studyStartTimestamp: Long, ph
         } else {
             val scheduledAlarm = ScheduledAlarm.getOrCreateScheduledAlarm(
                 database,
-                ChangePhaseReceiver::class.java.name,
+                "ChangePhaseReceiver",
                 "phase_${phase.fromDay}",
                 triggerTimestamp
             )

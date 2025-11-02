@@ -151,10 +151,11 @@ class StudyInfoViewModel @Inject constructor(
     fun cancelParticipation(context: Context) {
         _isCancellingParticipation.value = true
         // all with loading spinner
-        // 1. refactored endstudy method
-        runStudyLifecycleCleanup(context)
-        // 2. save enrolmentId to dataStoreManager
         viewModelScope.launch {
+            // 1. refactored endstudy method
+            runStudyLifecycleCleanup(context, database)
+
+            // 2. save data still required to datastore
             val enrolmentId = dataStoreManager.participantIdFlow.first()
             val study = dataStoreManager.studyFlow.first()
             dataStoreManager.eraseAllData()

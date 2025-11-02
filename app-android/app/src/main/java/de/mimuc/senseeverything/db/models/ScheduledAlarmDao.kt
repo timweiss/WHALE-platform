@@ -13,6 +13,9 @@ interface ScheduledAlarmDao {
     @Query("SELECT * FROM scheduled_alarms WHERE receiver = :receiver")
     fun getByReceiver(receiver: String): List<ScheduledAlarm>
 
+    @Query("SELECT * FROM scheduled_alarms WHERE timestamp > :timestamp")
+    fun getAfterTimestamp(timestamp: Long): List<ScheduledAlarm>
+
     @Insert
     fun insert(scheduledAlarm: ScheduledAlarm): Long
 

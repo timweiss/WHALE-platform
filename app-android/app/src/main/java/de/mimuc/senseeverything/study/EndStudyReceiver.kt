@@ -35,7 +35,7 @@ class EndStudyReceiver : BroadcastReceiver() {
         dataStoreManager.saveStudyState(StudyState.ENDED)
         WHALELog.i(TAG, "Marked study as ended")
 
-        runStudyLifecycleCleanup(applicationContext)
+        runStudyLifecycleCleanup(applicationContext, database)
 
         val token = dataStoreManager.tokenFlow.first()
         enqueueSingleSensorReadingsUploadWorker(applicationContext, token, "finalReadingsUpload", false, 1.minutes)

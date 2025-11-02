@@ -4,24 +4,27 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.work.WorkManager
+import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.esm.NotificationTriggerReceiver
 import de.mimuc.senseeverything.service.esm.OneTimeNotificationReceiver
 import de.mimuc.senseeverything.service.esm.PeriodicNotificationReceiver
 import de.mimuc.senseeverything.service.esm.RandomNotificationReceiver
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
-import de.mimuc.senseeverything.service.sampling.ResumeSamplingReceiver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
-fun runStudyLifecycleCleanup(context: Context) {
+suspend fun runStudyLifecycleCleanup(context: Context, database: AppDatabase) {
     stopLogService(context)
     clearJobs(context)
-    clearAllAlarms(context)
+    clearAllAlarms(context, database)
     PeriodicServiceHealthcheckReceiver.cancel(context)
 }
 
 fun stopLogService(context: Context) {
-    // stop LogService
     try {
         val logServiceIntent =
             Intent(context, de.mimuc.senseeverything.service.LogService::class.java)
@@ -34,26 +37,57 @@ fun stopLogService(context: Context) {
 }
 
 fun clearJobs(context: Context) {
-    // cancel all jobs
     WorkManager.getInstance(context).cancelAllWorkByTag("readingsUpload")
     WorkManager.getInstance(context).cancelAllWorkByTag("updateQuestionnaires")
+    WorkManager.getInstance(context).cancelAllWorkByTag("pendingQuestionnaireUpload")
+
     WHALELog.i("EndStudy", "Cancelled all jobs")
 }
 
-fun clearAllAlarms(context: Context) {
-    // cancel all alarms
-    clearAlarm(context, EndStudyReceiver::class.java, 101)
-    clearAlarm(context, ResumeSamplingReceiver::class.java, 101)
-    clearAlarm(context, RandomNotificationReceiver::class.java, 101)
-    clearAlarm(context, PeriodicNotificationReceiver::class.java, 101)
-    clearAlarm(context, OneTimeNotificationReceiver::class.java, 101)
-    clearAlarm(context, ChangePhaseReceiver::class.java, 101)
+suspend fun clearAllAlarms(context: Context, database: AppDatabase) {
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    WHALELog.i("EndStudy", "Cancelled all alarms")
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        alarmManager.cancelAll()
+        WHALELog.i("EndStudy", "API >34, cancelled all alarms")
+    } else {
+        val scheduledAlarms = withContext(Dispatchers.IO) {
+            database.scheduledAlarmDao().getAfterTimestamp(System.currentTimeMillis())
+        }
+
+        for (alarm in scheduledAlarms) {
+            when (alarm.receiver) {
+                "EndStudyReceiver" -> {
+                    clearAlarm(context, EndStudyReceiver::class.java, alarm.requestCode)
+                }
+
+                "OneTimeNotificationReceiver" -> {
+                    clearAlarm(context, OneTimeNotificationReceiver::class.java, alarm.requestCode)
+                }
+
+                "RandomNotificationReceiver" -> {
+                    clearAlarm(context, RandomNotificationReceiver::class.java, alarm.requestCode)
+                }
+
+                "PeriodicNotificationReceiver" -> {
+                    clearAlarm(context, PeriodicNotificationReceiver::class.java, alarm.requestCode)
+                }
+
+                "NotificationTriggerReceiver" -> {
+                    clearAlarm(context, NotificationTriggerReceiver::class.java, alarm.requestCode)
+                }
+
+                "ChangePhaseReceiver" -> {
+                    clearAlarm(context, ChangePhaseReceiver::class.java, alarm.requestCode)
+                }
+            }
+        }
+
+        WHALELog.i("EndStudy", "API <34, cancelled all alarms via database references")
+    }
 }
 
-fun <T>clearAlarm(context: Context, receiver: Class<T>, requestCode: Int) {
-    // cancel all alarms
+fun <T> clearAlarm(context: Context, receiver: Class<T>, requestCode: Int) {
     val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     val endStudyIntent = Intent(context, receiver)
     val pendingIntent = PendingIntent.getBroadcast(
@@ -65,7 +99,10 @@ fun <T>clearAlarm(context: Context, receiver: Class<T>, requestCode: Int) {
 
     if (pendingIntent != null) {
         alarmManager.cancel(pendingIntent)
-        WHALELog.i("EndStudy", "Cancelled alarm")
+        WHALELog.i(
+            "EndStudy",
+            "Cancelled alarm for receiver ${receiver::class.java.name} with code $requestCode"
+        )
     } else {
         WHALELog.w("EndStudy", "No alarm to cancel")
     }
