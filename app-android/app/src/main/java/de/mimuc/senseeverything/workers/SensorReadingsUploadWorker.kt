@@ -35,6 +35,12 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.toJavaDuration
 
+enum class UploadWorkTag(val tag: String) {
+    IMMEDIATE_FROM_DEBUG("immediateFromDebugSettings"),
+    FINAL_UPLOAD_MANUAL("finalReadingsUploadUserInitiated"),
+    STALE_UPLOAD_MANUAL("staleReadingsUploadUserInitiated")
+}
+
 @Serializable
 data class SensorReading(
     val sensorType: String,
@@ -184,8 +190,7 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
     val data = workDataOf("token" to token)
 
     val constraints = Constraints.Builder()
-        .setRequiredNetworkType(NetworkType.CONNECTED)
-        // .setRequiresCharging(true) --> blocks too many attempts at synchronization
+        .setRequiredNetworkType(NetworkType.UNMETERED)
         .build()
 
     val uploadWorkRequest = PeriodicWorkRequestBuilder<SensorReadingsUploadWorker>(1, TimeUnit.DAYS)
@@ -205,7 +210,7 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
 fun enqueueSingleSensorReadingsUploadWorker(
     context: Context,
     token: String,
-    tag: String,
+    workTag: UploadWorkTag = UploadWorkTag.FINAL_UPLOAD_MANUAL,
     expedited: Boolean,
     delay: Duration = 0.milliseconds
 ) {
@@ -217,7 +222,7 @@ fun enqueueSingleSensorReadingsUploadWorker(
     if (!expedited) constraintsBuilder.setRequiresCharging(true)
 
     val uploadWorkRequestBuilder = OneTimeWorkRequestBuilder<SensorReadingsUploadWorker>()
-        .addTag(tag)
+        .addTag(workTag.tag)
         .setInputData(data)
         .setInitialDelay(delay.toJavaDuration())
         .setConstraints(constraintsBuilder.build())

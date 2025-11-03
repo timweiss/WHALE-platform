@@ -28,11 +28,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -52,7 +49,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -76,6 +72,11 @@ import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
+import de.mimuc.senseeverything.activity.components.DataSyncProgressBanner
+import de.mimuc.senseeverything.activity.components.DataSyncWarningBanner
+import de.mimuc.senseeverything.activity.components.QuestionnaireInbox
+import de.mimuc.senseeverything.activity.components.StaleDataUploadInfo
+import de.mimuc.senseeverything.activity.components.StudyWarningBanner
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.activity.onboarding.Onboarding
 import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
@@ -98,6 +99,8 @@ import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.permissions.PermissionManager
 import de.mimuc.senseeverything.service.LogService
+import de.mimuc.senseeverything.workers.StaleUnsyncedSensorReadingsCheckWorker
+import de.mimuc.senseeverything.workers.UploadWorkTag
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -160,9 +163,17 @@ class StudyHomeViewModel @Inject constructor(
     val unsyncedCountBeforeStudyEnd: StateFlow<Long> get() = _unsyncedCountBeforeStudyEnd
 
     val uploadWorkInfo: StateFlow<WorkInfo?> = WorkManager.getInstance(application)
-        .getWorkInfosByTagFlow("finalReadingsUploadUserInitiated")
+        .getWorkInfosByTagFlow(UploadWorkTag.FINAL_UPLOAD_MANUAL.tag)
         .map { workInfos -> workInfos.firstOrNull() }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    val duringStudyUploadWorkInfo: StateFlow<WorkInfo?> = WorkManager.getInstance(application)
+        .getWorkInfosByTagFlow(UploadWorkTag.STALE_UPLOAD_MANUAL.tag)
+        .map { workInfos -> workInfos.firstOrNull() }
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    val staleUnsyncedItems: StateFlow<Long> = database.logDataDao().getUnsyncedCountBeforeFlow(
+        System.currentTimeMillis() - StaleUnsyncedSensorReadingsCheckWorker.STALE_DURATION).stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
     init {
         load()
@@ -285,10 +296,15 @@ class StudyHomeViewModel @Inject constructor(
         _currentDay.value = days.toInt()
     }
 
-    fun enqueueUploadJob() {
+    fun enqueueUploadJob(workTag: UploadWorkTag = UploadWorkTag.FINAL_UPLOAD_MANUAL) {
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
-            enqueueSingleSensorReadingsUploadWorker(this@StudyHomeViewModel.application, token, "finalReadingsUploadUserInitiated", true)
+            enqueueSingleSensorReadingsUploadWorker(
+                this@StudyHomeViewModel.application,
+                token,
+                workTag,
+                true
+            )
         }
     }
 }
@@ -307,6 +323,8 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
     val unsyncedBeforeEnd = viewModel.unsyncedCountBeforeStudyEnd.collectAsState()
     val uploadWorkInfo = viewModel.uploadWorkInfo.collectAsState()
+    val duringStudyUploadWorkInfo = viewModel.duringStudyUploadWorkInfo.collectAsState()
+    val staleUnsyncedItems = viewModel.staleUnsyncedItems.collectAsState()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -395,6 +413,15 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
 
+                            // Upload banner for old data during running study
+                            StaleDataUploadInfo(
+                                duringStudyUploadWorkInfo,
+                                staleUnsyncedItems,
+                                enqueueUpload = {
+                                    viewModel.enqueueUploadJob(UploadWorkTag.STALE_UPLOAD_MANUAL)
+                                }
+                            )
+
                             Text(
                                 AnnotatedString.fromHtml(study.value.description),
                                 style = MaterialTheme.typography.bodyLarge
@@ -402,7 +429,11 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
                             if (pendingQuestionnaires.value.isNotEmpty()) {
                                 val inboxItems = pendingQuestionnaires.value.filter { it.validDistance > kotlin.time.Duration.ZERO } .map { it.toInboxItem() }
-                                QuestionnaireInbox(inboxItems, viewModel)
+                                QuestionnaireInbox(
+                                    inboxItems,
+                                    openQuestionnaire = { questionnaire ->
+                                        viewModel.openPendingQuestionnaire(context, questionnaire)
+                                    })
                             }
 
                             SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
@@ -454,7 +485,9 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
                         if (pendingQuestionnaires.value.isNotEmpty()) {
                             val inboxItems = pendingQuestionnaires.value.map { it.toInboxItem() }
-                            QuestionnaireInbox(inboxItems, viewModel)
+                            QuestionnaireInbox(inboxItems, openQuestionnaire = { questionnaire ->
+                                viewModel.openPendingQuestionnaire(context, questionnaire)
+                            })
                         }
 
                         SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
@@ -493,66 +526,6 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                 }
 
                 else -> {}
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuestionnaireInbox(
-    pendingQuestionnaires: List<QuestionnaireInboxItem>,
-    viewModel: StudyHomeViewModel
-) {
-    val context = LocalContext.current
-
-    if (pendingQuestionnaires.isEmpty()) {
-        return
-    }
-
-    SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
-
-    Column {
-        Row(horizontalArrangement = Arrangement.Center) {
-            Image(
-                painter = painterResource(id = R.drawable.baseline_inbox_24),
-                contentDescription = "",
-                modifier = Modifier
-                    .size(28.dp)
-                    .padding(end = 6.dp)
-            )
-            Text(
-                stringResource(R.string.main_questionnaire_inbox), style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp
-            )
-        }
-
-        Text(stringResource(R.string.main_questionnaire_inbox_completion_hint))
-    }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.padding(vertical = 12.dp)
-    ) {
-        pendingQuestionnaires.forEach { pq ->
-            Card(
-                shape = RoundedCornerShape(4.dp),
-                modifier = Modifier
-                    .fillMaxWidth(), onClick = {
-                        viewModel.openPendingQuestionnaire(context, pq)
-                    }) {
-                Column(modifier = Modifier.padding(6.dp)) {
-                    Text(pq.title, fontWeight = FontWeight.SemiBold)
-                    if (pq.validUntil != -1L) {
-                        Text(
-                            stringResource(
-                                R.string.main_questionnaire_inbox_element_duration_validitiy,
-                                pq.validDistance.inWholeMinutes
-                            ))
-                    } else {
-                        Text(stringResource(R.string.main_questionnaire_inbox_element_duration_indefinite))
-                    }
-                }
             }
         }
     }
@@ -625,106 +598,6 @@ fun StudyActivity(
 }
 
 @Composable
-fun DataSyncWarningBanner(onSyncItems: () -> Unit) {
-    StudyWarningBanner(
-        imagePainter = painterResource(id = R.drawable.outline_arrow_warm_up_24),
-        title = stringResource(R.string.main_lastsync_title),
-        subtitle = stringResource(R.string.main_lastsync_subtitle),
-        actionText = stringResource(R.string.main_lastsync_button),
-        action = onSyncItems
-    )
-}
-
-@Composable
-fun DataSyncProgressBanner(workInfo: WorkInfo?, onRetry: () -> Unit) {
-    val state = workInfo?.state
-
-    val (backgroundColor, title, subtitle, showProgress, showRetry) = when (state) {
-        WorkInfo.State.ENQUEUED -> DataSyncProgress(
-            orange.copy(alpha = 0.15f),
-            stringResource(R.string.main_upload_enqueued_title),
-            stringResource(R.string.main_upload_enqueued_subtitle),
-            false,
-            false
-        )
-        WorkInfo.State.RUNNING -> DataSyncProgress(
-            Color(0xFF2196F3).copy(alpha = 0.15f),
-            stringResource(R.string.main_upload_running_title),
-            stringResource(R.string.main_upload_running_subtitle),
-            true,
-            false
-        )
-        WorkInfo.State.SUCCEEDED -> DataSyncProgress(
-            Color(0xFF4CAF50).copy(alpha = 0.15f),
-            stringResource(R.string.main_upload_success_title),
-            stringResource(R.string.main_upload_success_subtitle),
-            false,
-            false
-        )
-        WorkInfo.State.FAILED -> DataSyncProgress(
-            Color(0xFFF44336).copy(alpha = 0.15f),
-            stringResource(R.string.main_upload_failed_title),
-            stringResource(R.string.main_upload_failed_subtitle),
-            false,
-            true
-        )
-        else -> return
-    }
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (showProgress) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .padding(end = 6.dp),
-                    strokeWidth = 3.dp
-                )
-            } else {
-                Image(
-                    painter = painterResource(id = R.drawable.outline_arrow_warm_up_24),
-                    contentDescription = title,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .padding(end = 6.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            if (showRetry) {
-                Spacer(modifier = Modifier.width(8.dp))
-                FilledTonalButton(onClick = onRetry) {
-                    Text(stringResource(R.string.main_upload_retry_button))
-                }
-            }
-        }
-    }
-}
-
-private data class DataSyncProgress(
-    val color: Color,
-    val title: String,
-    val subtitle: String,
-    val showProgress: Boolean,
-    val showRetry: Boolean
-)
-
-@Composable
 fun PermissionWarningBanner(onFixPermissions: () -> Unit) {
     StudyWarningBanner(
         imagePainter = painterResource(id = R.drawable.rounded_key_vertical_24),
@@ -733,42 +606,6 @@ fun PermissionWarningBanner(onFixPermissions: () -> Unit) {
         actionText = stringResource(R.string.main_permission_warning_button),
         action = onFixPermissions
     )
-}
-
-@Composable
-fun StudyWarningBanner(imagePainter: Painter, title: String, subtitle: String, actionText: String, action: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = orange.copy(alpha = 0.15f)),
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = imagePainter,
-                contentDescription = title,
-                modifier = Modifier
-                    .size(28.dp)
-                    .padding(end = 6.dp)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            FilledTonalButton(onClick = action) {
-                Text(actionText)
-            }
-        }
-    }
 }
 
 @Composable

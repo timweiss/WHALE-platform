@@ -43,6 +43,7 @@ import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
+import de.mimuc.senseeverything.workers.enqueueOldDataCheckWorker
 import de.mimuc.senseeverything.workers.enqueuePendingQuestionnaireUploadWorker
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
 import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
@@ -50,6 +51,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.LocalTime
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 
@@ -101,6 +103,7 @@ class StartStudyViewModel @Inject constructor(
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
                 enqueuePendingQuestionnaireUploadWorker(context, studyId, token)
+                enqueueOldDataCheckWorker(context, LocalTime.of(14, 5))
 
                 val startedTimestamp = System.currentTimeMillis()
                 dataStoreManager.saveTimestampStudyStarted(startedTimestamp)

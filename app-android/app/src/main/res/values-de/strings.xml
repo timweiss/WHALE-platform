@@ -199,4 +199,9 @@
     <string name="main_upload_failed_title">Upload fehlgeschlagen</string>
     <string name="main_upload_failed_subtitle">Beim Hochladen der Daten ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.</string>
     <string name="main_upload_retry_button">Erneut versuchen</string>
+    <string name="sensor_upload_stale_notification_title">Upload erforderlich</string>
+    <string name="sensor_upload_stale_notification_message">Bitte öffnen Sie die App, um Ihre Daten mit dem Server zu synchronisieren.</string>
+
+    <string name="main_stale_data_title">Upload erforderlich</string>
+    <string name="main_stale_data_subtitle">Der letzte Upload wurde seit zwei Tagen nicht durchgeführt. Bitte starten Sie jetzt einen Upload. Der Upload wird unabhängig von Ihrer Verbindung durchgeführt, sodass Kosten entstehen können, wenn Sie nur über mobile Daten verbunden sind.</string>
 </resources>

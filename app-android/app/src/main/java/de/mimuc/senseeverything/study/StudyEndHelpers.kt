@@ -13,6 +13,7 @@ import de.mimuc.senseeverything.service.esm.OneTimeNotificationReceiver
 import de.mimuc.senseeverything.service.esm.PeriodicNotificationReceiver
 import de.mimuc.senseeverything.service.esm.RandomNotificationReceiver
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
+import de.mimuc.senseeverything.workers.StaleUnsyncedSensorReadingsCheckWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -40,6 +41,7 @@ fun clearJobs(context: Context) {
     WorkManager.getInstance(context).cancelAllWorkByTag("readingsUpload")
     WorkManager.getInstance(context).cancelAllWorkByTag("updateQuestionnaires")
     WorkManager.getInstance(context).cancelAllWorkByTag("pendingQuestionnaireUpload")
+    WorkManager.getInstance(context).cancelAllWorkByTag(StaleUnsyncedSensorReadingsCheckWorker.WORKER_TAG)
 
     WHALELog.i("EndStudy", "Cancelled all jobs")
 }

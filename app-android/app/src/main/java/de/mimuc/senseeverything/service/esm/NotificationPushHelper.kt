@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
 import de.mimuc.senseeverything.R
+import de.mimuc.senseeverything.activity.MainActivity
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
@@ -100,7 +101,8 @@ class NotificationPushHelper(private val context: Context) {
     private fun buildNotificationBase(
         title: String,
         pendingIntent: PendingIntent,
-        timeout: Duration? = null
+        timeout: Duration? = null,
+        bigText: String? = null
     ): Notification {
         val builder = NotificationCompat.Builder(context, "SEChannel")
             .setContentText(context.getString(R.string.app_name))
@@ -115,16 +117,34 @@ class NotificationPushHelper(private val context: Context) {
             .setPriority(NotificationManager.IMPORTANCE_HIGH)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText(title)
+                    .bigText(bigText ?: title)
             )
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
 
-        if (timeout != null && timeout != Duration.Companion.INFINITE) {
+        if (timeout != null && timeout != Duration.INFINITE) {
             builder.setTimeoutAfter(timeout.inWholeMilliseconds)
         }
 
         return builder.build()
+    }
+
+    fun sendOldDataReminderNotification() {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            1015,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = buildNotificationBase(context.getString(R.string.sensor_upload_stale_notification_title), pendingIntent, bigText = context.getString(R.string.sensor_upload_stale_notification_message))
+
+        val notificationManager = context.getSystemService(NotificationManager::class.java)
+        notificationManager.notify(1015, notification)
     }
 
     private fun Context.bitmapFromResource(

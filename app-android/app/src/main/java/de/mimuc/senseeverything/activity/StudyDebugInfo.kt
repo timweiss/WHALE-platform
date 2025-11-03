@@ -55,6 +55,7 @@ import de.mimuc.senseeverything.helpers.ExportStatus
 import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
 import de.mimuc.senseeverything.study.setStudyEndAlarm
+import de.mimuc.senseeverything.workers.UploadWorkTag
 import de.mimuc.senseeverything.workers.enqueueSinglePendingQuestionnaireUploadWorker
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
@@ -154,7 +155,7 @@ class StudyDebugInfoViewModel @Inject constructor(
     fun scheduleImmediateSync() {
         viewModelScope.launch {
             val token = dataStoreManager.tokenFlow.first()
-            enqueueSingleSensorReadingsUploadWorker(getApplication(), token, "immediateFromDebugSettings", true)
+            enqueueSingleSensorReadingsUploadWorker(getApplication(), token, UploadWorkTag.IMMEDIATE_FROM_DEBUG, true)
         }
     }
 

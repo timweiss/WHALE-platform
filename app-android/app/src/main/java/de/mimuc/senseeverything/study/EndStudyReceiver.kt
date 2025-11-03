@@ -12,6 +12,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.helpers.goAsync
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.workers.UploadWorkTag
 import de.mimuc.senseeverything.workers.enqueueSingleSensorReadingsUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -38,7 +39,7 @@ class EndStudyReceiver : BroadcastReceiver() {
         runStudyLifecycleCleanup(applicationContext, database)
 
         val token = dataStoreManager.tokenFlow.first()
-        enqueueSingleSensorReadingsUploadWorker(applicationContext, token, "finalReadingsUpload", false, 1.minutes)
+        enqueueSingleSensorReadingsUploadWorker(applicationContext, token, UploadWorkTag.FINAL_UPLOAD_MANUAL, false, 1.minutes)
         WHALELog.i(TAG, "Scheduled final sensor readings upload")
     }
 }
