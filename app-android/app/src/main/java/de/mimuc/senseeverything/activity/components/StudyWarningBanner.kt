@@ -20,12 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import de.mimuc.senseeverything.activity.orange
+import de.mimuc.senseeverything.activity.ui.theme.StudyStatusColors
 
 @Composable
 fun StudyWarningBanner(imagePainter: Painter, title: String, subtitle: String, actionText: String, action: () -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = orange.copy(alpha = 0.15f)),
+        colors = CardDefaults.cardColors(containerColor = StudyStatusColors.Warning.copy(alpha = 0.15f)),
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp)
     ) {

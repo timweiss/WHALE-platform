@@ -13,26 +13,17 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -45,22 +36,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.fromHtml
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
@@ -72,16 +55,16 @@ import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
-import de.mimuc.senseeverything.activity.components.DataSyncProgressBanner
-import de.mimuc.senseeverything.activity.components.DataSyncWarningBanner
-import de.mimuc.senseeverything.activity.components.QuestionnaireInbox
-import de.mimuc.senseeverything.activity.components.StaleDataUploadInfo
-import de.mimuc.senseeverything.activity.components.StudyWarningBanner
 import de.mimuc.senseeverything.activity.esm.QuestionnaireActivity
 import de.mimuc.senseeverything.activity.onboarding.Onboarding
 import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
 import de.mimuc.senseeverything.activity.onboarding.startedButIncomplete
 import de.mimuc.senseeverything.activity.settings.StudyInfo
+import de.mimuc.senseeverything.activity.studyLifecycleScreens.ActiveStudyScreen
+import de.mimuc.senseeverything.activity.studyLifecycleScreens.LoadingScreen
+import de.mimuc.senseeverything.activity.studyLifecycleScreens.NotEnrolledScreen
+import de.mimuc.senseeverything.activity.studyLifecycleScreens.StudyCancelledScreen
+import de.mimuc.senseeverything.activity.studyLifecycleScreens.StudyEndedScreen
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudy
@@ -217,17 +200,29 @@ class StudyHomeViewModel @Inject constructor(
 
     fun resumeStudy(context: Context) {
         LogServiceHelper.startLogService(context.applicationContext)
-
-        viewModelScope.launch {
-            delay(1000)
-            checkIfStudyIsRunning()
-        }
+        pollLogServiceStatus(false)
     }
 
     fun pauseStudy(context: Context) {
         LogServiceHelper.stopLogService(context.applicationContext)
+        pollLogServiceStatus(true)
+    }
+
+    private fun pollLogServiceStatus(serviceStopped: Boolean) {
         viewModelScope.launch {
-            delay(1000)
+            // Poll service state with timeout (max 5 seconds)
+            var attempts = 0
+            val maxAttempts = 20
+            while (attempts < maxAttempts) {
+                delay(250)
+                val serviceRunning = isServiceRunning(LogService::class.java)
+
+                if (serviceRunning xor serviceStopped) {
+                    break
+                }
+
+                attempts++
+            }
             checkIfStudyIsRunning()
         }
     }
@@ -345,12 +340,8 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
         AnimatedVisibility(
             visible = visible,
             enter = slideInVertically {
-                // Slide in from 40 dp from the top.
                 with(density) { -60.dp.roundToPx() }
-            } + fadeIn(
-                // Fade in with the initial alpha of 0.3f.
-                initialAlpha = 0.2f
-            ),
+            } + fadeIn(initialAlpha = 0.2f),
             exit = slideOutVertically() + fadeOut(),
         ) {
             Column(
@@ -384,135 +375,57 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Show appropriate screen based on study state
                 when (studyState) {
                     StudyState.RUNNING, StudyState.NOT_ENROLLED -> {
                         if (isEnrolled.value && !onboardingStep.value.startedButIncomplete()) {
-                            Text(
-                                stringResource(
-                                    R.string.day_of,
-                                    currentDay.value,
-                                    study.value.durationDays,
-                                    study.value.name
-                                )
+                            // Filter questionnaires for active study
+                            val activeStudyInboxItems = pendingQuestionnaires.value
+                                .filter { it.validDistance > kotlin.time.Duration.ZERO }
+                                .map { it.toInboxItem() }
+
+                            ActiveStudyScreen(
+                                currentDay = currentDay.value,
+                                study = study.value,
+                                isStudyRunning = isStudyRunning.value,
+                                isStudyPaused = isStudyPaused.value,
+                                hasPermissionIssues = hasPermissionIssues.value,
+                                duringStudyUploadWorkInfo = duringStudyUploadWorkInfo,
+                                staleUnsyncedItems = staleUnsyncedItems,
+                                questionnaireInboxItems = activeStudyInboxItems,
+                                onResumeStudy = { viewModel.resumeStudy(context) },
+                                onPauseStudy = { viewModel.pauseStudy(context) },
+                                onFixPermissions = { viewModel.openPermissionFix(context) },
+                                onOpenQuestionnaire = { viewModel.openPendingQuestionnaire(context, it) },
+                                onOpenSettings = { viewModel.openSettings(context) },
+                                onEnqueueStaleUpload = { viewModel.enqueueUploadJob(UploadWorkTag.STALE_UPLOAD_MANUAL) }
                             )
-
-                            StudyActivity(
-                                isRunning = isStudyRunning.value,
-                                isPaused = isStudyPaused.value,
-                                ended = false,
-                                canResume = !hasPermissionIssues.value,
-                                resumeStudy = { viewModel.resumeStudy(context) },
-                                pauseStudy = { viewModel.pauseStudy(context) })
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            if (hasPermissionIssues.value) {
-                                PermissionWarningBanner(
-                                    onFixPermissions = { viewModel.openPermissionFix(context) }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-
-                            // Upload banner for old data during running study
-                            StaleDataUploadInfo(
-                                duringStudyUploadWorkInfo,
-                                staleUnsyncedItems,
-                                enqueueUpload = {
-                                    viewModel.enqueueUploadJob(UploadWorkTag.STALE_UPLOAD_MANUAL)
-                                }
-                            )
-
-                            Text(
-                                AnnotatedString.fromHtml(study.value.description),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-
-                            if (pendingQuestionnaires.value.isNotEmpty()) {
-                                val inboxItems = pendingQuestionnaires.value.filter { it.validDistance > kotlin.time.Duration.ZERO } .map { it.toInboxItem() }
-                                QuestionnaireInbox(
-                                    inboxItems,
-                                    openQuestionnaire = { questionnaire ->
-                                        viewModel.openPendingQuestionnaire(context, questionnaire)
-                                    })
-                            }
-
-                            SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
-                            FilledTonalButton(
-                                onClick = { viewModel.openSettings(context) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(stringResource(R.string.study_settings))
-                            }
                         } else {
-                            Button(
-                                onClick = { viewModel.startOnboarding() },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                if (onboardingStep.value.startedButIncomplete()) {
-                                    Text(stringResource(R.string.continue_registration))
-                                } else {
-                                    Text(stringResource(R.string.enroll_in_study))
-                                }
-                            }
+                            NotEnrolledScreen(
+                                resumingOnboarding = onboardingStep.value.startedButIncomplete(),
+                                onStartOnboarding = { viewModel.startOnboarding() }
+                            )
                         }
                     }
                     StudyState.CANCELLED -> {
-                        Text(stringResource(R.string.main_study_cancelled_uninstall_hint))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
-                        FilledTonalButton(
-                            onClick = { viewModel.openSettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.study_settings))
-                        }
+                        StudyCancelledScreen(
+                            onOpenSettings = { viewModel.openSettings(context) }
+                        )
                     }
                     StudyState.ENDED -> {
-                        Text(stringResource(R.string.main_study_ended_last_questionnaire_hint))
-                        Spacer(modifier = Modifier.height(8.dp))
+                        val endedStudyInboxItems = pendingQuestionnaires.value.map { it.toInboxItem() }
 
-                        val workState = uploadWorkInfo.value?.state
-                        val isUploadActive = workState == WorkInfo.State.ENQUEUED || workState == WorkInfo.State.RUNNING
-
-                        if (uploadWorkInfo.value != null && (isUploadActive || workState == WorkInfo.State.SUCCEEDED || workState == WorkInfo.State.FAILED)) {
-                            DataSyncProgressBanner(
-                                workInfo = uploadWorkInfo.value,
-                                onRetry = { viewModel.enqueueUploadJob() }
-                            )
-                        } else if (unsyncedBeforeEnd.value > 0) {
-                            DataSyncWarningBanner(onSyncItems = { viewModel.enqueueUploadJob() })
-                        }
-
-                        if (pendingQuestionnaires.value.isNotEmpty()) {
-                            val inboxItems = pendingQuestionnaires.value.map { it.toInboxItem() }
-                            QuestionnaireInbox(inboxItems, openQuestionnaire = { questionnaire ->
-                                viewModel.openPendingQuestionnaire(context, questionnaire)
-                            })
-                        }
-
-                        SpacerLine(paddingValues = PaddingValues(vertical = 12.dp), width = 96.dp)
-                        FilledTonalButton(
-                            onClick = { viewModel.openSettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.study_settings))
-                        }
+                        StudyEndedScreen(
+                            uploadWorkInfo = uploadWorkInfo.value,
+                            unsyncedCount = unsyncedBeforeEnd.value,
+                            questionnaireInboxItems = endedStudyInboxItems,
+                            onOpenQuestionnaire = { viewModel.openPendingQuestionnaire(context, it) },
+                            onOpenSettings = { viewModel.openSettings(context) },
+                            onEnqueueUpload = { viewModel.enqueueUploadJob() }
+                        )
                     }
                     StudyState.LOADING -> {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .width(64.dp)
-                                    .height(64.dp),
-                                color = MaterialTheme.colorScheme.secondary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            )
-                            Text(stringResource(R.string.main_loading))
-                        }
+                        LoadingScreen()
                     }
                 }
             }
@@ -522,115 +435,11 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
             when (lifecycleState) {
                 androidx.lifecycle.Lifecycle.State.RESUMED -> {
                     viewModel.load()
-                    visible = true
+                    visible = true // required for animation
                 }
-
                 else -> {}
             }
         }
-    }
-}
-
-val green = Color.hsl(80f, 1f, 0.33f, 1f)
-val orange = Color.hsl(37f, 1f, 0.50f, 1f)
-val red = Color.hsl(0f, 1f, 0.41f, 1f)
-val grey = Color.LightGray
-
-@Composable
-fun StudyActivity(
-    isRunning: Boolean,
-    isPaused: Boolean,
-    ended: Boolean,
-    canResume: Boolean,
-    resumeStudy: () -> Unit,
-    pauseStudy: () -> Unit
-) {
-    if (ended) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            StatusIndicator(color = grey)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.study_has_ended))
-        }
-    } else if (isRunning) {
-        Column {
-            if (!isPaused) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusIndicator(color = Color.hsl(80f, 1f, 0.33f, 1f))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.study_is_running))
-                }
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusIndicator(color = Color.hsl(37f, 1f, 0.50f, 1f))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.study_is_paused), fontStyle = FontStyle.Italic)
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { resumeStudy() }) {
-                    Text(
-                        stringResource(R.string.resume_study),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-    } else {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusIndicator(color = Color.hsl(0f, 1f, 0.41f, 1f))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.study_not_running))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (canResume) {
-                Button(onClick = { resumeStudy() }) {
-                    Text(
-                        stringResource(R.string.service_not_running_resume_study),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PermissionWarningBanner(onFixPermissions: () -> Unit) {
-    StudyWarningBanner(
-        imagePainter = painterResource(id = R.drawable.rounded_key_vertical_24),
-        title = stringResource(R.string.main_permission_warning_title),
-        subtitle = stringResource(R.string.main_permission_warning_text),
-        actionText = stringResource(R.string.main_permission_warning_button),
-        action = onFixPermissions
-    )
-}
-
-@Composable
-fun StatusIndicator(color: Color) {
-    Box(
-        modifier = Modifier
-            .size(16.dp)
-            .clip(CircleShape)
-            .background(color)
-    )
-}
-
-@Composable
-fun SpacerLine(paddingValues: PaddingValues, width: Dp) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(paddingValues), horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .width(width)
-                .height(1.dp)
-                .background(Color.LightGray)
-        )
     }
 }
 

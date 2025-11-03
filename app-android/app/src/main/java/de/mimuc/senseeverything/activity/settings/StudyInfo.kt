@@ -42,7 +42,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.BuildConfig
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.MainActivity
-import de.mimuc.senseeverything.activity.SpacerLine
+import de.mimuc.senseeverything.activity.components.SpacerLine
 import de.mimuc.senseeverything.activity.StudyDebugInfo
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient

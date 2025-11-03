@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.mimuc.senseeverything.R
-import de.mimuc.senseeverything.activity.SpacerLine
 import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
 import de.mimuc.senseeverything.db.models.validDistance
 

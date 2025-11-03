@@ -27,7 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
 import de.mimuc.senseeverything.R
-import de.mimuc.senseeverything.activity.orange
+import de.mimuc.senseeverything.activity.ui.theme.StudyStatusColors
 
 @Composable
 fun StaleDataSyncWarningBanner(onSyncItems: () -> Unit) {
@@ -57,7 +57,7 @@ fun DataSyncProgressBanner(workInfo: WorkInfo?, onRetry: () -> Unit) {
 
     val (backgroundColor, title, subtitle, showProgress, showRetry) = when (state) {
         WorkInfo.State.ENQUEUED -> DataSyncProgress(
-            orange.copy(alpha = 0.15f),
+            StudyStatusColors.Warning.copy(alpha = 0.15f),
             stringResource(R.string.main_upload_enqueued_title),
             stringResource(R.string.main_upload_enqueued_subtitle),
             false,
