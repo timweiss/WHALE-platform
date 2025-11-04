@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.logging.WHALELog
 
 class PeriodicServiceHealthcheckReceiver : BroadcastReceiver() {
@@ -27,6 +28,9 @@ class PeriodicServiceHealthcheckReceiver : BroadcastReceiver() {
             if (!result.allCriticalPermissionsGranted) {
                 val revokedPerms = result.permissionsGranted.filter { !it.value }
                 WHALELog.w(TAG, "Revoked critical permissions: ${revokedPerms.keys}")
+            } else if (!result.logServiceHealthy) {
+                WHALELog.w(TAG, "Restarting LogService")
+                LogServiceHelper.startLogService(context.applicationContext)
             }
         }
     }
