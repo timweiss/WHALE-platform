@@ -15,6 +15,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerPriority
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
+import de.mimuc.senseeverything.db.models.answeredOrCancelled
 import de.mimuc.senseeverything.helpers.parseTimebucket
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_JSON
@@ -141,7 +142,7 @@ class FloatingWidgetNotificationScheduler {
                     val bucketTriggers = triggersByBucket[bucketName] ?: continue
                     val waveBreakingTrigger = bucketTriggers
                         .filter { it.priority == NotificationTriggerPriority.WaveBreaking }
-                        .filter { it.status != NotificationTriggerStatus.Answered }
+                        .filter { !it.answeredOrCancelled }
                         .maxByOrNull { it.validFrom }
 
                     // Keep track of the latest wave-breaking trigger across all previous buckets
@@ -203,14 +204,14 @@ class FloatingWidgetNotificationScheduler {
                         // Otherwise, return the latest unanswered trigger only if it's more recent
                         // than the latest answered trigger
                         return sortedTriggers
-                            .filter { it.status != NotificationTriggerStatus.Answered }
+                            .filter { !it.answeredOrCancelled }
                             .filter { it.validFrom > latestAnsweredTrigger.validFrom }
                             .maxByOrNull { it.validFrom }
                     }
 
                     // No answered triggers in the bucket, return the latest unanswered trigger
                     return currentBucketTriggers
-                        .filter { it.status != NotificationTriggerStatus.Answered }
+                        .filter { !it.answeredOrCancelled }
                         .maxByOrNull { it.validFrom }
                 }
             }

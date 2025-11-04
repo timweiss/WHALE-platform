@@ -53,3 +53,7 @@ enum class NotificationTriggerSource {
     Scheduled,
     RuleBased
 }
+
+val NotificationTrigger.answeredOrCancelled get(): Boolean {
+    return status == NotificationTriggerStatus.Answered || status == NotificationTriggerStatus.Cancelled
+}
