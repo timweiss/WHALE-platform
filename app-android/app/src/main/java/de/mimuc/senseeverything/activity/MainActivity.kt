@@ -137,7 +137,7 @@ class StudyHomeViewModel @Inject constructor(
     val studyStateFlow = dataStoreManager.studyStateFlow.stateIn(viewModelScope, SharingStarted.Lazily, StudyState.LOADING)
 
     val pendingQuestionnairesFlow: StateFlow<List<PendingQuestionnaire>> = database.pendingQuestionnaireDao().getAllNotExpiredFlow(
-        System.currentTimeMillis()).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        System.currentTimeMillis()).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _hasPermissionIssues = MutableStateFlow(false)
     val hasPermissionIssues: StateFlow<Boolean> get() = _hasPermissionIssues
