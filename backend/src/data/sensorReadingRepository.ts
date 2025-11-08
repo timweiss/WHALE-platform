@@ -37,6 +37,14 @@ export interface ISensorReadingRepository {
     >[],
   ): Promise<void>;
 
+  createSensorReadingBulk(
+    enrolmentId: number,
+    readings: Pick<
+      SensorReading,
+      'localId' | 'sensorType' | 'timestamp' | 'data'
+    >[],
+  ): Promise<void>;
+
   createFile(
     readingId: number,
     file: Pick<UploadFile, 'filename' | 'path'>,
@@ -124,6 +132,42 @@ export class SensorReadingRepository
             ],
           ),
         ),
+      );
+
+      return;
+    } catch (e) {
+      throw new DatabaseError((e as Error).message.toString());
+    }
+  }
+
+  /**
+   * This method inserts all readings in a single query instead of multiple queries.
+   */
+  async createSensorReadingBulk(
+    enrolmentId: number,
+    readings: Pick<
+      SensorReading,
+      'sensorType' | 'timestamp' | 'data' | 'localId'
+    >[],
+  ): Promise<void> {
+    if (readings.length === 0) {
+      return;
+    }
+
+    try {
+      // Build arrays for each column
+      const enrolmentIds = readings.map(() => enrolmentId);
+      const localIds = readings.map((r) => r.localId);
+      const sensorTypes = readings.map((r) => r.sensorType);
+      const timestamps = readings.map((r) => r.timestamp);
+      const data = readings.map((r) => r.data);
+
+      // Use unnest to insert all rows in a single query
+      await this.pool.query(
+        `INSERT INTO sensor_readings (enrolment_id, local_id, sensor_type, timestamp, data)
+         SELECT * FROM unnest($1::int[], $2::uuid[], $3::text[], $4::bigint[], $5::text[])
+         ON CONFLICT (enrolment_id, local_id) DO NOTHING`,
+        [enrolmentIds, localIds, sensorTypes, timestamps, data],
       );
 
       return;

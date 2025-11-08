@@ -10,6 +10,7 @@ import { createESMAnswerController } from './controllers/esmResponse';
 import { initializeRepositories, Repositories } from './data/repositoryHelper';
 import { createCompletionController } from './controllers/completion';
 import { Observability, setupO11y } from './o11y';
+import { createSensorReadingQueue } from './queues/sensorReadingQueue';
 
 export function makeExpressApp(
   pool: Pool,
@@ -23,6 +24,20 @@ export function makeExpressApp(
     res.send('Social Interaction Sensing!');
   });
 
+  // Initialize the sensor reading queue
+  let sensorReadingQueue;
+  try {
+    sensorReadingQueue = createSensorReadingQueue();
+    observability.logger.info('Sensor reading queue initialized');
+  } catch (error) {
+    observability.logger.error('Failed to initialize sensor reading queue', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    observability.logger.warn(
+      'API will continue without queue, using synchronous processing',
+    );
+  }
+
   createStudyController(repositories.study, app, observability);
   createEnrolmentController(
     repositories.enrolment,
@@ -35,6 +50,7 @@ export function makeExpressApp(
     repositories.enrolment,
     app,
     observability,
+    sensorReadingQueue,
   );
   createESMConfigController(
     repositories.esmConfig,

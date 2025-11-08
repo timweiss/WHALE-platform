@@ -1,10 +1,14 @@
 import { Pool, PoolConfig } from 'pg';
 import { Config } from './index';
-import { Logger, Observability } from '../o11y';
+import { Observability } from '../o11y';
 
 export function usePool(observability: Observability) {
-  const config: PoolConfig = {};
+  const config: PoolConfig = {
+    max: Config.database.poolSize,
+  };
+
   if (!Config.database.useEnv) {
+    observability.logger.warn('Not using environment to connect to PostgreSQL');
     config['connectionString'] = Config.database.connectionString;
   }
 
