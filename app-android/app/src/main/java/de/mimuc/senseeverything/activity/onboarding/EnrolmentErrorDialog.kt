@@ -12,6 +12,8 @@ fun EnrolmentErrorDialog(showErrorDialog: Boolean, errorCode: String, onDismiss:
             title = {
                 if (errorCode == "full" || errorCode == "closed") {
                     Text("Study closed")
+                } else if (errorCode == "timeout") {
+                    Text("Could not load study")
                 } else {
                     Text("Incorrect enrolment key")
                 }
@@ -19,6 +21,8 @@ fun EnrolmentErrorDialog(showErrorDialog: Boolean, errorCode: String, onDismiss:
             text = {
                 if (errorCode == "full" || errorCode == "closed") {
                     Text("The study no longer accepts new participants.")
+                } else if (errorCode == "timeout") {
+                    Text("The study could not be loaded right now. Please check if your connection is stable and try again.")
                 } else {
                     Text("The study could not be joined. Please check if the enrolment key is correct.")
                 }

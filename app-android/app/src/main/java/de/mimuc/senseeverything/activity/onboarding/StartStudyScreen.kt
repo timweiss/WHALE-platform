@@ -64,6 +64,12 @@ class StartStudyViewModel @Inject constructor(
     private val _pending = MutableStateFlow(false)
     val pending: StateFlow<Boolean> get() = _pending
 
+    private val _showErrorDialog = MutableStateFlow(false)
+    val showErrorDialog: StateFlow<Boolean> get() = _showErrorDialog
+
+    private val _errorCode = MutableStateFlow("")
+    val errorCode: StateFlow<String> get() = _errorCode
+
     fun prepareStudy(context: Context, finish: () -> Unit) {
         viewModelScope.launch {
             _pending.value = true
@@ -78,6 +84,10 @@ class StartStudyViewModel @Inject constructor(
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
                 dataStoreManager.saveSensitiveDataSalt(generateSensitiveDataSalt())
                 dataStoreManager.saveStudyState(StudyState.RUNNING)
+
+                // the timestamp needs to be available for the EMA scheduling
+                val startedTimestamp = System.currentTimeMillis()
+                dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
 
                 try {
                     val questionnaires =
@@ -105,9 +115,6 @@ class StartStudyViewModel @Inject constructor(
                 enqueuePendingQuestionnaireUploadWorker(context, studyId, token)
                 enqueueOldDataCheckWorker(context, LocalTime.of(14, 5))
 
-                val startedTimestamp = System.currentTimeMillis()
-                dataStoreManager.saveTimestampStudyStarted(startedTimestamp)
-
                 val phaseSchedules = reschedulePhaseChanges(context, database, dataStoreManager)
                 dataStoreManager.savePhaseSchedules(phaseSchedules)
 
@@ -124,12 +131,19 @@ class StartStudyViewModel @Inject constructor(
 
                 SamplingEventReceiver.sendBroadcast(context, "setupComplete")
             } else {
+                _showErrorDialog.value = true
+                _errorCode.value = "timeout"
                 WHALELog.e("StartStudyViewModel", "Could not load study")
             }
 
             _pending.value = false
             finish()
         }
+    }
+
+    fun closeError() {
+        _showErrorDialog.value = false
+        _errorCode.value = ""
     }
 }
 
@@ -141,6 +155,8 @@ fun StartStudyScreen(
 ) {
     val context = LocalContext.current
     val pending = viewModel.pending.collectAsState()
+    val showErrorDialog = viewModel.showErrorDialog.collectAsState()
+    val errorCode = viewModel.errorCode.collectAsState()
 
     Column(
         modifier = Modifier
@@ -155,6 +171,8 @@ fun StartStudyScreen(
         )
         Spacer(modifier = Modifier.padding(12.dp))
         Text(stringResource(R.string.onboarding_start_study_everything_setup))
+
+        EnrolmentErrorDialog(showErrorDialog.value, errorCode.value) { viewModel.closeError() }
 
         if (pending.value) {
             Column(

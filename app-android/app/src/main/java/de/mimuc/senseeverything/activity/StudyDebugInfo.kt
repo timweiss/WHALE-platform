@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -273,8 +275,11 @@ fun StudyDebugInfoView(
     val exportStatus = viewModel.exportStatus.collectAsState()
     val context = LocalContext.current
 
-    Column(modifier = modifier
-        .padding(16.dp)) {
+    Column(
+        modifier = modifier
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
         Text("Your Enrolment: ${enrolmentId.value} started on ${dateFromTimestamp(studyStarted.value)} ended: ${studyEnded.value}")
         Text("Cached Questionnaires: ${questionnaires.value.map { it.questionnaire.name + " (" + it.questionnaire.id + ")" }}")
         Text("Items not yet synced: ${unsyncedLogDataCount.value}")
