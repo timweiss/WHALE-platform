@@ -69,7 +69,7 @@ class SnapshotBatchManager(
             val batch = createBatchJson(snapshots)
             broadcastBatch(batch)
 
-            WHALELog.i(TAG, "Flushed batch of ${snapshots.size} snapshots via broadcast")
+            WHALELog.d(TAG, "Flushed batch of ${snapshots.size} snapshots via broadcast")
         }
     }
 
@@ -99,7 +99,7 @@ class SnapshotBatchManager(
 
                 val batchId = database.snapshotBatchDao().insert(snapshotBatch)
 
-                WHALELog.i(TAG, "Inserted batch ID $batchId ($sizeBytes bytes, ${batch.getInt("count")} snapshots) into database")
+                WHALELog.d(TAG, "Inserted batch ID $batchId ($sizeBytes bytes, ${batch.getInt("count")} snapshots) into database")
 
                 // Broadcast lightweight Intent with ID only
                 val intent = Intent(BROADCAST_ACTION).apply {

@@ -108,7 +108,7 @@ class UITreeSensor(applicationContext: Context, database: AppDatabase) :
                     return
                 }
 
-                WHALELog.i(TAG, "Fetched batch ID $batchId: ${batch.jsonData.length} bytes")
+                WHALELog.d(TAG, "Fetched batch ID $batchId: ${batch.jsonData.length} bytes")
 
                 val compressedData = compressJson(batch.jsonData)
 
@@ -119,7 +119,6 @@ class UITreeSensor(applicationContext: Context, database: AppDatabase) :
                 dao.deleteById(batchId)
 
                 WHALELog.d(TAG, "Processed and deleted batch ID $batchId")
-
             } catch (e: Exception) {
                 WHALELog.e(TAG, "Failed to fetch batch from database: ${e.message}", e)
             }
