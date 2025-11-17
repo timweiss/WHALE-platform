@@ -20,7 +20,7 @@ const CreateEnrolment = z.object({
 
 function generateParticipantId() {
   const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz';
-  return customAlphabet(alphabet, 8)();
+  return customAlphabet(alphabet, 9)();
 }
 
 export function createEnrolmentController(
