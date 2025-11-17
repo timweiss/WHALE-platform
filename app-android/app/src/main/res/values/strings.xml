@@ -64,7 +64,7 @@
     <string name="n_days">%1$s days</string>
     <string name="studyinfo_last_day">Last day of the study</string>
     <string name="studyinfo_no_information_available">No information available right now</string>
-    <string name="studyinfo_your_id">Your Participant ID</string>
+    <string name="studyinfo_your_id">Your WHALE ID</string>
     <string name="studyinfo_data_export_title">Confirm Data Export</string>
     <string name="studyinfo_data_export_description">To request an export of your study data, please send an email with your enrolment ID: %1$s.\n\n</string>
     <string name="studyinfo_data_export_proceed_email">Do you want to proceed and open your email client?</string>

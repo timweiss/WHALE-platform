@@ -62,7 +62,7 @@
     <string name="n_days">%1$s Tage</string>
     <string name="studyinfo_last_day">Letzter Studientag</string>
     <string name="studyinfo_no_information_available">Derzeit keine Informationen verfügbar</string>
-    <string name="studyinfo_your_id">Ihre Teilnehmer-ID</string>
+    <string name="studyinfo_your_id">Ihre WHALE-ID</string>
     <string name="studyinfo_data_export_title">Datenanforderung bestätigen</string>
     <string name="studyinfo_data_export_description">Um einen Export Ihrer Studiendaten anzufordern, senden Sie bitte eine E-Mail mit Ihrer Teilnahme-Kennung: %1$s.\n\n</string>
     <string name="studyinfo_data_export_proceed_email">Möchten Sie fortfahren und Ihre E-Mail-App öffnen?</string>
