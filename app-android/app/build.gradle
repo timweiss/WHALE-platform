@@ -35,6 +35,26 @@ android {
         }
         buildConfigField 'boolean', 'IS_DEBUG', 'false'
     }
+
+    flavorDimensions = ["environment"]
+
+    productFlavors {
+        sisensing {
+            dimension "environment"
+            versionNameSuffix "-sisensing"
+            buildConfigField 'String', 'API_BASE', '"https://sisensing.medien.ifi.lmu.de/v1"'
+        }
+        staging {
+            dimension "environment"
+            versionNameSuffix "-staging"
+            buildConfigField 'String', 'API_BASE', '"https://whale-staging.timweiss.dev/v1"'
+        }
+        prod {
+            dimension "environment"
+            buildConfigField 'String', 'API_BASE', '"https://lmpp10e-whale.srv.mwn.de/v1"'
+        }
+    }
+
     buildTypes {
         debug {
             minifyEnabled false

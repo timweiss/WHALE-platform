@@ -1,8 +1,10 @@
 package de.mimuc.senseeverything.api
 
+import de.mimuc.senseeverything.BuildConfig
+
 class ApiResources {
     companion object {
-        const val API_BASE = "https://sisensing.medien.ifi.lmu.de/v1"
+        const val API_BASE: String = BuildConfig.API_BASE
 
         fun studyById(studyId: Int): String {
             return "$API_BASE/study/$studyId"
