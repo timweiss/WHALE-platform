@@ -885,4 +885,127 @@ class FloatingWidgetNotificationSchedulerTest {
             }
         }
     }
+
+    /**
+     * Test for bug where EventContingent notification (N3) is incorrectly displayed
+     * after WaveBreaking trigger (N4a) from previous bucket extends into current bucket.
+     *
+     * Real-world scenario from participant data:
+     * Time Bucket 2 (11:30-13:59) contains:
+     * - N1: Planned Push notification (validFrom: 11:41:21)
+     * - N3: Planned EventContingent notification (validFrom: 11:46:21)
+     * - N4a: Answered WaveBreaking EventContingent (validFrom: 13:58:32, answered at 14:35:23)
+     *
+     * Time Bucket 3 (14:00-16:29) contains:
+     * - N1: Planned Push notification (validFrom: 14:02:41)
+     * - N3: Planned EventContingent notification (validFrom: 14:07:41)
+     *
+     * Check time: 15:44:25 (when N3 was incorrectly displayed in Bucket 3)
+     *
+     * Expected: null - N3 should NOT be retrieved because N4a from Bucket 2 extended into Bucket 3
+     * (N4a's validFrom 13:58:32 < Bucket 3 start 14:00, but answered at 14:35:23 which is in Bucket 3)
+     *
+     * Bug: Currently returns N3 (EventContingent) instead of null, even though the WaveBreaking
+     * wave from Bucket 2 completed in Bucket 3, which should suppress all Bucket 2 notifications
+     * including EventContingent ones.
+     *
+     * Note: In the actual data, N3 was displayed at 15:44:25 and answered at 15:44:39, but we test
+     * at the display time before it was answered to verify the retrieval logic.
+     */
+    @Test
+    fun doesNotReturnEventContingentWhenWaveBreakingFromPreviousBucketCompleted() {
+        // Check time: 15:44:25 (November 15, 2025)
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.YEAR, 2025)
+        calendar.set(Calendar.MONTH, Calendar.NOVEMBER)
+        calendar.set(Calendar.DAY_OF_MONTH, 15)
+        calendar.set(Calendar.HOUR_OF_DAY, 15)
+        calendar.set(Calendar.MINUTE, 44)
+        calendar.set(Calendar.SECOND, 25)
+        calendar.set(Calendar.MILLISECOND, 310)
+
+        val triggers = listOf(
+            // Bucket 2 triggers (11:30-13:59)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("1d8e63e3-4bb5-4cdd-8164-35a8bc31b611"),
+                addedAt = 1763161200106L,
+                name = "N1",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = 1763203281935L, // 11:41:21
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "11:30-13:59",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = 1763161200107L
+            ),
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("f31f9f1b-41a9-4bda-b047-108478f3282f"),
+                addedAt = 1763161200106L,
+                name = "N3",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = 1763203581935L, // 11:46:21
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "11:30-13:59",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 71,
+                triggerJson = "{}",
+                updatedAt = 1763161200114L
+            ),
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("c9ac296e-17f7-499c-8c0c-8c709b7e90a1"),
+                addedAt = 1763211512445L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1763211512445L, // 13:58:32
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "11:30-13:59",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1763213723664L, // answered at 14:35:23
+                displayedAt = 1763213720766L,
+                answeredAt = 1763213723664L
+            ),
+            // Bucket 3 triggers (14:00-16:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("c25c3264-c230-47da-a462-4b1fad7c221c"),
+                addedAt = 1763161200107L,
+                name = "N1",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = 1763211761483L, // 14:02:41
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = 1763161200107L
+            ),
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("87a6c4c0-fc23-4288-adaf-85c7791da67c"),
+                addedAt = 1763161200107L,
+                name = "N3",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = 1763212061483L, // 14:07:41
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 71,
+                triggerJson = "{}",
+                updatedAt = 1763161200107L,
+            )
+        )
+
+        val latest = FloatingWidgetNotificationScheduler.selectLastValidTrigger(triggers, calendar)
+
+        assert(latest == null) {
+            "Expected null because N4a (WaveBreaking) from Bucket 2 extended into and completed in Bucket 3, " +
+            "which should suppress all Bucket 2 notifications including EventContingent N3, but got '${latest?.name}'"
+        }
+    }
 }

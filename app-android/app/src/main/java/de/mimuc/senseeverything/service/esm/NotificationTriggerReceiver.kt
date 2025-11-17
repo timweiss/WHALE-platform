@@ -13,6 +13,8 @@ import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.helpers.goAsync
+import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.esm.EsmHandler.Companion.INTENT_TRIGGER_NOTIFICATION_ID
 import kotlinx.coroutines.flow.first
 import java.util.Calendar
 import javax.inject.Inject
@@ -42,6 +44,9 @@ class NotificationTriggerReceiver: BroadcastReceiver() {
         if (notificationTrigger != null && shouldSendPush(notificationTrigger)) {
             notificationPushHelper?.pushNotificationTrigger(notificationTrigger, getTimeout(notificationTrigger))
             setPushed(notificationTrigger)
+        } else {
+            val originalTriggerId = intent.getStringExtra(INTENT_TRIGGER_NOTIFICATION_ID)
+            WHALELog.w("NotificationTriggerReceiver", "No valid notification trigger found for timestamp ${calendar.timeInMillis} (planned trigger was $originalTriggerId)")
         }
     }
 

@@ -181,6 +181,28 @@ class FloatingWidgetNotificationScheduler {
                 }
             }
 
+            // Check if a wave-breaking trigger from a previous bucket was answered in the current bucket
+            // This means the previous wave extended into the current bucket and completed here
+            if (currentBucket != null && currentBucketStart != null) {
+                val currentBucketEnd = parseTimebucket(currentBucket, currentTime).second.timeInMillis
+
+                for ((bucketName, _, bucketEnd) in sortedBuckets) {
+                    if (bucketEnd < currentTime.timeInMillis) {
+                        val bucketTriggers = triggersByBucket[bucketName] ?: continue
+                        val waveBreakingAnsweredInCurrentBucket = bucketTriggers
+                            .filter { it.priority == NotificationTriggerPriority.WaveBreaking }
+                            .filter { it.status == NotificationTriggerStatus.Answered }
+                            .filter { it.validFrom < currentBucketStart } // scheduled in previous bucket
+                            .filter { (it.answeredAt ?: 0) >= currentBucketStart && (it.answeredAt ?: 0) <= currentBucketEnd } // answered in current bucket
+                            .maxByOrNull { it.validFrom }
+
+                        if (waveBreakingAnsweredInCurrentBucket != null) {
+                            return null // Wave from previous bucket extended into current bucket and completed
+                        }
+                    }
+                }
+            }
+
             // If no unanswered wave-breaking trigger from previous buckets, return the latest trigger from current bucket
             if (currentBucket != null) {
                 val currentBucketTriggers = triggersByBucket[currentBucket]
