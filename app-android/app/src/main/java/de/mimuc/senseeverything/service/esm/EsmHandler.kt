@@ -612,7 +612,7 @@ class EsmHandler {
                         set(Calendar.MINUTE, scheduleMinute)
                         set(Calendar.SECOND, 0)
                         set(Calendar.MILLISECOND, 0)
-                        add(Calendar.DATE, trigger.configuration.studyDay)
+                        add(Calendar.DATE, trigger.configuration.studyDay - 1)
                     }
 
                     // don't schedule if the time is in the past
