@@ -23,22 +23,24 @@ fun getCircumplexFilename(element: CircumplexElement): String {
 }
 
 suspend fun persistQuestionnaireElementContent(context: Context, questionnaires: List<FullQuestionnaire>) {
-    for (qq in questionnaires) {
-        for (element in qq.elements) {
-            when (element.type) {
-                QuestionnaireElementType.CIRCUMPLEX -> {
-                    val circumplexElement = element as CircumplexElement
-                    val imageUrl = circumplexElement.configuration.imageUrl
+    val elementsWithContent = questionnaires
+        .flatMap { it.elements }
+        .filter { it.type in listOf(QuestionnaireElementType.CIRCUMPLEX) }
 
-                    val bytes = ApiClient.getInstance(context).getRawBytes(imageUrl)
-                    if (bytes != null) {
-                        val fileName = getCircumplexFilename(element)
-                        saveImageToFile(context, bytes, fileName)
-                    }
+    for (element in elementsWithContent) {
+        when (element.type) {
+            QuestionnaireElementType.CIRCUMPLEX -> {
+                val circumplexElement = element as CircumplexElement
+                val imageUrl = circumplexElement.configuration.imageUrl
+
+                val bytes = ApiClient.getInstance(context).getRawBytes(imageUrl)
+                if (bytes != null) {
+                    val fileName = getCircumplexFilename(element)
+                    saveImageToFile(context, bytes, fileName)
                 }
-
-                else -> return // nothing to cache for the other elements
             }
+
+            else -> continue // nothing to cache for the other elements
         }
     }
 }
