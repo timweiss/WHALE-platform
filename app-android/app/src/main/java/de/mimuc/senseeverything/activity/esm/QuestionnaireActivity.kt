@@ -47,7 +47,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -93,7 +92,7 @@ class QuestionnaireViewModel @Inject constructor(
     private val _textReplacements = MutableStateFlow<Map<String, String>>(emptyMap())
     val textReplacements: StateFlow<Map<String, String>> = _textReplacements.asStateFlow()
 
-    private var pendingQuestionnaireId: UUID? = null
+    private lateinit var pendingQuestionnaireId: UUID
 
     private var pendingQuestionnaire: PendingQuestionnaire? = null
 
@@ -110,6 +109,15 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     private fun loadFromIntent(activity: Activity?, intent: Intent) {
+        val pqId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)?.let { UUID.fromString(it) }
+        if (pqId == null) {
+            viewModelScope.launch {
+                close(activity, CloseReason.PendingQuestionnaireNotFound)
+            }
+            return
+        }
+        pendingQuestionnaireId = pqId
+
         val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
         if (json != null) {
             val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
@@ -119,15 +127,17 @@ class QuestionnaireViewModel @Inject constructor(
             val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
             if (triggerId != -1) {
                 viewModelScope.launch {
-                    dataStoreManager.questionnairesFlow.collect { questionnaires ->
-                        val questionnaire =
-                            questionnaires.find { it.triggers.any { it.id == triggerId } }
-                        if (questionnaire == null) {
-                            _isLoading.value = false
-                        } else {
-                            _questionnaire.value = questionnaire
-                        }
+                    val questionnaires = dataStoreManager.questionnairesFlow.first()
+
+                    val questionnaire =
+                        questionnaires.find { it.triggers.any { it.id == triggerId } }
+
+                    if (questionnaire == null) {
+                        close(activity, CloseReason.PendingQuestionnaireNotFound)
+                        return@launch
                     }
+
+                    _questionnaire.value = questionnaire
                 }
                 WHALELog.i(
                     "Questionnaire",
@@ -136,37 +146,35 @@ class QuestionnaireViewModel @Inject constructor(
             }
         }
 
-        pendingQuestionnaireId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)?.let { UUID.fromString(it) }
-        if (pendingQuestionnaireId != null) {
-            WHALELog.i(
-                "Questionnaire",
-                "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
+        WHALELog.i(
+            "Questionnaire",
+            "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            pendingQuestionnaire = database.pendingQuestionnaireDao()?.getById(
+                pendingQuestionnaireId
             )
 
-            viewModelScope.launch(Dispatchers.IO) {
-                pendingQuestionnaire = database.pendingQuestionnaireDao()?.getById(
-                    pendingQuestionnaireId!!
-                )
-
-                val pendingQuestionnaire = pendingQuestionnaire
-                if (pendingQuestionnaire == null) {
-                    close(activity, CloseReason.PendingQuestionnaireNotFound)
-                    return@launch
-                }
-
-                if (pendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
-                    close(activity, CloseReason.AlreadyCompleted)
-                    return@launch
-                }
-
-                loadFromPendingQuestionnaire()
-                _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId!!)
-                _isLoading.value = false
+            val pendingQuestionnaire = pendingQuestionnaire
+            if (pendingQuestionnaire == null) {
+                close(activity, CloseReason.PendingQuestionnaireNotFound)
+                return@launch
             }
+
+            if (pendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
+                close(activity, CloseReason.AlreadyCompleted)
+                return@launch
+            }
+
+            loadFromPendingQuestionnaire()
+            _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId!!)
+            _isLoading.value = false
         }
     }
 
     enum class CloseReason {
+        PendingQuestionnaireNotSet,
         PendingQuestionnaireNotFound,
         AlreadyCompleted,
         Completed
@@ -176,6 +184,7 @@ class QuestionnaireViewModel @Inject constructor(
         if (activity != null) {
             withContext(Dispatchers.Main) {
                 when (reason) {
+                    CloseReason.PendingQuestionnaireNotSet -> WHALELog.e("Questionnaire", "Pending questionnaire ID was not set")
                     CloseReason.PendingQuestionnaireNotFound, CloseReason.AlreadyCompleted -> WHALELog.w(
                         "Questionnaire",
                         "Finishing questionnaire activity, reason: $reason, pending questionnaire id: $pendingQuestionnaireId"
@@ -189,7 +198,7 @@ class QuestionnaireViewModel @Inject constructor(
                 activity.finishAndRemoveTask()
 
                 val message = when (reason) {
-                    CloseReason.PendingQuestionnaireNotFound -> activity.getString(R.string.questionnaire_not_found_toast)
+                    CloseReason.PendingQuestionnaireNotFound, CloseReason.PendingQuestionnaireNotSet -> activity.getString(R.string.questionnaire_not_found_toast)
                     CloseReason.AlreadyCompleted -> activity.getString(R.string.questionnaire_already_completed_toast)
                     CloseReason.Completed -> activity.getString(R.string.questionnaire_thank_you_toast)
                 }
@@ -214,7 +223,7 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     fun stepChanged(page: Int, values: Map<Int, ElementValue>, context: Context) {
-        WHALELog.i("QuestionnaireViewModel", "Step changed to page $page with values: $values")
+        WHALELog.i("QuestionnaireViewModel", "Step changed to page $page")
 
         viewModelScope.launch(Dispatchers.IO) {
             if (pendingQuestionnaire != null) {
@@ -227,41 +236,40 @@ class QuestionnaireViewModel @Inject constructor(
         WHALELog.i("Questionnaire", "Saving questionnaire")
 
         viewModelScope.launch {
-            combine(
-                dataStoreManager.studyIdFlow, dataStoreManager.tokenFlow
-            ) { studyId, token ->
-                val pendingQuestionnaire = pendingQuestionnaire
-                if (pendingQuestionnaire == null) {
-                    WHALELog.e("Questionnaire", "No pending questionnaire to save to")
-                    return@combine
-                }
+            val studyId = dataStoreManager.studyIdFlow.first()
+            val token = dataStoreManager.tokenFlow.first()
 
-                withContext(Dispatchers.IO) {
-                    pendingQuestionnaire.markCompleted(database, answerValues(elementValues.value))
-                }
+            val pendingQuestionnaire = pendingQuestionnaire
+            if (pendingQuestionnaire == null) {
+                WHALELog.e("Questionnaire", "No pending questionnaire to save to")
+                return@launch
+            }
 
-                // schedule to upload answers
-                WHALELog.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
-                enqueueQuestionnaireUploadWorker(
-                    context,
-                    makeAnswerJsonArray(),
-                    questionnaire.value.questionnaire.id,
-                    studyId,
-                    token,
-                    pendingQuestionnaireId
-                )
+            withContext(Dispatchers.IO) {
+                pendingQuestionnaire.markCompleted(database, answerValues(elementValues.value))
+            }
 
-                WHALELog.i("Questionnaire", "Scheduled questionnaire upload worker")
+            // schedule to upload answers
+            WHALELog.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
+            enqueueQuestionnaireUploadWorker(
+                context,
+                makeAnswerJsonArray(),
+                questionnaire.value.questionnaire.id,
+                studyId,
+                token,
+                pendingQuestionnaireId
+            )
 
-                val rules = questionnaire.value.questionnaire.rules
-                if (rules != null) {
-                    val actions = QuestionnaireRuleEvaluator(rules).evaluate(elementValues.value)
-                    WHALELog.i("Questionnaire", "Evaluated rules, got actions: $actions")
-                    QuestionnaireRuleEvaluator.handleActions(context, actions.flatMap { it.value }, pendingQuestionnaire)
-                }
+            WHALELog.i("Questionnaire", "Scheduled questionnaire upload worker")
 
-                close(context as? Activity, CloseReason.Completed)
-            }.collect {}
+            val rules = questionnaire.value.questionnaire.rules
+            if (rules != null) {
+                val actions = QuestionnaireRuleEvaluator(rules).evaluate(elementValues.value)
+                WHALELog.i("Questionnaire", "Evaluated rules, got actions: $actions")
+                QuestionnaireRuleEvaluator.handleActions(context, actions.flatMap { it.value }, pendingQuestionnaire)
+            }
+
+            close(context as? Activity, CloseReason.Completed)
         }
     }
 

@@ -124,8 +124,7 @@ class StudyHomeViewModel @Inject constructor(
     private val _isStudyRunning = MutableStateFlow(false)
     val isStudyRunning: StateFlow<Boolean> get() = _isStudyRunning
 
-    private val _isStudyPaused = MutableStateFlow(false)
-    val isStudyPaused: StateFlow<Boolean> get() = _isStudyPaused
+    val isStudyPaused = dataStoreManager.studyPausedFlow.stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     private val _currentDay = MutableStateFlow(0)
     val currentDay: StateFlow<Int> get() = _currentDay
@@ -256,10 +255,6 @@ class StudyHomeViewModel @Inject constructor(
         viewModelScope.launch {
             val isRunning = isServiceRunning(LogService::class.java)
             _isStudyRunning.value = isRunning
-
-            dataStoreManager.studyPausedFlow.collect { paused ->
-                _isStudyPaused.value = paused
-            }
         }
     }
 

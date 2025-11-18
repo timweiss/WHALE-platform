@@ -44,6 +44,7 @@ import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -77,11 +78,12 @@ class DataProtectionViewModel @Inject constructor(
     private fun loadStudy() {
         viewModelScope.launch {
             _isLoading.value = true
-            dataStoreManager.studyFlow.collect { study ->
-                _study.value = study
-                _dataProtectionNotice.value = study?.dataProtectionNotice
-                _isLoading.value = false
-            }
+
+            val study = dataStoreManager.studyFlow.first()
+            _study.value = study
+            _dataProtectionNotice.value = study?.dataProtectionNotice
+            
+            _isLoading.value = false
         }
     }
 
