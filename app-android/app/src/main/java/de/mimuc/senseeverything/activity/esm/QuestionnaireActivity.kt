@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -113,7 +114,6 @@ class QuestionnaireViewModel @Inject constructor(
         if (json != null) {
             val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
             _questionnaire.value = loaded
-            _isLoading.value = false
             WHALELog.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
         } else {
             val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
@@ -126,7 +126,6 @@ class QuestionnaireViewModel @Inject constructor(
                             _isLoading.value = false
                         } else {
                             _questionnaire.value = questionnaire
-                            _isLoading.value = false
                         }
                     }
                 }
@@ -162,6 +161,7 @@ class QuestionnaireViewModel @Inject constructor(
 
                 loadFromPendingQuestionnaire()
                 _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId!!)
+                _isLoading.value = false
             }
         }
     }

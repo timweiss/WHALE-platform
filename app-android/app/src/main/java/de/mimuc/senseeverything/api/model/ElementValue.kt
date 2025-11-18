@@ -112,6 +112,9 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
                     elementId, elementName,
                     Pair(valueJson.getInt("hour"), valueJson.getInt("minute"))
                 )
+                QuestionnaireElementType.QUANTITY_ENTRY -> QuantityEntryValue(
+                    elementId, elementName, valueJson.getString("value")
+                )
                 else -> ElementValue(elementId, elementName, QuestionnaireElementType.MALFORMED)
             }
         }

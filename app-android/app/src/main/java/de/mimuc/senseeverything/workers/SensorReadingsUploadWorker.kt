@@ -219,8 +219,6 @@ fun enqueueSingleSensorReadingsUploadWorker(
     val constraintsBuilder = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
 
-    if (!expedited) constraintsBuilder.setRequiresCharging(true)
-
     val uploadWorkRequestBuilder = OneTimeWorkRequestBuilder<SensorReadingsUploadWorker>()
         .addTag(workTag.tag)
         .setInputData(data)
