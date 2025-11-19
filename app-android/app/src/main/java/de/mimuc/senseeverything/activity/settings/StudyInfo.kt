@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -274,9 +275,13 @@ fun StudyInfoView(
     val pagerState = rememberPagerState(pageCount = { 3 })
     val coroutineScope = rememberCoroutineScope()
 
-    // Sync pager state with tab selection
+    // Track which pages have been visited for lazy loading
+    val visitedPages = remember { mutableSetOf(0) } // Settings page is always loaded
+
+    // Sync pager state with tab selection and track visited pages
     LaunchedEffect(pagerState.currentPage) {
         selectedTabIndex = pagerState.currentPage
+        visitedPages.add(pagerState.currentPage)
     }
 
     if (showCancelParticipationDialog) {
@@ -359,18 +364,29 @@ fun StudyInfoView(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            when (page) {
-                0 -> SettingsContent(
-                    enrolmentId = enrolmentId,
-                    study = study,
-                    currentDay = currentDay,
-                    studyState = studyState,
-                    enrolmentInfo = enrolmentInfo,
-                    isCancellingParticipation = isCancellingParticipation,
-                    viewModel = viewModel
-                )
-                1 -> FAQContent(embeddedInfoUrl = study?.embeddedInfoUrl)
-                2 -> DataProtectionContent(dataProtectionNotice = study?.dataProtectionNotice)
+            // Only render content for pages that have been visited
+            if (visitedPages.contains(page)) {
+                when (page) {
+                    0 -> SettingsContent(
+                        enrolmentId = enrolmentId,
+                        study = study,
+                        currentDay = currentDay,
+                        studyState = studyState,
+                        enrolmentInfo = enrolmentInfo,
+                        isCancellingParticipation = isCancellingParticipation,
+                        viewModel = viewModel
+                    )
+                    1 -> FAQContent(embeddedInfoUrl = study?.embeddedInfoUrl)
+                    2 -> DataProtectionContent(dataProtectionNotice = study?.dataProtectionNotice)
+                }
+            } else {
+                // Show placeholder for unvisited pages
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         }
     }
@@ -489,6 +505,9 @@ fun SettingsContent(
 
 @Composable
 fun FAQContent(embeddedInfoUrl: String?) {
+    var isLoading by remember { mutableStateOf(true) }
+    var hasLoadedUrl by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -501,24 +520,52 @@ fun FAQContent(embeddedInfoUrl: String?) {
                 style = MaterialTheme.typography.bodyLarge
             )
         } else {
-            AndroidView(
-                factory = { context ->
-                    WebView(context).apply {
-                        webViewClient = WebViewClient()
-                        settings.apply {
-                            javaScriptEnabled = true
-                            domStorageEnabled = false
-                            setSupportZoom(false)
-                            builtInZoomControls = false
-                            displayZoomControls = false
+            Box(modifier = Modifier.fillMaxSize()) {
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageStarted(
+                                    view: WebView?,
+                                    url: String?,
+                                    favicon: android.graphics.Bitmap?
+                                ) {
+                                    isLoading = true
+                                }
+
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    isLoading = false
+                                }
+                            }
+                            settings.apply {
+                                javaScriptEnabled = true
+                                domStorageEnabled = false
+                                setSupportZoom(false)
+                                builtInZoomControls = false
+                                displayZoomControls = false
+                            }
                         }
+                    },
+                    update = { webView ->
+                        if (!hasLoadedUrl) {
+                            webView.loadUrl(embeddedInfoUrl)
+                            hasLoadedUrl = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
                     }
-                },
-                update = { webView ->
-                    webView.loadUrl(embeddedInfoUrl)
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                }
+            }
         }
     }
 }
