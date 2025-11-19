@@ -114,7 +114,7 @@ class NotificationPushHelper(private val context: Context) {
                     R.drawable.ic_launcher_whale_foreground
                 )
             )
-            .setPriority(NotificationManager.IMPORTANCE_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText(bigText ?: title)

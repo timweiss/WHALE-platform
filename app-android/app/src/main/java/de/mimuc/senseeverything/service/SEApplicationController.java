@@ -57,8 +57,8 @@ public class SEApplicationController extends Application implements Configuratio
         sInstance = this;
         super.onCreate();
 
-        NotificationChannel channel = new NotificationChannel("SEChannel", "SenseEverything", NotificationManager.IMPORTANCE_HIGH);
-        channel.setDescription("SenseEverything Notifications");
+        NotificationChannel channel = new NotificationChannel("SEChannel", "WHALE", NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription("WHALE Notifications");
 
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
@@ -85,13 +85,6 @@ public class SEApplicationController extends Application implements Configuratio
         req.setTag(TAG);
 
         getRequestQueue().add(req);
-    }
-
-    public EsmHandler getEsmHandler() {
-        if (mEsmHandler == null) {
-            mEsmHandler = new EsmHandler();
-        }
-        return mEsmHandler;
     }
 
     /**
