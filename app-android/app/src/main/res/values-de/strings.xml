@@ -76,6 +76,11 @@
     <string name="studyinfo_data_export_email_subject">Anfrage zum Datenexport</string>
     <string name="studyinfo_data_export_email_body">Hallo,\n\nich möchte einen Export meiner Studiendaten beantragen.\nMeine Teilnahme-Kennung ist: %1$s\n\nVielen Dank.</string>
     <string name="studyinfo_title">Einstellungen</string>
+    <string name="studyinfo_tab_settings">Info</string>
+    <string name="studyinfo_tab_faq">Fragen/Antworten</string>
+    <string name="studyinfo_tab_data_protection">Datenschutz</string>
+    <string name="studyinfo_faq_not_available">Für diese Studie wurden keine Informationen zu Fragen &amp; Antworten bereitgestellt.</string>
+    <string name="studyinfo_data_protection_not_available">Für diese Studie wurde keine Datenschutzerklärung angegeben.</string>
     <string name="main_study_cancelled_uninstall_hint">Die Teilnahme wurde abgebrochen. Sie können die App jetzt deinstallieren.</string>
     <string name="main_study_ended_last_questionnaire_hint">Die Studie ist beendet. Möglicherweise müssen Sie den letzten Fragebogen noch ausfüllen, bevor Sie die App deinstallieren.</string>
     <string name="main_questionnaire_inbox">Aktuelle Fragebögen</string>

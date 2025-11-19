@@ -78,6 +78,11 @@
     <string name="studyinfo_data_export_email_subject">Request for Data Export</string>
     <string name="studyinfo_data_export_email_body">Hello,\n\nI would like to request an export of my study data.\nMy enrolment ID is: %1$s\n\nThank you.</string>
     <string name="studyinfo_title">Settings</string>
+    <string name="studyinfo_tab_settings">Info</string>
+    <string name="studyinfo_tab_faq">FAQ</string>
+    <string name="studyinfo_tab_data_protection">Data Protection</string>
+    <string name="studyinfo_faq_not_available">FAQ information is not available for this study.</string>
+    <string name="studyinfo_data_protection_not_available">Data protection notice is not available.</string>
     <string name="main_study_cancelled_uninstall_hint">Participation has been cancelled. You can uninstall the app now.</string>
     <string name="main_study_ended_last_questionnaire_hint">The study has ended. You may need to fill out the last questionnaire before uninstalling the app.</string>
     <string name="main_questionnaire_inbox">Questionnaire Inbox</string>

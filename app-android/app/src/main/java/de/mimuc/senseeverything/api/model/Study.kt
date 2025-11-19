@@ -11,7 +11,8 @@ data class Study(
     val description: String,
     val contactEmail: String,
     val durationDays: Int,
-    val dataProtectionNotice: String?
+    val dataProtectionNotice: String?,
+    val embeddedInfoUrl: String?
 ) {
     companion object {
         val empty = Study(
@@ -21,7 +22,8 @@ data class Study(
             description = "No study loaded",
             contactEmail = "",
             durationDays = 0,
-            dataProtectionNotice = null
+            dataProtectionNotice = null,
+            embeddedInfoUrl = null
         )
     }
 }

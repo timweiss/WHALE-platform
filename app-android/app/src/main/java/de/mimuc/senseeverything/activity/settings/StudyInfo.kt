@@ -5,35 +5,54 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,8 +61,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.BuildConfig
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.MainActivity
-import de.mimuc.senseeverything.activity.components.SpacerLine
 import de.mimuc.senseeverything.activity.StudyDebugInfo
+import de.mimuc.senseeverything.activity.components.SpacerLine
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.model.EnrolmentResponse
@@ -241,9 +260,8 @@ fun StudyInfoView(
     viewModel: StudyInfoViewModel = viewModel()
 ) {
     val enrolmentId by viewModel.enrolmentId.collectAsState()
-    val studyStarted = viewModel.studyStartedAt.collectAsState()
-    val study = viewModel.study.collectAsState()
-    val currentDay = viewModel.currentDay.collectAsState()
+    val study by viewModel.study.collectAsState()
+    val currentDay by viewModel.currentDay.collectAsState()
     val showDataDeletionDialog by viewModel.showDataDeletionDialog.collectAsState()
     val showDataExportDialog by viewModel.showDataExportDialog.collectAsState()
     val showCancelParticipationDialog by viewModel.showCancelParticipationDialog.collectAsState()
@@ -251,6 +269,15 @@ fun StudyInfoView(
     val studyState by viewModel.studyState.collectAsState()
     val enrolmentInfo by viewModel.enrolmentInfo.collectAsState()
     val context = LocalContext.current
+
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val coroutineScope = rememberCoroutineScope()
+
+    // Sync pager state with tab selection
+    LaunchedEffect(pagerState.currentPage) {
+        selectedTabIndex = pagerState.currentPage
+    }
 
     if (showCancelParticipationDialog) {
         ConfirmationDialog(
@@ -297,16 +324,85 @@ fun StudyInfoView(
         )
     }
 
-    Column(modifier = modifier
-        .padding(16.dp)) {
+    Column(modifier = modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = selectedTabIndex) {
+            Tab(
+                selected = selectedTabIndex == 0,
+                onClick = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(0)
+                    }
+                },
+                text = { Text(stringResource(R.string.studyinfo_tab_settings)) }
+            )
+            Tab(
+                selected = selectedTabIndex == 1,
+                onClick = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(1)
+                    }
+                },
+                text = { Text(stringResource(R.string.studyinfo_tab_faq)) }
+            )
+            Tab(
+                selected = selectedTabIndex == 2,
+                onClick = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(2)
+                    }
+                },
+                text = { Text(stringResource(R.string.studyinfo_tab_data_protection)) }
+            )
+        }
 
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            when (page) {
+                0 -> SettingsContent(
+                    enrolmentId = enrolmentId,
+                    study = study,
+                    currentDay = currentDay,
+                    studyState = studyState,
+                    enrolmentInfo = enrolmentInfo,
+                    isCancellingParticipation = isCancellingParticipation,
+                    viewModel = viewModel
+                )
+                1 -> FAQContent(embeddedInfoUrl = study?.embeddedInfoUrl)
+                2 -> DataProtectionContent(dataProtectionNotice = study?.dataProtectionNotice)
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsContent(
+    enrolmentId: String,
+    study: Study?,
+    currentDay: Long,
+    studyState: StudyState,
+    enrolmentInfo: EnrolmentResponse?,
+    isCancellingParticipation: Boolean,
+    viewModel: StudyInfoViewModel
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
         Text(stringResource(R.string.studyinfo_your_id), fontWeight = FontWeight.Bold)
         SelectionContainer {
             Text(enrolmentId)
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(stringResource(R.string.studyinfo_remaining_days), fontWeight = FontWeight.Bold)
-        if (study.value == null) {
+        if (study == null) {
             when (studyState) {
                 StudyState.CANCELLED -> {
                     Text(stringResource(R.string.studyinfo_study_cancelled))
@@ -319,7 +415,7 @@ fun StudyInfoView(
                 }
             }
         } else {
-            val remainingDays = study.value!!.durationDays - currentDay.value
+            val remainingDays = study.durationDays - currentDay
             if (remainingDays == 0L) {
                 Text(stringResource(R.string.studyinfo_last_day))
             } else {
@@ -388,7 +484,71 @@ fun StudyInfoView(
             )
             Text(stringResource(R.string.studyinfo_cancelling_pending))
         }
+    }
+}
 
+@Composable
+fun FAQContent(embeddedInfoUrl: String?) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (embeddedInfoUrl.isNullOrBlank()) {
+            Text(
+                text = stringResource(R.string.studyinfo_faq_not_available),
+                style = MaterialTheme.typography.bodyLarge
+            )
+        } else {
+            AndroidView(
+                factory = { context ->
+                    WebView(context).apply {
+                        webViewClient = WebViewClient()
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = false
+                            setSupportZoom(false)
+                            builtInZoomControls = false
+                            displayZoomControls = false
+                        }
+                    }
+                },
+                update = { webView ->
+                    webView.loadUrl(embeddedInfoUrl)
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+fun DataProtectionContent(dataProtectionNotice: String?) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        if (dataProtectionNotice.isNullOrBlank()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.studyinfo_data_protection_not_available),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(AnnotatedString.fromHtml(dataProtectionNotice))
+            }
+        }
     }
 }
 

@@ -10,10 +10,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.mimuc.senseeverything.activity.onboarding.OnboardingStep
 import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.Study
-import de.mimuc.senseeverything.study.PhaseScheduleInfo
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.study.PhaseScheduleInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -146,7 +146,10 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
 @Singleton
 class SettingsSerializer @Inject constructor() : Serializer<AppSettings> {
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    }
     override val defaultValue = DEFAULT_APP_SETTINGS
 
     override suspend fun readFrom(input: InputStream): AppSettings =
