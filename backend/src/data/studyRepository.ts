@@ -12,6 +12,7 @@ export interface Study {
   allocationStrategy: StudyExperimentalGroupAllocationStrategy;
   completionTracking: CompletionTracking | null;
   dataProtectionNotice: string | null;
+  embeddedInfoUrl: string | null;
 }
 
 interface StudyRow {
@@ -25,6 +26,7 @@ interface StudyRow {
   allocation_strategy: StudyExperimentalGroupAllocationStrategy;
   completion_tracking: CompletionTracking | null;
   data_protection_notice: string | null;
+  embedded_info_url: string | null;
 }
 
 enum InteractionWidgetStrategy {
@@ -228,6 +230,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
       allocationStrategy: row.allocation_strategy,
       completionTracking: row.completion_tracking,
       dataProtectionNotice: row.data_protection_notice,
+      embeddedInfoUrl: row.embedded_info_url,
     };
   }
 

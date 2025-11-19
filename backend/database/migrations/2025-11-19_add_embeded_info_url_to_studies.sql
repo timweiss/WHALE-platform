@@ -1,0 +1,1 @@
+alter table studies add column embedded_info_url text default null;
