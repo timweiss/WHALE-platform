@@ -49,7 +49,8 @@ data class EventQuestionnaireTrigger(
 data class EventTriggerConfiguration(
     val eventName: String,
     val notificationText: String,
-    val modality: EventTriggerModality
+    val modality: EventTriggerModality,
+    val reminder: QuestionnaireReminder?
 )
 
 @Serializable
@@ -140,8 +141,28 @@ data class OneTimeTriggerConfiguration(
     val studyDay: Int,
     val time: String,
     val randomToleranceMinutes: Int,
-    val notificationText: String
+    val notificationText: String,
+    val reminder: QuestionnaireReminder?
 )
+
+@Serializable
+sealed class QuestionnaireReminder {
+    abstract val reminderText: String
+}
+
+@Serializable
+@SerialName("time")
+data class TimeQuestionnaireReminder(
+    override val reminderText: String,
+    val time: String
+) : QuestionnaireReminder()
+
+@Serializable
+@SerialName("duration")
+data class DurationQuestionnaireReminder(
+    override val reminderText: String,
+    val afterMinutes: Int
+) : QuestionnaireReminder()
 
 @Serializable
 @SerialName("unknown")

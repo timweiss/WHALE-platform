@@ -31,9 +31,9 @@ class NotificationPushHelper(private val context: Context) {
     ) {
         val intent = Intent(context, QuestionnaireActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra(QuestionnaireActivity.Companion.INTENT_TRIGGER_ID, triggerId)
+            putExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, triggerId)
             putExtra(
-                QuestionnaireActivity.Companion.INTENT_PENDING_QUESTIONNAIRE_ID,
+                QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID,
                 pendingQuestionnaireId?.toString()
             )
         }

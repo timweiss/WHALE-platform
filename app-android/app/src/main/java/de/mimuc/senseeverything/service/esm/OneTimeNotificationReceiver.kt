@@ -38,13 +38,28 @@ class OneTimeNotificationReceiver: BroadcastReceiver() {
         if (id != 0 && trigger != null) {
             val pendingQuestionnaire =
                 PendingQuestionnaire.createEntry(database, dataStoreManager, trigger)
-            scheduleNotificationService?.sendReminderNotification(
-                id,
-                pendingQuestionnaire?.uid,
-                title,
-                questionnaireName,
-                pendingQuestionnaire?.validDistance
-            )
+
+            if (pendingQuestionnaire != null) {
+                scheduleNotificationService?.sendReminderNotification(
+                    id,
+                    pendingQuestionnaire?.uid,
+                    title,
+                    questionnaireName,
+                    pendingQuestionnaire?.validDistance
+                )
+
+                if (trigger.configuration.reminder != null) {
+                    scheduleReminderNotification(
+                        context!!,
+                        database,
+                        pendingQuestionnaire,
+                        trigger.configuration.reminder,
+                        trigger,
+                        questionnaireName ?: "",
+                        System.currentTimeMillis()
+                    )
+                }
+            }
         }
     }
 }

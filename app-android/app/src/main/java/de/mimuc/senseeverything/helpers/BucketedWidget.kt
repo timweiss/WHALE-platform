@@ -29,6 +29,20 @@ fun getCurrentTimeBucket(): String {
     } ?: "Unknown"
 }
 
+fun applyTime(time: String, startDay: Calendar): Calendar {
+    val startHour = time.split(":")[0].toInt()
+    val startMinute = time.split(":")[1].toInt()
+
+    val timeCal = startDay.clone() as Calendar
+    timeCal.apply {
+        set(Calendar.HOUR_OF_DAY, startHour)
+        set(Calendar.MINUTE, startMinute)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    return timeCal
+}
 
 fun parseTimebucket(bucket: String, startDay: Calendar): Pair<Calendar, Calendar> {
     val startHour = bucket.split("-")[0].split(":")[0].toInt()

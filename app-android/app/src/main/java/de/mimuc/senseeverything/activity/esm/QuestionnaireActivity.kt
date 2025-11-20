@@ -42,6 +42,7 @@ import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.db.models.PendingQuestionnaireStatus
 import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.esm.clearReminderNotification
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -168,7 +169,7 @@ class QuestionnaireViewModel @Inject constructor(
             }
 
             loadFromPendingQuestionnaire()
-            _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId!!)
+            _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId)
             _isLoading.value = false
         }
     }
@@ -247,6 +248,7 @@ class QuestionnaireViewModel @Inject constructor(
 
             withContext(Dispatchers.IO) {
                 pendingQuestionnaire.markCompleted(database, answerValues(elementValues.value))
+                clearReminderNotification(context, database, pendingQuestionnaireId)
             }
 
             // schedule to upload answers

@@ -109,6 +109,9 @@
             android:name=".service.esm.NotificationTriggerReceiver"
             android:enabled="true" />
         <receiver
+            android:name=".service.esm.QuestionnaireReminderNotificationReceiver"
+            android:enabled="true" />
+        <receiver
             android:name=".service.healthcheck.PeriodicServiceHealthcheckReceiver"
             android:enabled="true"
             android:exported="false" />

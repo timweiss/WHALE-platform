@@ -41,6 +41,8 @@ class EsmHandler {
         const val INTENT_TITLE = "title"
         const val INTENT_TRIGGER_ID = "id"
         const val INTENT_TRIGGER_JSON = "triggerJson"
+        const val INTENT_REMINDER_JSON = "reminderJson"
+        const val INTENT_PENDING_QUESTIONNAIRE_ID = "pendingQuestionnaireId"
         const val INTENT_QUESTIONNAIRE_NAME = "questionnaireName"
         const val INTENT_NOTIFY_PHASE_UNTIL_TIMESTAMP = "untilTimestamp"
         const val INTENT_REMAINING_STUDY_DAYS = "remainingDays"
@@ -285,19 +287,19 @@ class EsmHandler {
             dataStoreManager: DataStoreManager,
             database: AppDatabase
         ) {
-            var pendingId: UUID?
-
-            coroutineScope {
+            val pendingQuestionnaire = coroutineScope {
                 withContext(Dispatchers.IO) {
-                    pendingId = PendingQuestionnaire.createEntry(
+                    PendingQuestionnaire.createEntry(
                         database,
                         dataStoreManager,
                         trigger,
                         notificationTriggerUid = null,
                         sourcePendingNotificationId = sourceId
-                    )?.uid
+                    )
                 }
             }
+
+            val pendingId = pendingQuestionnaire?.uid
 
             if (pendingId == null) {
                 WHALELog.e("EsmHandler", "Failed to create pending questionnaire entry for trigger ${trigger.id}")
@@ -312,6 +314,18 @@ class EsmHandler {
                     trigger.configuration.notificationText,
                     questionnaire.questionnaire.name
                 )
+
+                if (trigger.configuration.reminder != null) {
+                    scheduleReminderNotification(
+                        context,
+                        database,
+                        pendingQuestionnaire,
+                        trigger.configuration.reminder,
+                        trigger,
+                        questionnaire.questionnaire.name,
+                        System.currentTimeMillis()
+                    )
+                }
             } else if (trigger.configuration.modality == EventTriggerModality.Open) {
                 // open questionnaire
                 val intent = Intent(context, QuestionnaireActivity::class.java)
@@ -333,10 +347,7 @@ class EsmHandler {
             dataStoreManager: DataStoreManager,
             database: AppDatabase
         ) {
-            val pendingQuestionnaireId = pendingQuestionnaireId
-            if (pendingQuestionnaireId == null) {
-                return
-            }
+            val pendingQuestionnaireId = pendingQuestionnaireId ?: return
 
             coroutineScope {
                 withContext(Dispatchers.IO) {
