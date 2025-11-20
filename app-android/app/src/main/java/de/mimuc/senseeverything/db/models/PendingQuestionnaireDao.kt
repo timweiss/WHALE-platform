@@ -19,6 +19,9 @@ interface PendingQuestionnaireDao {
     @Query("SELECT * FROM pending_questionnaire WHERE uid = :uid")
     fun getById(uid: UUID): PendingQuestionnaire?
 
+    @Query("SELECT * FROM pending_questionnaire WHERE uid = :uid")
+    fun getByIdFlow(uid: UUID): Flow<PendingQuestionnaire?>
+
     @Insert
     fun insert(pendingQuestionnaire: PendingQuestionnaire)
 

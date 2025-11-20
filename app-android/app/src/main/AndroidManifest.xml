@@ -62,9 +62,32 @@
             android:theme="@style/Theme.MyApplication" />
         <activity
             android:name=".activity.esm.QuestionnaireActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_activity_questionnaire"
-            android:theme="@style/Theme.MyApplication" />
+            android:theme="@style/Theme.MyApplication">
+
+            <intent-filter android:label="@string/title_activity_questionnaire_finalize">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="whale-app"
+                    android:host="questionnaire"
+                    android:pathPrefix="/finalize"/>
+            </intent-filter>
+
+            <intent-filter
+                android:autoVerify="true"
+                android:label="@string/title_activity_questionnaire_finalize">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="whale-app.de" />
+                <data android:pathPrefix="/questionnaire/finalize" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".activity.StudyEnrolment"
             android:exported="false"

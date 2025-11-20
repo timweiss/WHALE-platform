@@ -6,6 +6,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -68,9 +69,9 @@ class QuestionnaireActivity : ComponentActivity() {
     }
 
     companion object {
-        val INTENT_PENDING_QUESTIONNAIRE_ID = "pendingQuestionnaireId"
-        val INTENT_TRIGGER_ID = "triggerId"
-        val INTENT_QUESTIONNAIRE = "questionnaire"
+        const val INTENT_PENDING_QUESTIONNAIRE_ID = "pendingQuestionnaireId"
+        const val INTENT_TRIGGER_ID = "triggerId"
+        const val INTENT_QUESTIONNAIRE = "questionnaire"
     }
 }
 
@@ -95,7 +96,8 @@ class QuestionnaireViewModel @Inject constructor(
 
     private lateinit var pendingQuestionnaireId: UUID
 
-    private var pendingQuestionnaire: PendingQuestionnaire? = null
+    private val _pendingQuestionnaire = MutableStateFlow<PendingQuestionnaire?>(null)
+    val pendingQuestionnaire: StateFlow<PendingQuestionnaire?> = _pendingQuestionnaire.asStateFlow()
 
     init {
         _isLoading.value = true
@@ -110,67 +112,141 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     private fun loadFromIntent(activity: Activity?, intent: Intent) {
-        val pqId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)?.let { UUID.fromString(it) }
-        if (pqId == null) {
-            viewModelScope.launch {
-                close(activity, CloseReason.PendingQuestionnaireNotFound)
-            }
-            return
-        }
-        pendingQuestionnaireId = pqId
+        val action: String? = intent.action
+        val data: Uri? = intent.data
 
-        val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
-        if (json != null) {
-            val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
-            _questionnaire.value = loaded
-            WHALELog.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
+        if (action == Intent.ACTION_VIEW) {
+            finalizeQuestionnaireFromAction(data, activity)
         } else {
-            val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
-            if (triggerId != -1) {
+            val pqId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)?.let { UUID.fromString(it) }
+            if (pqId == null) {
                 viewModelScope.launch {
-                    val questionnaires = dataStoreManager.questionnairesFlow.first()
-
-                    val questionnaire =
-                        questionnaires.find { it.triggers.any { it.id == triggerId } }
-
-                    if (questionnaire == null) {
-                        close(activity, CloseReason.PendingQuestionnaireNotFound)
-                        return@launch
-                    }
-
-                    _questionnaire.value = questionnaire
+                    close(activity, CloseReason.PendingQuestionnaireNotFound)
                 }
-                WHALELog.i(
-                    "Questionnaire",
-                    "Loaded questionnaire by trigger id: $triggerId, name: ${_questionnaire.value.questionnaire.name}"
-                )
+                return
             }
-        }
+            pendingQuestionnaireId = pqId
 
-        WHALELog.i(
-            "Questionnaire",
-            "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
-        )
+            val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
+            if (json != null) {
+                val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
+                _questionnaire.value = loaded
+                WHALELog.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
+            } else {
+                val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
+                if (triggerId != -1) {
+                    viewModelScope.launch {
+                        val questionnaires = dataStoreManager.questionnairesFlow.first()
 
-        viewModelScope.launch(Dispatchers.IO) {
-            pendingQuestionnaire = database.pendingQuestionnaireDao()?.getById(
-                pendingQuestionnaireId
+                        val questionnaire =
+                            questionnaires.find { it.triggers.any { it.id == triggerId } }
+
+                        if (questionnaire == null) {
+                            close(activity, CloseReason.PendingQuestionnaireNotFound)
+                            return@launch
+                        }
+
+                        _questionnaire.value = questionnaire
+                    }
+                    WHALELog.i(
+                        "Questionnaire",
+                        "Loaded questionnaire by trigger id: $triggerId, name: ${_questionnaire.value.questionnaire.name}"
+                    )
+                }
+            }
+
+            WHALELog.i(
+                "Questionnaire",
+                "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
             )
 
-            val pendingQuestionnaire = pendingQuestionnaire
-            if (pendingQuestionnaire == null) {
-                close(activity, CloseReason.PendingQuestionnaireNotFound)
-                return@launch
+            // Observe the pending questionnaire for status changes
+            // This will automatically close this activity if another instance completes it
+            viewModelScope.launch(Dispatchers.IO) {
+                database.pendingQuestionnaireDao()?.getByIdFlow(pendingQuestionnaireId)?.collect { updatedPendingQuestionnaire ->
+                    val previousStatus = _pendingQuestionnaire.value?.status
+                    _pendingQuestionnaire.value = updatedPendingQuestionnaire
+
+                    if (updatedPendingQuestionnaire == null) {
+                        close(activity, CloseReason.PendingQuestionnaireNotFound)
+                        return@collect
+                    }
+
+                    // If another instance completed this questionnaire, close this instance
+                    if (updatedPendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED
+                        && previousStatus != PendingQuestionnaireStatus.COMPLETED) {
+                        WHALELog.i("Questionnaire", "Questionnaire was completed by another instance, closing this one")
+                        close(activity, CloseReason.AlreadyCompleted)
+                        return@collect
+                    }
+
+                    // First time loading - initialize the questionnaire
+                    if (previousStatus == null) {
+                        if (updatedPendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
+                            close(activity, CloseReason.AlreadyCompleted)
+                            return@collect
+                        }
+
+                        loadFromPendingQuestionnaire()
+                        _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId)
+                        _isLoading.value = false
+                    }
+                }
+            }
+        }
+    }
+
+    private fun finalizeQuestionnaireFromAction(data: Uri?, activity: Activity?) {
+        if (data != null && data.path != null && data.path!!.startsWith("/finalize")) {
+            WHALELog.d("Questionnaire", "Called finalization deep link")
+
+            val finalizePendingQuestionnaireId = data.getQueryParameter("id")
+            if (finalizePendingQuestionnaireId == null) {
+                viewModelScope.launch {
+                    close(
+                        activity,
+                        CloseReason.PendingQuestionnaireNotSet
+                    )
+                }
+                return
             }
 
-            if (pendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
-                close(activity, CloseReason.AlreadyCompleted)
-                return@launch
-            }
+            viewModelScope.launch(Dispatchers.IO) {
+                _pendingQuestionnaire.value = database.pendingQuestionnaireDao()
+                    .getById(UUID.fromString(finalizePendingQuestionnaireId))
 
-            loadFromPendingQuestionnaire()
-            _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId)
-            _isLoading.value = false
+                val pendingQuestionnaire = _pendingQuestionnaire.value
+                if (pendingQuestionnaire == null) {
+                    viewModelScope.launch {
+                        close(
+                            activity,
+                            CloseReason.PendingQuestionnaireNotSet
+                        )
+                    }
+                    return@launch
+                }
+
+                // pending questionnaire was already completed before
+                if (pendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
+                    viewModelScope.launch { close(activity, CloseReason.AlreadyCompleted) }
+                    return@launch
+                }
+
+                // needs to be available for upload
+                _questionnaire.value = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pendingQuestionnaire.questionnaireJson)
+
+                withContext(Dispatchers.Main) {
+                    this@QuestionnaireViewModel._pendingQuestionnaire.value = pendingQuestionnaire
+                    this@QuestionnaireViewModel.pendingQuestionnaireId = pendingQuestionnaire.uid
+
+                    WHALELog.i(
+                        "Questionnaire",
+                        "Finalizing questionnaire $pendingQuestionnaireId from deep link"
+                    )
+
+                    saveQuestionnaire(activity as Context)
+                }
+            }
         }
     }
 
@@ -227,8 +303,9 @@ class QuestionnaireViewModel @Inject constructor(
         WHALELog.i("QuestionnaireViewModel", "Step changed to page $page")
 
         viewModelScope.launch(Dispatchers.IO) {
-            if (pendingQuestionnaire != null) {
-                pendingQuestionnaire?.update(database, answerValues(values), page)
+            val pq = _pendingQuestionnaire.value
+            if (pq != null) {
+                pq.update(database, answerValues(values), page)
             }
         }
     }
@@ -240,7 +317,7 @@ class QuestionnaireViewModel @Inject constructor(
             val studyId = dataStoreManager.studyIdFlow.first()
             val token = dataStoreManager.tokenFlow.first()
 
-            val pendingQuestionnaire = pendingQuestionnaire
+            val pendingQuestionnaire = _pendingQuestionnaire.value
             if (pendingQuestionnaire == null) {
                 WHALELog.e("Questionnaire", "No pending questionnaire to save to")
                 return@launch
@@ -284,8 +361,9 @@ class QuestionnaireViewModel @Inject constructor(
     }
 
     private fun loadFromPendingQuestionnaire() {
-        if (pendingQuestionnaire != null) {
-            _elementValues.value = ElementValue.valueMapFromJson(JSONArray(pendingQuestionnaire!!.elementValuesJson ?: "[]"))
+        val pq = _pendingQuestionnaire.value
+        if (pq != null) {
+            _elementValues.value = ElementValue.valueMapFromJson(JSONArray(pq.elementValuesJson ?: "[]"))
             WHALELog.i("Questionnaire", "Loaded pending questionnaire values: ${_elementValues.value}")
         } else {
             WHALELog.w("Questionnaire", "No pending questionnaire to load from")
@@ -302,6 +380,7 @@ fun QuestionnaireView(
     val questionnaire = viewModel.questionnaire.collectAsState()
     val initialValues = viewModel.elementValues.collectAsState()
     val replacements = viewModel.textReplacements.collectAsState()
+    val pendingQuestionnaire = viewModel.pendingQuestionnaire.collectAsState()
 
     val context = LocalContext.current
 
@@ -327,11 +406,18 @@ fun QuestionnaireView(
             if (isLoading.value) {
                 Text("Loading...")
             } else {
-                QuestionnaireHost(questionnaire.value, replacements.value, onSave = { items ->
-                    viewModel.saveFromHost(items, context)
-                }, onStepChanged = { page, values ->
-                    viewModel.stepChanged(page, values, context)
-                }, initialValues = initialValues.value)
+                QuestionnaireHost(
+                    questionnaire = questionnaire.value,
+                    textReplacements = replacements.value,
+                    onSave = { items ->
+                        viewModel.saveFromHost(items, context)
+                    },
+                    onStepChanged = { page, values ->
+                        viewModel.stepChanged(page, values, context)
+                    },
+                    initialValues = initialValues.value,
+                    pendingQuestionnaire = pendingQuestionnaire.value
+                )
             }
         }
     }

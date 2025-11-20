@@ -11,7 +11,8 @@ suspend fun fetchExternalQuestionnaireParams(
     params: Map<String, String>,
     dataStoreManager: DataStoreManager,
     database: AppDatabase,
-    apiClient: ApiClient
+    apiClient: ApiClient,
+    pendingQuestionnaireId: String? = null
 ): Map<String, String> {
     val results = mutableMapOf<String, String>()
 
@@ -20,20 +21,28 @@ suspend fun fetchExternalQuestionnaireParams(
             val name = value.split('.')[1]
             val value = getOrCreateGeneratedKey(name, database)
             if (value != null) {
-                results.put(key, value)
+                results[key] = value
             }
         } else if (value.startsWith("configuration")) {
             when (value) {
                 "configuration.enrolmentId" -> {
                     val enrolmentId = dataStoreManager.participantIdFlow.first()
-                    results.put(key, enrolmentId)
+                    results[key] = enrolmentId
+                }
+            }
+        } else if (value.startsWith("questionnaire")) {
+            when (value) {
+                "questionnaire.pendingQuestionnaireId" -> {
+                    if (pendingQuestionnaireId != null) {
+                        results[key] = pendingQuestionnaireId
+                    }
                 }
             }
         } else if (value.startsWith("completionTracking")) {
             try {
                 val completion = fetchCompletionStatus(apiClient, dataStoreManager)
                 val completedString = completion.filter { (k, v) -> v }.keys.joinToString(",")
-                results.put(key, completedString)
+                results[key] = completedString
             } catch (e: Exception) {
                WHALELog.e("ExternalQuestionnaireParamsHelper", "Error fetching completion status: $e")
             }

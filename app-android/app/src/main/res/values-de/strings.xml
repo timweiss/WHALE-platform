@@ -209,4 +209,5 @@
 
     <string name="main_stale_data_title">Upload erforderlich</string>
     <string name="main_stale_data_subtitle">Der letzte Upload wurde seit zwei Tagen nicht durchgeführt. Bitte starten Sie jetzt einen Upload. Der Upload wird unabhängig von Ihrer Verbindung durchgeführt, sodass Kosten entstehen können, wenn Sie nur über mobile Daten verbunden sind.</string>
+    <string name="title_activity_questionnaire_finalize">Finalize Questionnaire</string>
 </resources>

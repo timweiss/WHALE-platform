@@ -15,7 +15,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,10 +63,14 @@ import de.mimuc.senseeverything.api.model.ema.TimeInputElement
 import de.mimuc.senseeverything.api.model.emptyValueForElement
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
+import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+
+// CompositionLocal for providing PendingQuestionnaire throughout the composable tree
+val LocalPendingQuestionnaire = compositionLocalOf<PendingQuestionnaire?> { null }
 
 @HiltViewModel(assistedFactory = QuestionnaireHostViewModel.Factory::class)
 class QuestionnaireHostViewModel @AssistedInject constructor(
@@ -161,13 +167,31 @@ fun QuestionnaireHost(
     onStepChanged: (Int, Map<Int, ElementValue>) -> Unit = { _, _ -> },
     initialValues: Map<Int, ElementValue> = emptyMap(),
     embedded: Boolean = false,
-    hostKey: String = "default_host"
+    hostKey: String = "default_host",
+    pendingQuestionnaire: PendingQuestionnaire? = null
 ) {
     val viewModel =
         hiltViewModel<QuestionnaireHostViewModel, QuestionnaireHostViewModel.Factory>(key = hostKey) { factory ->
             factory.create(questionnaire, onSave, onStepChanged, initialValues)
         }
 
+    CompositionLocalProvider(LocalPendingQuestionnaire provides pendingQuestionnaire) {
+        QuestionnaireHostContent(
+            questionnaire = questionnaire,
+            textReplacements = textReplacements,
+            viewModel = viewModel,
+            embedded = embedded
+        )
+    }
+}
+
+@Composable
+private fun QuestionnaireHostContent(
+    questionnaire: FullQuestionnaire,
+    textReplacements: Map<String, String>,
+    viewModel: QuestionnaireHostViewModel,
+    embedded: Boolean
+) {
     if (questionnaire.elements.isEmpty()) {
         Text(stringResource(R.string.questionnaire_empty_error))
     } else {

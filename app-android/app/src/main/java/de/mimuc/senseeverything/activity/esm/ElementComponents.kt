@@ -299,7 +299,7 @@ class ExternalQuestionnaireLinkElementComponentViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> get() = _isLoading
 
-    fun openQuestionnaire(context: Context, element: ExternalQuestionnaireLinkElement) {
+    fun openQuestionnaire(context: Context, element: ExternalQuestionnaireLinkElement, pendingQuestionnaireId: String?) {
         viewModelScope.launch {
             _isLoading.value = true
 
@@ -311,7 +311,8 @@ class ExternalQuestionnaireLinkElementComponentViewModel @Inject constructor(
                     urlParamsMap,
                     dataStoreManager,
                     database,
-                    apiClient
+                    apiClient,
+                    pendingQuestionnaireId
                 )
             }
             if (!element.configuration.externalUrl.startsWith("https://")) return@launch
@@ -344,7 +345,10 @@ fun ExternalQuestionnaireLinkElementComponent(
     element: ExternalQuestionnaireLinkElement
 ) {
     val context = LocalContext.current
-    Button(onClick = { viewModel.openQuestionnaire(context, element) }) {
+    val pendingQuestionnaire = LocalPendingQuestionnaire.current
+    Button(onClick = {
+        viewModel.openQuestionnaire(context, element, pendingQuestionnaire?.uid?.toString())
+    }) {
         Text(
             element.configuration.actionText,
             modifier = Modifier.fillMaxWidth(),

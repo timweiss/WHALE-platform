@@ -210,4 +210,5 @@
     <string name="sensor_upload_stale_notification_message">Please open the app to synchronize your data to the server.</string>
     <string name="main_stale_data_title">Upload required</string>
     <string name="main_stale_data_subtitle">The last data upload has not been uploaded for two days. Please start an upload now. The upload will be done regardless how you\'re connected, so costs can occur if you\'re on mobile data.</string>
+    <string name="title_activity_questionnaire_finalize">Finalize Questionnaire</string>
 </resources>

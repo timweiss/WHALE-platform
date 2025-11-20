@@ -3,10 +3,22 @@ package de.mimuc.senseeverything.permissions
 import android.Manifest
 import android.content.Context
 import de.mimuc.senseeverything.R
-import de.mimuc.senseeverything.permissions.checker.*
+import de.mimuc.senseeverything.permissions.checker.AccessibilityServiceChecker
+import de.mimuc.senseeverything.permissions.checker.BatteryOptimizationChecker
+import de.mimuc.senseeverything.permissions.checker.ExactAlarmChecker
+import de.mimuc.senseeverything.permissions.checker.NotificationListenerChecker
+import de.mimuc.senseeverything.permissions.checker.StandardPermissionChecker
+import de.mimuc.senseeverything.permissions.checker.SystemAlertWindowChecker
+import de.mimuc.senseeverything.permissions.checker.UsageStatsChecker
 import de.mimuc.senseeverything.permissions.model.PermissionDefinition
 import de.mimuc.senseeverything.permissions.model.PermissionType
-import de.mimuc.senseeverything.permissions.requester.*
+import de.mimuc.senseeverything.permissions.requester.AccessibilityServiceRequester
+import de.mimuc.senseeverything.permissions.requester.BatteryOptimizationRequester
+import de.mimuc.senseeverything.permissions.requester.ExactAlarmRequester
+import de.mimuc.senseeverything.permissions.requester.NotificationListenerRequester
+import de.mimuc.senseeverything.permissions.requester.StandardPermissionRequester
+import de.mimuc.senseeverything.permissions.requester.SystemAlertWindowRequester
+import de.mimuc.senseeverything.permissions.requester.UsageStatsRequester
 
 /**
  * Central manager for all app permissions
@@ -31,6 +43,24 @@ object PermissionManager {
                 requester = StandardPermissionRequester(Manifest.permission.WAKE_LOCK)
             ),
             PermissionDefinition(
+                permission = Manifest.permission.FOREGROUND_SERVICE,
+                nameResId = R.string.permission_foreground_service_name,
+                descriptionResId = R.string.permission_foreground_service_desc,
+                type = PermissionType.STANDARD,
+                checker = StandardPermissionChecker(Manifest.permission.FOREGROUND_SERVICE),
+                requester = StandardPermissionRequester(Manifest.permission.FOREGROUND_SERVICE)
+            ),
+            PermissionDefinition(
+                permission = Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                nameResId = R.string.permission_battery_optimization_name,
+                descriptionResId = R.string.permission_battery_optimization_desc,
+                type = PermissionType.SPECIAL,
+                checker = BatteryOptimizationChecker(),
+                requester = BatteryOptimizationRequester(),
+                isCritical = true
+            ),
+
+            PermissionDefinition(
                 permission = Manifest.permission.RECORD_AUDIO,
                 nameResId = R.string.permission_record_audio_name,
                 descriptionResId = R.string.permission_record_audio_desc,
@@ -47,6 +77,14 @@ object PermissionManager {
                 requester = StandardPermissionRequester(Manifest.permission.ACCESS_WIFI_STATE)
             ),
             PermissionDefinition(
+                permission = Manifest.permission.ACCESS_NETWORK_STATE,
+                nameResId = R.string.permission_access_network_name,
+                descriptionResId = R.string.permission_access_network_desc,
+                type = PermissionType.STANDARD,
+                checker = StandardPermissionChecker(Manifest.permission.ACCESS_NETWORK_STATE),
+                requester = StandardPermissionRequester(Manifest.permission.ACCESS_NETWORK_STATE)
+            ),
+            PermissionDefinition(
                 permission = Manifest.permission.RECEIVE_BOOT_COMPLETED,
                 nameResId = R.string.permission_receive_boot_name,
                 descriptionResId = R.string.permission_receive_boot_desc,
@@ -61,22 +99,6 @@ object PermissionManager {
                 type = PermissionType.STANDARD,
                 checker = StandardPermissionChecker(Manifest.permission.READ_PHONE_STATE),
                 requester = StandardPermissionRequester(Manifest.permission.READ_PHONE_STATE)
-            ),
-            PermissionDefinition(
-                permission = Manifest.permission.ACCESS_NETWORK_STATE,
-                nameResId = R.string.permission_access_network_name,
-                descriptionResId = R.string.permission_access_network_desc,
-                type = PermissionType.STANDARD,
-                checker = StandardPermissionChecker(Manifest.permission.ACCESS_NETWORK_STATE),
-                requester = StandardPermissionRequester(Manifest.permission.ACCESS_NETWORK_STATE)
-            ),
-            PermissionDefinition(
-                permission = Manifest.permission.FOREGROUND_SERVICE,
-                nameResId = R.string.permission_foreground_service_name,
-                descriptionResId = R.string.permission_foreground_service_desc,
-                type = PermissionType.STANDARD,
-                checker = StandardPermissionChecker(Manifest.permission.FOREGROUND_SERVICE),
-                requester = StandardPermissionRequester(Manifest.permission.FOREGROUND_SERVICE)
             ),
             PermissionDefinition(
                 permission = Manifest.permission.ACCESS_FINE_LOCATION,
@@ -162,15 +184,6 @@ object PermissionManager {
                 type = PermissionType.SPECIAL,
                 checker = UsageStatsChecker(),
                 requester = UsageStatsRequester()
-            ),
-            PermissionDefinition(
-                permission = Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                nameResId = R.string.permission_battery_optimization_name,
-                descriptionResId = R.string.permission_battery_optimization_desc,
-                type = PermissionType.SPECIAL,
-                checker = BatteryOptimizationChecker(),
-                requester = BatteryOptimizationRequester(),
-                isCritical = true
             )
         )
     }
