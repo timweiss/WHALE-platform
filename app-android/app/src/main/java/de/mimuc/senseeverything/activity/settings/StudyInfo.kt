@@ -173,7 +173,7 @@ class StudyInfoViewModel @Inject constructor(
         // all with loading spinner
         viewModelScope.launch {
             // 1. refactored endstudy method
-            runStudyLifecycleCleanup(context, database)
+            runStudyLifecycleCleanup(context, database, true)
 
             // 2. save data still required to datastore
             val enrolmentId = dataStoreManager.participantIdFlow.first()

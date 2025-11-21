@@ -19,10 +19,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 
-suspend fun runStudyLifecycleCleanup(context: Context, database: AppDatabase) {
+suspend fun runStudyLifecycleCleanup(context: Context, database: AppDatabase, clearAlarms: Boolean = false) {
     stopLogService(context)
     clearJobs(context)
-    clearAllAlarms(context, database)
+
+    // if alarms are cleared prematurely from EndStudyReceiver,
+    // questionnaires after the last day would not be delivered
+    if (clearAlarms) {
+        clearAllAlarms(context, database)
+    }
+
     PeriodicServiceHealthcheckReceiver.cancel(context)
 }
 
