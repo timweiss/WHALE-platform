@@ -16,6 +16,7 @@ import { customAlphabet } from 'nanoid';
 
 const CreateEnrolment = z.object({
   enrolmentKey: z.string(),
+  source: z.string().nullable(),
 });
 
 function generateParticipantId() {
@@ -110,11 +111,15 @@ export function createEnrolmentController(
 
               const newEnrolment: Pick<
                 Enrolment,
-                'studyId' | 'participantId' | 'studyExperimentalGroupId'
+                | 'studyId'
+                | 'participantId'
+                | 'studyExperimentalGroupId'
+                | 'source'
               > = {
                 studyId: study.id,
                 participantId: participantId,
                 studyExperimentalGroupId: experimentalGroup.id,
+                source: body.data.source,
               };
 
               const enrolment =

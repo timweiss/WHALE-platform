@@ -8,6 +8,7 @@ export interface Enrolment {
   studyExperimentalGroupId: number;
   enrolledAt: Date;
   debugEnabled: boolean;
+  source: string | null;
 }
 
 interface EnrolmentRow {
@@ -17,6 +18,7 @@ interface EnrolmentRow {
   study_experimental_group_id: number;
   enrolled_at: Date;
   debug_enabled: boolean;
+  source: string | null;
 }
 
 export interface IEnrolmentRepository {
@@ -25,7 +27,7 @@ export interface IEnrolmentRepository {
   createEnrolment(
     enrolment: Pick<
       Enrolment,
-      'studyId' | 'participantId' | 'studyExperimentalGroupId'
+      'studyId' | 'participantId' | 'studyExperimentalGroupId' | 'source'
     >,
   ): Promise<Enrolment>;
 
@@ -70,16 +72,17 @@ export class EnrolmentRepository
   async createEnrolment(
     enrolment: Pick<
       Enrolment,
-      'studyId' | 'participantId' | 'studyExperimentalGroupId'
+      'studyId' | 'participantId' | 'studyExperimentalGroupId' | 'source'
     >,
   ): Promise<Enrolment> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO enrolments (study_id, participant_id, study_experimental_group_id) VALUES ($1, $2, $3) RETURNING *',
+        'INSERT INTO enrolments (study_id, participant_id, study_experimental_group_id, source) VALUES ($1, $2, $3, $4) RETURNING *',
         [
           enrolment.studyId,
           enrolment.participantId,
           enrolment.studyExperimentalGroupId,
+          enrolment.source,
         ],
       );
       return this.enrolmentFromRow(res.rows[0]);
@@ -127,7 +130,8 @@ export class EnrolmentRepository
       participantId: row.participant_id,
       studyExperimentalGroupId: row.study_experimental_group_id,
       enrolledAt: row.enrolled_at,
-      debugEnabled: row.debug_enabled
+      debugEnabled: row.debug_enabled,
+      source: row.source,
     };
   }
 }
