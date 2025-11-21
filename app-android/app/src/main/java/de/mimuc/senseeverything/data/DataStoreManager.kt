@@ -58,6 +58,7 @@ data class AppSettings(
     val studyPaused: Boolean,
     val studyPausedUntil: Long,
     val onboardingStep: OnboardingStep,
+    val onboardingSource: String?,
     val study: Study?,
     val phases: List<ExperimentalGroupPhase>? = null,
     val studyState: StudyState,
@@ -82,6 +83,7 @@ data class OptionalAppSettings(
     val studyPaused: Boolean? = null,
     val studyPausedUntil: Long? = null,
     val onboardingStep: OnboardingStep? = null,
+    val onboardingSource: String? = null,
     val study: Study? = null,
     val phases: List<ExperimentalGroupPhase>? = null,
     val studyState: StudyState? = null,
@@ -105,6 +107,7 @@ val DEFAULT_APP_SETTINGS = AppSettings(
     studyPaused = false,
     studyPausedUntil = -1,
     onboardingStep = OnboardingStep.WELCOME,
+    onboardingSource = null,
     study = null,
     phases = null,
     studyState = StudyState.NOT_ENROLLED,
@@ -132,6 +135,7 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
         studyPausedUntil = optionalAppSettings.studyPausedUntil
             ?: defaultAppSettings.studyPausedUntil,
         onboardingStep = optionalAppSettings.onboardingStep ?: defaultAppSettings.onboardingStep,
+        onboardingSource = optionalAppSettings.onboardingSource ?: defaultAppSettings.onboardingSource,
         study = optionalAppSettings.study ?: defaultAppSettings.study,
         phases = optionalAppSettings.phases ?: defaultAppSettings.phases,
         studyState = optionalAppSettings.studyState ?: defaultAppSettings.studyState,
@@ -326,6 +330,16 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
     suspend fun saveOnboardingStep(onboardingStep: OnboardingStep) {
         dataStore.updateData {
             it.copy(lastUpdate = System.currentTimeMillis(), onboardingStep = onboardingStep)
+        }
+    }
+
+    val onboardingSourceFlow = dataStore.data.map { preferences ->
+        preferences.onboardingSource
+    }
+
+    suspend fun saveOnboardingSource(onboardingSource: String?) {
+        dataStore.updateData {
+            it.copy(lastUpdate = System.currentTimeMillis(), onboardingSource = onboardingSource)
         }
     }
 

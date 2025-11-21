@@ -7,7 +7,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CreateEnrolmentRequest(
-    val enrolmentKey: String
+    val enrolmentKey: String,
+    val source: String?
 )
 
 @Serializable

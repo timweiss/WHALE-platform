@@ -1,7 +1,10 @@
 package de.mimuc.senseeverything.activity.onboarding
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +39,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.getActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
+import de.mimuc.senseeverything.api.ApiClient
+import de.mimuc.senseeverything.api.loadStudyByEnrolmentKey
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,6 +92,55 @@ class OnboardingViewModel @Inject constructor(
         loadStep()
     }
 
+    fun loadFromIntent(context: Context) {
+        val activity = (context as? Activity)
+        val intent = activity?.intent
+        if (intent != null) {
+            val action: String? = intent.action
+            val data: Uri? = intent.data
+
+            if (action == Intent.ACTION_VIEW) {
+                handleDeepLink(activity, data)
+            }
+        }
+    }
+
+    private fun handleDeepLink(activity: Activity, data: Uri?) {
+        if (data != null && data.path != null && data.path!!.startsWith("/start")) {
+            WHALELog.d("Questionnaire", "Called onboarding start deep link")
+
+            val studyKey = data.getQueryParameter("studyKey")
+            val source = data.getQueryParameter("source")
+
+            // just prompt the normal onboarding activity
+            if (studyKey.isNullOrBlank()) return
+
+            viewModelScope.launch {
+                dataStoreManager.saveOnboardingSource(source)
+
+                val lastStep = dataStoreManager.onboardingStepFlow.first()
+                if (lastStep > OnboardingStep.DATA_PROTECTION) {
+                    // todo: handle case when onboarding was already further,
+                    //  possibly just silently continue and show a warning toast
+                    return@launch
+                }
+
+                val client = ApiClient.getInstance(activity)
+                val study = loadStudyByEnrolmentKey(client, studyKey)
+
+                if (study != null) {
+                    dataStoreManager.saveStudy(study)
+                    dataStoreManager.saveStudyId(study.id)
+
+                    _step.value = OnboardingStep.DATA_PROTECTION
+                } else {
+                    // todo: show error that study cannot be loaded
+                    return@launch
+                }
+            }
+        }
+    }
+
     private fun loadStep() {
         viewModelScope.launch {
             _step.value = dataStoreManager.onboardingStepFlow.first()
@@ -127,6 +182,10 @@ class OnboardingViewModel @Inject constructor(
 fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
     val step = viewModel.step.collectAsState()
     val context = LocalContext.current
+
+    LaunchedEffect(key1 = true) {
+        viewModel.loadFromIntent(context)
+    }
 
     Scaffold(
         topBar = {

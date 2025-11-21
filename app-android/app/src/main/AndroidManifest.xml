@@ -59,7 +59,30 @@
             android:name=".activity.onboarding.Onboarding"
             android:exported="false"
             android:label="@string/title_activity_onboarding"
-            android:theme="@style/Theme.MyApplication" />
+            android:theme="@style/Theme.MyApplication">
+
+            <intent-filter android:label="@string/title_activity_onboarding_start">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="whale-app"
+                    android:host="onboarding"
+                    android:pathPrefix="/start"/>
+            </intent-filter>
+
+            <intent-filter
+                android:autoVerify="true"
+                android:label="@string/title_activity_onboarding_start">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" />
+                <data android:host="whale-app.de" />
+                <data android:pathPrefix="/onboarding/start" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".activity.esm.QuestionnaireActivity"
             android:exported="true"

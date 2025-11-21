@@ -97,8 +97,11 @@ class DataProtectionViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isEnrolling.value = true
+
+            val source = dataStoreManager.onboardingSourceFlow.first()
+
             val client = ApiClient.getInstance(context)
-            val request = CreateEnrolmentRequest(currentStudy.enrolmentKey)
+            val request = CreateEnrolmentRequest(currentStudy.enrolmentKey, source)
 
             try {
                 val createEnrolmentResponse = client.postSerialized<CreateEnrolmentRequest, CreateEnrolmentResponse>(
@@ -206,7 +209,7 @@ fun DataProtectionScreen(nextStep: () -> Unit, innerPadding: PaddingValues) {
                 }))
             }
 
-            Spacer(modifier = Modifier.Companion.padding(8.dp))
+            Spacer(modifier = Modifier.padding(8.dp))
 
             Button(
                 onClick = {
