@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -99,6 +100,10 @@ class QuestionnaireViewModel @Inject constructor(
     private val _pendingQuestionnaire = MutableStateFlow<PendingQuestionnaire?>(null)
     val pendingQuestionnaire: StateFlow<PendingQuestionnaire?> = _pendingQuestionnaire.asStateFlow()
 
+    // Flag to track if this instance is completing the questionnaire locally
+    // Prevents the Flow observer from auto-closing when this instance completes
+    private var isCompletingLocally = false
+
     init {
         _isLoading.value = true
     }
@@ -116,54 +121,112 @@ class QuestionnaireViewModel @Inject constructor(
         val data: Uri? = intent.data
 
         if (action == Intent.ACTION_VIEW) {
-            finalizeQuestionnaireFromAction(data, activity)
+            handleDeepLinkFinalization(data, activity)
         } else {
-            val pqId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)?.let { UUID.fromString(it) }
-            if (pqId == null) {
-                viewModelScope.launch {
-                    close(activity, CloseReason.PendingQuestionnaireNotFound)
-                }
-                return
-            }
-            pendingQuestionnaireId = pqId
+            handleNormalLoad(intent, activity)
+        }
+    }
 
-            val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
-            if (json != null) {
-                val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
-                _questionnaire.value = loaded
-                WHALELog.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
+    /**
+     * Handles normal questionnaire loading (not from deep link).
+     */
+    private fun handleNormalLoad(intent: Intent, activity: Activity?) {
+        // Extract and validate pending questionnaire ID
+        val pqId = intent.getStringExtra(QuestionnaireActivity.INTENT_PENDING_QUESTIONNAIRE_ID)
+            ?.let { UUID.fromString(it) }
+
+        if (pqId == null) {
+            viewModelScope.launch {
+                close(activity, CloseReason.PendingQuestionnaireNotFound)
+            }
+            return
+        }
+
+        pendingQuestionnaireId = pqId
+
+        // Determine how to load the questionnaire
+        val json = intent.getStringExtra(QuestionnaireActivity.INTENT_QUESTIONNAIRE)
+        if (json != null) {
+            handleLoadFromQuestionnaire(json, pqId, activity)
+        } else {
+            val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
+            if (triggerId != -1) {
+                handleLoadFromTriggerId(triggerId, pqId, activity)
             } else {
-                val triggerId = intent.getIntExtra(QuestionnaireActivity.INTENT_TRIGGER_ID, -1)
-                if (triggerId != -1) {
-                    viewModelScope.launch {
-                        val questionnaires = dataStoreManager.questionnairesFlow.first()
+                // No questionnaire or trigger ID, just observe pending questionnaire
+                startQuestionnaireObservation(pqId, activity)
+            }
+        }
+    }
 
-                        val questionnaire =
-                            questionnaires.find { it.triggers.any { it.id == triggerId } }
+    /**
+     * Handles loading when full questionnaire JSON is provided in the intent.
+     */
+    private fun handleLoadFromQuestionnaire(json: String, pqId: UUID, activity: Activity?) {
+        val loaded = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(json)
+        _questionnaire.value = loaded
+        WHALELog.i("Questionnaire", "Loaded questionnaire from intent: ${loaded.questionnaire.name}")
 
-                        if (questionnaire == null) {
-                            close(activity, CloseReason.PendingQuestionnaireNotFound)
-                            return@launch
-                        }
+        startQuestionnaireObservation(pqId, activity)
+    }
 
-                        _questionnaire.value = questionnaire
-                    }
-                    WHALELog.i(
-                        "Questionnaire",
-                        "Loaded questionnaire by trigger id: $triggerId, name: ${_questionnaire.value.questionnaire.name}"
-                    )
-                }
+    /**
+     * Handles loading when only trigger ID is provided in the intent.
+     * Finds the questionnaire by searching for the trigger ID in available questionnaires.
+     */
+    private fun handleLoadFromTriggerId(triggerId: Int, pqId: UUID, activity: Activity?) {
+        viewModelScope.launch {
+            val questionnaires = dataStoreManager.questionnairesFlow.first()
+            val questionnaire = questionnaires.find { it.triggers.any { it.id == triggerId } }
+
+            if (questionnaire == null) {
+                close(activity, CloseReason.PendingQuestionnaireNotFound)
+                return@launch
             }
 
+            _questionnaire.value = questionnaire
             WHALELog.i(
                 "Questionnaire",
-                "Found pending questionnaire id, will remove if saved: $pendingQuestionnaireId"
+                "Loaded questionnaire by trigger id: $triggerId, name: ${questionnaire.questionnaire.name}"
             )
+        }
 
-            // Observe the pending questionnaire for status changes
-            // This will automatically close this activity if another instance completes it
-            viewModelScope.launch(Dispatchers.IO) {
-                database.pendingQuestionnaireDao()?.getByIdFlow(pendingQuestionnaireId)?.collect { updatedPendingQuestionnaire ->
+        startQuestionnaireObservation(pqId, activity)
+    }
+
+    /**
+     * Starts observing the pending questionnaire and initializes the UI when loaded.
+     */
+    private fun startQuestionnaireObservation(pqId: UUID, activity: Activity?) {
+        WHALELog.i(
+            "Questionnaire",
+            "Found pending questionnaire id, will remove if saved: $pqId"
+        )
+
+        observePendingQuestionnaire(pqId, activity) { _ ->
+            loadFromPendingQuestionnaire()
+            _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pqId)
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Observes the pending questionnaire for status changes and automatically closes
+     * this activity if another instance completes it.
+     *
+     * @param pqId The pending questionnaire UUID to observe
+     * @param activity The activity to close if needed
+     * @param onFirstLoad Callback invoked on first successful load of the questionnaire
+     */
+    private fun observePendingQuestionnaire(
+        pqId: UUID,
+        activity: Activity?,
+        onFirstLoad: suspend (PendingQuestionnaire) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            database.pendingQuestionnaireDao()?.getByIdFlow(pqId)
+                ?.takeWhile { !isCompletingLocally }
+                ?.collect { updatedPendingQuestionnaire ->
                     val previousStatus = _pendingQuestionnaire.value?.status
                     _pendingQuestionnaire.value = updatedPendingQuestionnaire
 
@@ -174,9 +237,10 @@ class QuestionnaireViewModel @Inject constructor(
 
                     // If another instance completed this questionnaire, close this instance
                     if (updatedPendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED
-                        && previousStatus != PendingQuestionnaireStatus.COMPLETED) {
+                        && previousStatus != PendingQuestionnaireStatus.COMPLETED
+                        && !isCompletingLocally) {
                         WHALELog.i("Questionnaire", "Questionnaire was completed by another instance, closing this one")
-                        close(activity, CloseReason.AlreadyCompleted)
+                        close(activity, CloseReason.CompletedAnotherInstance)
                         return@collect
                     }
 
@@ -187,16 +251,18 @@ class QuestionnaireViewModel @Inject constructor(
                             return@collect
                         }
 
-                        loadFromPendingQuestionnaire()
-                        _textReplacements.value = dataRepository.getTextReplacementsForPendingQuestionnaire(pendingQuestionnaireId)
-                        _isLoading.value = false
+                        // Call the initialization callback
+                        onFirstLoad(updatedPendingQuestionnaire)
                     }
                 }
-            }
         }
     }
 
-    private fun finalizeQuestionnaireFromAction(data: Uri?, activity: Activity?) {
+    /**
+     * Handles deep link finalization from external questionnaires.
+     * Called when the user returns from an external questionnaire via deep link.
+     */
+    private fun handleDeepLinkFinalization(data: Uri?, activity: Activity?) {
         if (data != null && data.path != null && data.path!!.startsWith("/finalize")) {
             WHALELog.d("Questionnaire", "Called finalization deep link")
 
@@ -211,41 +277,24 @@ class QuestionnaireViewModel @Inject constructor(
                 return
             }
 
-            viewModelScope.launch(Dispatchers.IO) {
-                _pendingQuestionnaire.value = database.pendingQuestionnaireDao()
-                    .getById(UUID.fromString(finalizePendingQuestionnaireId))
+            val pqId = UUID.fromString(finalizePendingQuestionnaireId)
+            pendingQuestionnaireId = pqId
 
-                val pendingQuestionnaire = _pendingQuestionnaire.value
-                if (pendingQuestionnaire == null) {
-                    viewModelScope.launch {
-                        close(
-                            activity,
-                            CloseReason.PendingQuestionnaireNotSet
-                        )
-                    }
-                    return@launch
-                }
+            // Start observing the pending questionnaire for changes
+            observePendingQuestionnaire(pqId, activity) { pq ->
+                // Load questionnaire JSON from pending questionnaire (needed for upload)
+                _questionnaire.value = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pq.questionnaireJson)
 
-                // pending questionnaire was already completed before
-                if (pendingQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
-                    viewModelScope.launch { close(activity, CloseReason.AlreadyCompleted) }
-                    return@launch
-                }
+                WHALELog.i(
+                    "Questionnaire",
+                    "Finalizing questionnaire $pendingQuestionnaireId from deep link"
+                )
 
-                // needs to be available for upload
-                _questionnaire.value = fullQuestionnaireJson.decodeFromString<FullQuestionnaire>(pendingQuestionnaire.questionnaireJson)
+                // Set flag before saving to prevent self-triggered auto-close
+                isCompletingLocally = true
 
-                withContext(Dispatchers.Main) {
-                    this@QuestionnaireViewModel._pendingQuestionnaire.value = pendingQuestionnaire
-                    this@QuestionnaireViewModel.pendingQuestionnaireId = pendingQuestionnaire.uid
-
-                    WHALELog.i(
-                        "Questionnaire",
-                        "Finalizing questionnaire $pendingQuestionnaireId from deep link"
-                    )
-
-                    saveQuestionnaire(activity as Context)
-                }
+                // Save the questionnaire (use safe call to avoid crash if activity is null)
+                activity?.let { saveQuestionnaire(it) }
             }
         }
     }
@@ -254,7 +303,8 @@ class QuestionnaireViewModel @Inject constructor(
         PendingQuestionnaireNotSet,
         PendingQuestionnaireNotFound,
         AlreadyCompleted,
-        Completed
+        Completed,
+        CompletedAnotherInstance
     }
 
     private suspend fun close(activity: Activity?, reason: CloseReason) {
@@ -262,7 +312,7 @@ class QuestionnaireViewModel @Inject constructor(
             withContext(Dispatchers.Main) {
                 when (reason) {
                     CloseReason.PendingQuestionnaireNotSet -> WHALELog.e("Questionnaire", "Pending questionnaire ID was not set")
-                    CloseReason.PendingQuestionnaireNotFound, CloseReason.AlreadyCompleted -> WHALELog.w(
+                    CloseReason.PendingQuestionnaireNotFound, CloseReason.AlreadyCompleted, CloseReason.CompletedAnotherInstance -> WHALELog.w(
                         "Questionnaire",
                         "Finishing questionnaire activity, reason: $reason, pending questionnaire id: $pendingQuestionnaireId"
                     )
@@ -274,17 +324,20 @@ class QuestionnaireViewModel @Inject constructor(
 
                 activity.finishAndRemoveTask()
 
-                val message = when (reason) {
-                    CloseReason.PendingQuestionnaireNotFound, CloseReason.PendingQuestionnaireNotSet -> activity.getString(R.string.questionnaire_not_found_toast)
-                    CloseReason.AlreadyCompleted -> activity.getString(R.string.questionnaire_already_completed_toast)
-                    CloseReason.Completed -> activity.getString(R.string.questionnaire_thank_you_toast)
-                }
+                if (reason != CloseReason.CompletedAnotherInstance) {
+                    val message = when (reason) {
+                        CloseReason.PendingQuestionnaireNotFound, CloseReason.PendingQuestionnaireNotSet -> activity.getString(R.string.questionnaire_not_found_toast)
+                        CloseReason.AlreadyCompleted -> activity.getString(R.string.questionnaire_already_completed_toast)
+                        CloseReason.Completed -> activity.getString(R.string.questionnaire_thank_you_toast)
+                        else -> ""
+                    }
 
-                Toast.makeText(
-                    activity,
-                    message,
-                    Toast.LENGTH_SHORT
-                ).show()
+                    Toast.makeText(
+                        activity,
+                        message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }
@@ -322,6 +375,9 @@ class QuestionnaireViewModel @Inject constructor(
                 WHALELog.e("Questionnaire", "No pending questionnaire to save to")
                 return@launch
             }
+
+            // Set flag before marking completed to prevent self-triggered auto-close
+            isCompletingLocally = true
 
             withContext(Dispatchers.IO) {
                 pendingQuestionnaire.markCompleted(database, answerValues(elementValues.value))
