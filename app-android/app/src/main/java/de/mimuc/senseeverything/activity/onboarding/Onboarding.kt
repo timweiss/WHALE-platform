@@ -106,17 +106,17 @@ class OnboardingViewModel @Inject constructor(
     }
 
     private fun handleDeepLink(activity: Activity, data: Uri?) {
-        if (data != null && data.path != null && data.path!!.startsWith("/start")) {
+        if (data != null && data.path != null) {
             WHALELog.d("Questionnaire", "Called onboarding start deep link")
 
-            val studyKey = data.getQueryParameter("studyKey")
-            val source = data.getQueryParameter("source")
-
-            // just prompt the normal onboarding activity
-            if (studyKey.isNullOrBlank()) return
+            val parsed = parseOnboardingUrl(data)
+            if (parsed == null) {
+                // todo: show error that QR code is invalid
+                return
+            }
 
             viewModelScope.launch {
-                dataStoreManager.saveOnboardingSource(source)
+                dataStoreManager.saveOnboardingSource(parsed.second)
 
                 val lastStep = dataStoreManager.onboardingStepFlow.first()
                 if (lastStep > OnboardingStep.DATA_PROTECTION) {
@@ -126,7 +126,7 @@ class OnboardingViewModel @Inject constructor(
                 }
 
                 val client = ApiClient.getInstance(activity)
-                val study = loadStudyByEnrolmentKey(client, studyKey)
+                val study = loadStudyByEnrolmentKey(client, parsed.first)
 
                 if (study != null) {
                     dataStoreManager.saveStudy(study)
