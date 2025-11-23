@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -42,6 +43,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudyByEnrolmentKey
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -111,18 +113,31 @@ class OnboardingViewModel @Inject constructor(
 
             val parsed = parseOnboardingUrl(data)
             if (parsed == null) {
-                // todo: show error that QR code is invalid
+                activity.runOnUiThread {
+                    Toast.makeText(activity, "Invalid QR code or link", Toast.LENGTH_LONG).show()
+                }
+                activity.finish()
                 return
             }
 
             viewModelScope.launch {
                 dataStoreManager.saveOnboardingSource(parsed.second)
 
-                val token = dataStoreManager.tokenFlow.first()
                 val lastStep = dataStoreManager.onboardingStepFlow.first()
-                if (lastStep > OnboardingStep.DATA_PROTECTION || token.isNotBlank()) {
-                    // todo: handle case when onboarding was already further,
-                    //  possibly just silently continue and show a warning toast
+                if (lastStep > OnboardingStep.DATA_PROTECTION) {
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, "You've already scanned the study code. Continuing with onboarding.", Toast.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+
+                val token = dataStoreManager.tokenFlow.first()
+                val studyState = dataStoreManager.studyStateFlow.first()
+                if (token.isNotBlank() && studyState != StudyState.NOT_ENROLLED) {
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, "Onboarding already completed.", Toast.LENGTH_LONG).show()
+                    }
+                    activity.finish()
                     return@launch
                 }
 
@@ -135,7 +150,9 @@ class OnboardingViewModel @Inject constructor(
 
                     _step.value = OnboardingStep.DATA_PROTECTION
                 } else {
-                    // todo: show error that study cannot be loaded
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, "Could not load study. Please check your enrolment key.", Toast.LENGTH_LONG).show()
+                    }
                     return@launch
                 }
             }

@@ -52,6 +52,7 @@
     <string name="social_network_no_person_selected">Keine Person ausgewählt</string>
     <string name="social_network_add_person">Person hinzufügen</string>
     <string name="abort">Abbrechen</string>
+    <string name="qr_scanner_instruction">Richten Sie Ihre Kamera auf den QR-Code</string>
     <string name="studyinfo_cancelling_pending">Teilnahme wird abgebrochen, bitte warten...</string>
     <string name="studyinfo_open_debug">Debug-Info öffnen</string>
     <string name="studyinfo_request_data_export">Meine Daten anfordern</string>

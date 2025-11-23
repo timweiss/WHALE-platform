@@ -1,16 +1,24 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
+    <!-- Base application theme (Dark) - Material 3 -->
+    <style name="Theme.MyApplication" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary colors matching Compose MaterialTheme dark scheme -->
+        <item name="colorPrimary">@color/purple_80</item>
         <item name="colorOnPrimary">@color/black</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
+        <item name="colorPrimaryContainer">@color/purple_grey_80</item>
+        <item name="colorOnPrimaryContainer">@color/black</item>
+
+        <!-- Secondary colors -->
+        <item name="colorSecondary">@color/purple_grey_80</item>
         <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <item name="colorSecondaryContainer">@color/purple_grey_80</item>
+        <item name="colorOnSecondaryContainer">@color/black</item>
+
+        <!-- Tertiary colors -->
+        <item name="colorTertiary">@color/pink_80</item>
+        <item name="colorOnTertiary">@color/black</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor" tools:targetApi="l">@color/purple_80</item>
+        <item name="android:navigationBarColor">@color/black</item>
     </style>
 </resources>

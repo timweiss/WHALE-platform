@@ -53,6 +53,7 @@
     <string name="social_network_no_person_selected">No person selected</string>
     <string name="social_network_add_person">Add person</string>
     <string name="abort">Abort</string>
+    <string name="qr_scanner_instruction">Point your camera at the QR code</string>
     <string name="studyinfo_cancelling_pending">Cancelling participation, please wait...</string>
     <string name="studyinfo_open_debug">Open Debug Info</string>
     <string name="studyinfo_request_data_export">Request Data Export</string>

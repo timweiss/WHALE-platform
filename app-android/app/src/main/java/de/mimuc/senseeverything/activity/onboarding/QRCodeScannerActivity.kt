@@ -20,7 +20,6 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.logging.WHALELog
-import java.util.concurrent.Executors
 
 /**
  * Activity that uses CameraX + ML Kit bundled barcode scanning to scan QR codes.
@@ -37,7 +36,7 @@ class QRCodeScannerActivity : AppCompatActivity() {
         const val EXTRA_SOURCE = "source"
     }
 
-    private var previewView: PreviewView? = null
+    private var cameraProvider: ProcessCameraProvider? = null
     private var hasScanned = false
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -55,8 +54,6 @@ class QRCodeScannerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_qr_scanner)
-
-        previewView = findViewById(R.id.preview_view)
 
         // Setup cancel button
         findViewById<Button>(R.id.cancel_button).setOnClickListener {
@@ -78,16 +75,22 @@ class QRCodeScannerActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraProvider?.unbindAll()
+    }
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
         cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
+            cameraProvider = cameraProviderFuture.get()
+            val previewView = findViewById<PreviewView>(R.id.preview_view)
 
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    it.setSurfaceProvider(previewView?.surfaceProvider)
+                    it.setSurfaceProvider(previewView.surfaceProvider)
                 }
 
             val imageAnalysis = ImageAnalysis.Builder()
@@ -95,12 +98,14 @@ class QRCodeScannerActivity : AppCompatActivity() {
                 .build()
                 .also {
                     it.setAnalyzer(
-                        Executors.newSingleThreadExecutor(),
+                        ContextCompat.getMainExecutor(this),
                         QRCodeAnalyzer { studyKey, source ->
                             if (!hasScanned) {
                                 hasScanned = true
                                 WHALELog.i("QRCodeScannerActivity", "QR Code detected: studyKey=$studyKey, source=$source")
-                                returnResult(studyKey, source)
+                                runOnUiThread {
+                                    returnResult(studyKey, source)
+                                }
                             }
                         }
                     )
@@ -109,8 +114,8 @@ class QRCodeScannerActivity : AppCompatActivity() {
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
+                cameraProvider?.unbindAll()
+                cameraProvider?.bindToLifecycle(
                     this,
                     cameraSelector,
                     preview,
@@ -136,6 +141,7 @@ class QRCodeScannerActivity : AppCompatActivity() {
     /**
      * Image analyzer that uses ML Kit bundled barcode scanning to detect and decode QR codes.
      */
+    @androidx.camera.core.ExperimentalGetImage
     private class QRCodeAnalyzer(
         private val onQRCodeDetected: (studyKey: String, source: String) -> Unit
     ) : ImageAnalysis.Analyzer {
@@ -144,7 +150,6 @@ class QRCodeScannerActivity : AppCompatActivity() {
         private var lastProcessedTime = 0L
         private val processingInterval = 1000L // Process at most once per second
 
-        @androidx.camera.core.ExperimentalGetImage
         override fun analyze(imageProxy: ImageProxy) {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastProcessedTime < processingInterval) {
