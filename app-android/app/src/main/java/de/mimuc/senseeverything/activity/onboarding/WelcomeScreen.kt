@@ -47,7 +47,7 @@ import javax.inject.Inject
 @HiltViewModel
 class WelcomeScreenViewModel @Inject constructor(
     application: Application,
-    val dataStoreManager: DataStoreManager  // Made public for QR code source tracking
+    val dataStoreManager: DataStoreManager
 ) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> get() = _isLoading

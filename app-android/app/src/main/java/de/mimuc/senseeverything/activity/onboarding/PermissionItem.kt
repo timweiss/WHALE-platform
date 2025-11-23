@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -34,7 +35,7 @@ fun PermissionItem(
 ) {
     Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Row(horizontalArrangement = Arrangement.Center) {
-            Image(
+            Icon(
                 painter = painterResource(id = if (isGranted) R.drawable.baseline_check_24 else R.drawable.outline_close_24),
                 contentDescription = if (isGranted) "Granted" else "Not granted",
                 modifier = Modifier

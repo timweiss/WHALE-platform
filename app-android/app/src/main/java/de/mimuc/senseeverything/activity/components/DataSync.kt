@@ -14,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -104,7 +105,7 @@ fun DataSyncProgressBanner(workInfo: WorkInfo?, onRetry: () -> Unit) {
                     strokeWidth = 3.dp
                 )
             } else {
-                Image(
+                Icon(
                     painter = painterResource(id = R.drawable.outline_arrow_warm_up_24),
                     contentDescription = title,
                     modifier = Modifier

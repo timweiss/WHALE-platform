@@ -118,8 +118,9 @@ class OnboardingViewModel @Inject constructor(
             viewModelScope.launch {
                 dataStoreManager.saveOnboardingSource(parsed.second)
 
+                val token = dataStoreManager.tokenFlow.first()
                 val lastStep = dataStoreManager.onboardingStepFlow.first()
-                if (lastStep > OnboardingStep.DATA_PROTECTION) {
+                if (lastStep > OnboardingStep.DATA_PROTECTION || token.isNotBlank()) {
                     // todo: handle case when onboarding was already further,
                     //  possibly just silently continue and show a warning toast
                     return@launch
