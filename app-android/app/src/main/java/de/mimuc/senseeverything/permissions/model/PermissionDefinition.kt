@@ -21,5 +21,6 @@ data class PermissionDefinition(
     val type: PermissionType,
     val checker: PermissionChecker,
     val requester: PermissionRequester,
+    val category: PermissionCategory,
     val isCritical: Boolean = false
 )

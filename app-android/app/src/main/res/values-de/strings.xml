@@ -96,7 +96,7 @@
     <string name="onboarding_app_explanation">Hier können wir einen Text darstellen, um die App zu erklären.</string>
     <string name="onboarding_continue">Weiter</string>
     <string name="onboarding_permissions_necessary">Notwendige Berechtigungen</string>
-    <string name="onboarding_permissions_hint">Um an der Studie teilnehmen zu können, benötigen wir Zugriff auf einige Sensoren Ihres Telefons. Alle Daten werden pseudonymisiert und auf geschützten Severn sicher gespeichert.</string>
+    <string name="onboarding_permissions_hint">Unsere Forschungsapp WHALE erfasst für 13 Tage Daten, die nicht auf Selbstauskunft basieren, sondern auf Informationen von Sensoren in Ihrem Smartphone. Das sind z.B. die Umgebungsgeräusche oder wie oft Sie über Apps und/oder Telefonate mit anderen kommunizieren. WHALE speichert die Umgebungsgeräusche nicht, &lt;b&gt;sondern&lt;/b&gt; kategorisiert sie lediglich (z.B. “Sprache”, “Musik”, “Hundegebell”) und löscht sie danach wieder.&lt;br/&gt;WHALE zeichnet nicht auf, welche Nachrichten Sie in sozialen Medien veröffentlichen oder ansehen, &lt;b&gt;sondern&lt;/b&gt; misst lediglich, &lt;b&gt;&lt;i&gt;dass&lt;/i&gt;&lt;/b&gt; Sie dieses soziale Medium genutzt haben. Telefongespräche werden nicht aufgezeichnet und Telefonnummern werden nicht erkannt, &lt;b&gt;sondern&lt;/b&gt; es wird lediglich registriert, &lt;b&gt;&lt;i&gt;dass&lt;/i&gt;&lt;/b&gt; Sie einen Anruf getätigt haben.&lt;br/&gt;&lt;br/&gt;Diese Smartphone-Daten können für die Studie wichtige zusätzliche Informationen zu Ihrer Alltagsumgebung liefern. Diese Daten helfen uns beispielsweise zu verstehen, in welchem Kontext Sie die Fragebögen beantwortet haben, ohne dass wir Sie extra danach fragen müssen.&lt;br/&gt;Eine genaue Auflistung der erfassten Datentypen finden Sie in der datenschutzrechtlichen Aufklärung und Einwilligungserklärung, die Sie bei der Anmeldung zur Studie erhalten haben.</string>
     <string name="onboarding_grant_permission">Berechtigung anfordern</string>
     <string name="onboarding_permissions_accept_all_hint">Bitte akzeptieren Sie alle Berechtigungen, um fortzufahren. Sie können die Studie jederzeit abbrechen und haben die Möglichkeit, alle gesammelten Daten zu löschen.</string>
     <string name="onboarding_start_study_finalizing">Einrichtung wird abgeschlossen, dies kann einen Moment dauern...</string>
@@ -116,59 +116,63 @@
     <string name="questionnaire_element_quantity_valid_range">Bitte geben Sie einen Wert zwischen %1$d und %2$d ein.</string>
 
     <!-- Permission names and descriptions -->
-    <string name="permission_wake_lock_name">Wake Lock</string>
-    <string name="permission_wake_lock_desc">Hält das Gerät für die Hintergrunddatenerfassung wach</string>
+    <string name="permission_wake_lock_name">App im Hintergrund aktiv halten 1</string>
+    <string name="permission_wake_lock_desc">Ist technisch notwendig, damit Ihr Smartphone die WHALE-App nicht automatisch beendet und die Informationen von den Sensoren Ihres Smartphones durchgehend aufgezeichnet werden können.</string>
 
-    <string name="permission_record_audio_name">Audio aufnehmen</string>
-    <string name="permission_record_audio_desc">Nimmt Audio für die Umgebungsgeräuschanalyse auf</string>
+    <string name="permission_record_audio_name">Umgebungsgeräusche kategorisieren</string>
+    <string name="permission_record_audio_desc">Nutzt das Mikrofon, um kurze Audioaufnahmen zu machen, die innerhalb der App in eine Kategorie umgewandelt werden (z.B. “Sprache”, “Musik”, “Hundegebell”, “Straßenlärm”).&lt;br/&gt;&lt;i&gt;Hinweis: Die Audioaufnahme selbst wird &lt;b&gt;wieder gelöscht&lt;/b&gt;. D.h. es werden &lt;b&gt;keine Audioaufnahmen an unseren Server geschickt&lt;/b&gt;. Genauere Informationen, wie wir Ihre Audioaufnahmen datenschutzfreundlich verarbeiten, finden Sie in der datenschutzrechtlichen Aufklärung und Einwilligungserklärung, die Sie bei der Anmeldung zur Studie erhalten haben.&lt;/i&gt;</string>
 
     <string name="permission_access_wifi_name">WLAN-Status</string>
-    <string name="permission_access_wifi_desc">Erkennt WLAN-Verbindungsstatus und Netzwerke</string>
+    <string name="permission_access_wifi_desc">Erkennt, in welchem WLAN Sie eingeloggt sind und welche WLAN Netzwerke in Ihrer Umgebung sind. Wir speichern aber nicht die Bezeichnung des Netzwerks, sondern eine verschlüsselte Variante, die keinen Rückschluss auf den Namen erlaubt.</string>
 
     <string name="permission_receive_boot_name">Autostart</string>
-    <string name="permission_receive_boot_desc">Startet die App automatisch nach dem Geräteneustart</string>
+    <string name="permission_receive_boot_desc">Startet WHALE automatisch nach einem Geräteneustart</string>
 
     <string name="permission_read_phone_state_name">Telefonstatus</string>
-    <string name="permission_read_phone_state_desc">Erkennt Telefonanrufe und Verbindungsstatus</string>
+    <string name="permission_read_phone_state_desc">Erkennt, ob Sie telefonieren. Wir speichern keine Gesprächsinhalte.</string>
 
     <string name="permission_access_network_name">Netzwerkstatus</string>
-    <string name="permission_access_network_desc">Überwacht die Netzwerkverbindung</string>
+    <string name="permission_access_network_desc">Ist technisch notwendig, um die Erkennung des WLAN-Status zu ermöglichen. Siehe oben.</string>
 
-    <string name="permission_foreground_service_name">Hintergrunddienste</string>
-    <string name="permission_foreground_service_desc">Führt Hintergrunddienste für die Datenerfassung aus</string>
+    <string name="permission_foreground_service_name">App im Hintergrund aktiv halten 2</string>
+    <string name="permission_foreground_service_desc">Erlaubt, dass WHALE auch dann weiterläuft, wenn Sie die App gerade nicht geöffnet haben. Ihr Smartphone zeigt Ihnen dabei immer an, dass die App aktiv ist.</string>
 
     <string name="permission_fine_location_name">Standortbestimmung</string>
-    <string name="permission_fine_location_desc">Benötigt genaue Standortdaten für Mobilitätsmuster</string>
+    <string name="permission_fine_location_desc">Diese Berechtigung ist systemseitig erforderlich, weil die App Ihren WLAN- und Bluetooth-Status erkennt und dies potentiell Rückschlüsse auf Ihren Standort zulassen würde. Da die App aber keine Bezeichnungen speichert (siehe oben), sondern eine verschlüsselte Variante, ist keine Standortbestimmung möglich. Wir speichern keinen Standort.&lt;br/&gt;&lt;i&gt;Hinweis: Immer zulassen auswählen&lt;/i&gt;</string>
 
     <string name="permission_background_location_name">Hintergrundstandort</string>
-    <string name="permission_background_location_desc">Setzt die Standortverfolgung fort, wenn die App im Hintergrund ist</string>
+    <string name="permission_background_location_desc">Diese Berechtigung ist systemseitig erforderlich, damit WLAN-Status und Bluetooth-Status auch erkannt werden kann, wenn Sie die App gerade nicht geöffnet haben. Die App zeichnet auch im Hintergrund &lt;b&gt;Ihren Standort nicht&lt;/b&gt; auf, sondern die verschlüsselten Bezeichnungen (siehe oben).</string>
 
     <string name="permission_bluetooth_scan_name">Bluetooth-Scan</string>
-    <string name="permission_bluetooth_scan_desc">Scannt nach Bluetooth-Geräten in der Nähe</string>
+    <string name="permission_bluetooth_scan_desc">Erkennt, welche Geräte in Ihrer Umgebung Bluetooth aktiviert haben. Wir speichern aber nicht die Bezeichnung des Geräts, sondern eine verschlüsselte Variante, die keinen Rückschluss auf den Namen erlaubt.</string>
 
     <string name="permission_notifications_name">Benachrichtigungen</string>
-    <string name="permission_notifications_desc">Benachrichtigungen für Fragebögen und Studienaktualisierungen</string>
+    <string name="permission_notifications_desc">Erlaubt WHALE Ihnen innerhalb der App Benachrichtigungen zu schicken, um Sie über Fragebögen und Studienaktualisierungen zu informieren</string>
 
     <string name="permission_activity_recognition_name">Aktivitätserkennung</string>
     <string name="permission_activity_recognition_desc">Erkennt körperliche Aktivitäten wie Gehen oder Laufen</string>
 
-    <string name="permission_exact_alarm_name">Genaue Alarme</string>
-    <string name="permission_exact_alarm_desc">Plant zeitgenaue Datenerfassung und Fragebögen</string>
+    <string name="permission_exact_alarm_name">Zeiterfassung</string>
+    <string name="permission_exact_alarm_desc">Plant zeitgenaue Datenerfassung und Versendung der Fragebögen und erlaubt die Aktivität der App zu dem geplanten Zeitpunkt</string>
 
     <string name="permission_system_alert_name">Über anderen Apps anzeigen</string>
-    <string name="permission_system_alert_desc">Zeigt Fenster für Fragebögen im Vordergrund an</string>
+    <string name="permission_system_alert_desc">Zeigt Fenster für Fragebögen im Vordergrund an&lt;br/&gt;&lt;i&gt;Hinweis: In Einstellungen zu WHALE-App scrollen&lt;/i&gt;</string>
 
-    <string name="permission_notification_listener_name">Benachrichtigungszugriff</string>
-    <string name="permission_notification_listener_desc">Protokolliert, wann Benachrichtigungen empfangen werden</string>
+    <string name="permission_notification_listener_name">Benachrichtigungsstatus</string>
+    <string name="permission_notification_listener_desc">Erkennt, wann Benachrichtigungen von welcher App empfangen werden&lt;br/&gt;&lt;i&gt;Hinweis: Sollte Ihr Smartphone den Benachrichtigungszugriff nicht erlauben, werden Sie zu den Einstellungen weitergeleitet. Suchen Sie “Apps” und wählen Sie unter “Apps” die “WHALE” App aus und scrollen Sie zu “Eingeschränkte Einstellungen zulassen” und aktivieren Sie dies. Danach können Sie in der App die Berechtigung erteilen. Keine Sorge, Sie können uns vertrauen. Wir speichern keine Telefonnummern oder Klartext-Inhalte von Benachrichtigungen, sondern lediglich, dass und von welcher App Sie eine Benachrichtigung erhalten haben.&lt;/i&gt;</string>
 
     <string name="permission_accessibility_name">Bedienungshilfen-Dienst</string>
-    <string name="permission_accessibility_desc">Für App-Nutzung und Bildschirminteraktionen</string>
+    <string name="permission_accessibility_desc">Erkennt, welche Tasten oder Menüs Sie während der Nutzung einer App anklicken und wie das Layout einer App ist, die Sie nutzen, und welche Bildschirminteraktion (tippen, wischen etc.) Sie machen.&lt;br/&gt;&lt;i&gt;Hinweis: Klicken Sie auf “Heruntergeladene Apps” und wählen Sie “WHALE” aus. Achtung: Im Hinweisfeld Ihres Smartphones könnten wesentlich mehr Berechtigungen gelistet sein im Vergleich zu denen, auf die die WHALE App laut Datenschutzerklärung tatsächlich zugreift.&lt;/i&gt;</string>
 
     <string name="permission_usage_stats_name">Nutzungsstatistiken</string>
-    <string name="permission_usage_stats_desc">Für App-Nutzungsmuster und Bildschirmzeit</string>
+    <string name="permission_usage_stats_desc">Erkennt, welche App und wie lange Sie diese nutzen, wann Sie am Smartphone den Bildschirm eingeschaltet haben&lt;br/&gt;&lt;i&gt;Hinweis: Sie werden zur Einstellung "Zugriff auf Nutzungsdaten" weitergeleitet. Wischen Sie nach ganz unten bis Sie die App "WHALE" sehen. Tippen Sie auf "WHALE“ und lassen Sie die Nutzungsverfolgung zu. Im Hinweisfeld Ihres Smartphones könnten wesentlich mehr Berechtigungen gelistet sein im Vergleich zu denen, auf die die WHALE App laut Datenschutzerklärung tatsächlich zugreift.&lt;/i&gt;</string>
 
-    <string name="permission_battery_optimization_name">Ausnahme der Akku-Optimierung</string>
-    <string name="permission_battery_optimization_desc">Verhindert, dass das System die Hintergrunddatenerfassung stoppt. Für die erfolgreiche Studienteilnahme ist es erforderlich, dass keine Akkubeschränkungen bestehen.</string>
+    <string name="permission_battery_optimization_name">App von den Batterie-Optimierungen ausschließen</string>
+    <string name="permission_battery_optimization_desc">Verhindert, dass Ihr Smartphone die WHALE App zum Akku sparen beendet. Erlaubt, dass die Informationen von den Sensoren Ihres Smartphones durchgehend aufgezeichnet werden können.&lt;br/&gt;&lt;i&gt;Hinweis: Wählen Sie “keine Beschränkungen”.&lt;/i&gt;</string>
+
+    <string name="permission_category_background">App im Hintergrund aktiv halten</string>
+    <string name="permission_category_questionnaire">App-Fragebögen ermöglichen</string>
+    <string name="permission_category_sensor">Informationen von Sensoren in Ihrem Smartphone</string>
 
     <!-- Permission revocation notification -->
     <string name="permission_revoked_channel_name">Berechtigungsbenachrichtigungen</string>
