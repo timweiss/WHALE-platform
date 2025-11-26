@@ -95,11 +95,19 @@ export async function setupO11y(): Promise<{
       message: string,
       attributes?: Record<string, any>
     ) => {
-      console.log(`[${level}] ${message}`, {
+      const timestamp = new Date().toISOString();
+      const logData = {
+        timestamp,
+        level,
         name,
+        message,
         ...loggerAttributes,
         ...attributes,
-      });
+      };
+
+      // Output structured logs to console for Docker logs
+      // Use JSON format for easier parsing and log aggregation
+      console.log(JSON.stringify(logData));
 
       logger.emit({
         timestamp: new Date(),
