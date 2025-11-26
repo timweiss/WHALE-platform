@@ -1,6 +1,11 @@
 # WHALE
 Social Sensing environment with Experience Sampling capabilities.
 
+> [!IMPORTANT]  
+> Wenn Sie auf der Suche nach Informationen zur Teilnahme an der aktuell laufenden WHALE-Studie sind, besuchen Sie bitte [diese Webseite](https://www.charlotte-fresenius-uni.de/whale-studie/).
+> 
+> If you're looking for how to participate in the WHALE study, please [follow this link (in German)](https://www.charlotte-fresenius-uni.de/whale-studie/) for information on how to enrol in the study.
+
 ## Components
 * [Android App](app-android): The app that records sensor data. Needs to be installed on participant's devices
 * [Backend](backend): The backend that allows for data storage. Deployed on a server.
