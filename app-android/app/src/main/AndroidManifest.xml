@@ -60,7 +60,7 @@
         </activity>
         <activity
             android:name=".activity.onboarding.Onboarding"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_activity_onboarding"
             android:theme="@style/Theme.MyApplication">
 

@@ -217,4 +217,11 @@
     <string name="main_stale_data_subtitle">The last data upload has not been uploaded for two days. Please start an upload now. The upload will be done regardless how you\'re connected, so costs can occur if you\'re on mobile data.</string>
     <string name="title_activity_questionnaire_finalize">Finalize Questionnaire</string>
     <string name="title_activity_onboarding_start">Start Onboarding</string>
+    <string name="onboarding_welcome_scan_qr">Scan QR Code</string>
+    <string name="onboarding_welcome_or">OR</string>
+    <string name="onboarding_welcome_invalid_qr">Invalid QR code or link</string>
+    <string name="onboarding_welcome_qr_completed">Onboarding already completed.</string>
+    <string name="onboarding_welcome_qr_continuing">Continuing with onboarding.</string>
+    <string name="onboarding_welcome_qr_could_not_load_study">Could not load study. Please check your enrolment key.</string>
+    <string name="onboarding_welcome_enrolment_key">Enrolment Key</string>
 </resources>

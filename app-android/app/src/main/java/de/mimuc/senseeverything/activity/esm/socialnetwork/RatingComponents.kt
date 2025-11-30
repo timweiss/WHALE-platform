@@ -83,15 +83,21 @@ class SocialNetworkRatingViewModel @AssistedInject constructor(
     val ratingValues: StateFlow<Map<Int, Map<Int, ElementValue>>> = _ratingValues
 
     init {
+        _ratingValues.value = value
         loadContacts()
         loadRatingQuestionnaire()
-        _ratingValues.value = value
     }
 
     fun loadContacts() {
         viewModelScope.launch {
             val persons = withContext(Dispatchers.IO) {
                 database.socialNetworkContactDao().getAllSortedByName()
+            }
+            // if not saved, prefill empty so we can validate
+            if (_ratingValues.value.isEmpty()) {
+                _ratingValues.value =
+                    persons.associate { it.uid.toInt() to emptyMap() }
+                onValueChange(_ratingValues.value)
             }
             _contacts.value = persons
         }
@@ -144,12 +150,13 @@ fun SocialNetworkRatingElementComponent(
 
     if (questionnaire == null || contacts.isEmpty()) {
         // Show loading or error state
+        // fixme: show if no contacts have been added
         BasicText("Loading contacts...")
         return
     } else {
         Column {
-            for ((contactId, contact) in contacts.withIndex()) {
-                val contactValue = values[contactId] ?: emptyMap()
+            for ((index, contact) in contacts.withIndex()) {
+                val contactValue = values[contact.uid.toInt()] ?: emptyMap()
                 val completed = contactValue.isNotEmpty()
                 AccordionItem(
                     title = contact.name,
@@ -160,10 +167,10 @@ fun SocialNetworkRatingElementComponent(
                         QuestionnaireHost(questionnaire = questionnaire!!,
                             emptyMap(), // todo: replacements in ratings component not supported for now
                             onSave = { newValues ->
-                                viewModel.setContactValue(contactId, newValues)
+                                viewModel.setContactValue(contact.uid.toInt(), newValues)
                             },
                             embedded = true,
-                            hostKey = "hosted_questionnaire_${element.questionnaireId}_rating_${contactId}"
+                            hostKey = "hosted_questionnaire_${element.questionnaireId}_rating_${index}"
                         )
                     }
                 }
@@ -180,7 +187,7 @@ fun AccordionItem(
     icon: @Composable () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(true) }
     Column {
         Row(
             modifier = Modifier

@@ -114,7 +114,7 @@ class OnboardingViewModel @Inject constructor(
             val parsed = parseOnboardingUrl(data)
             if (parsed == null) {
                 activity.runOnUiThread {
-                    Toast.makeText(activity, "Invalid QR code or link", Toast.LENGTH_LONG).show()
+                    Toast.makeText(activity, activity.getString(R.string.onboarding_welcome_invalid_qr), Toast.LENGTH_LONG).show()
                 }
                 activity.finish()
                 return
@@ -123,21 +123,21 @@ class OnboardingViewModel @Inject constructor(
             viewModelScope.launch {
                 dataStoreManager.saveOnboardingSource(parsed.second)
 
-                val lastStep = dataStoreManager.onboardingStepFlow.first()
-                if (lastStep > OnboardingStep.DATA_PROTECTION) {
-                    activity.runOnUiThread {
-                        Toast.makeText(activity, "You've already scanned the study code. Continuing with onboarding.", Toast.LENGTH_LONG).show()
-                    }
-                    return@launch
-                }
-
                 val token = dataStoreManager.tokenFlow.first()
                 val studyState = dataStoreManager.studyStateFlow.first()
                 if (token.isNotBlank() && studyState != StudyState.NOT_ENROLLED) {
                     activity.runOnUiThread {
-                        Toast.makeText(activity, "Onboarding already completed.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(activity, activity.getString(R.string.onboarding_welcome_qr_completed), Toast.LENGTH_LONG).show()
                     }
                     activity.finish()
+                    return@launch
+                }
+
+                val lastStep = dataStoreManager.onboardingStepFlow.first()
+                if (lastStep > OnboardingStep.DATA_PROTECTION) {
+                    activity.runOnUiThread {
+                        Toast.makeText(activity, activity.getString(R.string.onboarding_welcome_qr_continuing), Toast.LENGTH_LONG).show()
+                    }
                     return@launch
                 }
 
@@ -151,7 +151,7 @@ class OnboardingViewModel @Inject constructor(
                     _step.value = OnboardingStep.DATA_PROTECTION
                 } else {
                     activity.runOnUiThread {
-                        Toast.makeText(activity, "Could not load study. Please check your enrolment key.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(activity, activity.getString(R.string.onboarding_welcome_qr_could_not_load_study), Toast.LENGTH_LONG).show()
                     }
                     return@launch
                 }

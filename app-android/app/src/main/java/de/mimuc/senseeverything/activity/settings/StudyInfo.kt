@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
@@ -538,9 +539,18 @@ fun FAQContent(embeddedInfoUrl: String?) {
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     isLoading = false
                                 }
+
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    request: WebResourceRequest?
+                                ): Boolean {
+                                    val intent = Intent(Intent.ACTION_VIEW, request!!.getUrl())
+                                    view!!.context.startActivity(intent)
+                                    return true
+                                }
                             }
                             settings.apply {
-                                javaScriptEnabled = true
+                                javaScriptEnabled = false
                                 domStorageEnabled = false
                                 setSupportZoom(false)
                                 builtInZoomControls = false

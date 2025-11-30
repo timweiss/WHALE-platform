@@ -210,9 +210,13 @@ private fun QuestionnaireHostContent(
                     ElementSeparator(element, currentElements)
 
                     val elementValue = answerValues.value[element.id]
-                    QuestionnaireElement(element, elementValue, textReplacements, onValueChange = { id, value ->
-                        viewModel.setElementValue(id, value)
-                    })
+                    QuestionnaireElement(
+                        element,
+                        elementValue,
+                        textReplacements,
+                        onValueChange = { id, value ->
+                            viewModel.setElementValue(id, value)
+                        })
                 }
 
                 // Navigation after content
@@ -257,9 +261,13 @@ private fun QuestionnaireHostContent(
                         ElementSeparator(element, currentElements)
 
                         val elementValue = answerValues.value[element.id]
-                        QuestionnaireElement(element, elementValue, textReplacements, onValueChange = { id, value ->
-                            viewModel.setElementValue(id, value)
-                        })
+                        QuestionnaireElement(
+                            element,
+                            elementValue,
+                            textReplacements,
+                            onValueChange = { id, value ->
+                                viewModel.setElementValue(id, value)
+                            })
                     }
                 }
 
@@ -289,14 +297,27 @@ private fun QuestionnaireHostContent(
                                     listState.animateScrollToItem(0)
                                 }
                             } else {
-                                Toast.makeText(context,
-                                    context.getString(R.string.questionnaire_answer_all_questions), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.questionnaire_answer_all_questions),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }) {
                             Text(stringResource(R.string.questionnaire_next))
                         }
                     } else {
-                        TextButton(onClick = { viewModel.save() }) {
+                        TextButton(onClick = {
+                            if (viewModel.stepElementsAnswered()) {
+                                viewModel.save()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.questionnaire_answer_all_questions),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }) {
                             Text(stringResource(R.string.questionnaire_save))
                         }
                     }
@@ -430,12 +451,15 @@ fun QuestionnaireElement(
         }
 
         QuestionnaireElementType.TIME_INPUT -> {
-            TimeInputElementComponent(element as TimeInputElement, (elementValue as TimeInputValue).value, onValueChange = { newValue ->
-                onValueChange(
-                    element.id,
-                    TimeInputValue(element.id, element.name, newValue)
-                )
-            })
+            TimeInputElementComponent(
+                element as TimeInputElement,
+                (elementValue as TimeInputValue).value,
+                onValueChange = { newValue ->
+                    onValueChange(
+                        element.id,
+                        TimeInputValue(element.id, element.name, newValue)
+                    )
+                })
         }
     }
 }

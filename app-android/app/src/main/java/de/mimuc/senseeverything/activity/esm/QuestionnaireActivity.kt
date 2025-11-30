@@ -263,7 +263,22 @@ class QuestionnaireViewModel @Inject constructor(
      * Called when the user returns from an external questionnaire via deep link.
      */
     private fun handleDeepLinkFinalization(data: Uri?, activity: Activity?) {
-        if (data != null && data.path != null && data.path!!.startsWith("/finalize")) {
+        if (data != null && data.path != null) {
+            val isValidPath =
+                (data.host == "whale-app.de" && data.path?.startsWith("/questionnaire/finalize") == true) ||
+                        (data.host == "questionnaire" && data.path?.startsWith("/finalize") == true)
+
+            if (!isValidPath) {
+                WHALELog.d("Questionnaire", "Invalid URL opened: $data")
+                viewModelScope.launch {
+                    close(
+                        activity,
+                        CloseReason.PendingQuestionnaireNotSet
+                    )
+                }
+                return
+            }
+
             WHALELog.d("Questionnaire", "Called finalization deep link")
 
             val finalizePendingQuestionnaireId = data.getQueryParameter("id")

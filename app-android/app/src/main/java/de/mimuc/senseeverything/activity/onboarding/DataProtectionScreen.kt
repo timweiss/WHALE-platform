@@ -153,7 +153,7 @@ fun DataProtectionScreen(nextStep: () -> Unit, innerPadding: PaddingValues) {
     val isAccepted = remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.Companion
+        modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
             .padding(16.dp)
@@ -163,23 +163,23 @@ fun DataProtectionScreen(nextStep: () -> Unit, innerPadding: PaddingValues) {
             description = stringResource(R.string.onboarding_data_protection),
             text = stringResource(R.string.onboarding_data_protection_header)
         )
-        Spacer(modifier = Modifier.Companion.padding(6.dp))
+        Spacer(modifier = Modifier.padding(6.dp))
 
         if (isLoading.value) {
             Text("Loading...")
         } else {
             dataProtectionNotice.value?.let { notice ->
                 Column(
-                    modifier = Modifier.Companion
+                    modifier = Modifier
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text(AnnotatedString.Companion.fromHtml(notice))
+                    Text(AnnotatedString.fromHtml(notice))
                 }
             } ?: Text(stringResource(R.string.onboarding_data_protection_not_available))
         }
 
-        Spacer(modifier = Modifier.Companion.padding(8.dp))
+        Spacer(modifier = Modifier.padding(8.dp))
 
         // Show enrollment error dialog
         EnrolmentErrorDialog(showErrorDialog.value, errorCode.value, { viewModel.closeError() })
@@ -187,23 +187,23 @@ fun DataProtectionScreen(nextStep: () -> Unit, innerPadding: PaddingValues) {
         // Show loading or acceptance controls
         if (isEnrolling.value) {
             Row(
-                verticalAlignment = Alignment.Companion.CenterVertically,
-                modifier = Modifier.Companion.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 CircularProgressIndicator()
-                Spacer(modifier = Modifier.Companion.padding(8.dp))
+                Spacer(modifier = Modifier.padding(8.dp))
                 Text("Creating enrollment...")
             }
         } else {
             Row(
-                verticalAlignment = Alignment.Companion.CenterVertically,
-                modifier = Modifier.Companion.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Checkbox(
                     checked = isAccepted.value,
                     onCheckedChange = { isAccepted.value = it }
                 )
-                Spacer(modifier = Modifier.Companion.padding(4.dp))
+                Spacer(modifier = Modifier.padding(4.dp))
                 Text(stringResource(R.string.onboarding_data_protection_accept), modifier = Modifier.clickable(onClick = {
                     isAccepted.value = !isAccepted.value
                 }))
@@ -216,7 +216,7 @@ fun DataProtectionScreen(nextStep: () -> Unit, innerPadding: PaddingValues) {
                     viewModel.createEnrolment(context, nextStep)
                 },
                 enabled = isAccepted.value,
-                modifier = Modifier.Companion.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.onboarding_continue))
             }

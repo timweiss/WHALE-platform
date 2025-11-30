@@ -166,6 +166,11 @@ class SocialNetworkEntryValue(elementId: Int, elementName: String, var values: L
 }
 
 class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: Map<Int, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SOCIAL_NETWORK_RATING) {
+    override fun isAnswered(): Boolean {
+        // either no contacts exist (empty) or all need to be answered (so value is present) for it to be valid
+        return values.isEmpty() || values.entries.all { it.value.isNotEmpty() }
+    }
+
     override fun getSerializedValue(): String {
         return values.entries.joinToString(",") { (key, value) ->
             "$key:${value.entries.joinToString(",") { (_, v) -> "${v.elementName}:${v.getSerializedValue()}" }}"

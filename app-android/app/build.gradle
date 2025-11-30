@@ -20,8 +20,8 @@ android {
         applicationId "de.mimuc.whale"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
-        versionCode 28
-        versionName "1.0.28"
+        versionCode 30
+        versionName "1.0.30"
 
         multiDexEnabled true
         vectorDrawables {
@@ -51,7 +51,7 @@ android {
         }
         prod {
             dimension "environment"
-            buildConfigField 'String', 'API_BASE', '"https://lmpp10e-whale.srv.mwn.de/v1"'
+            buildConfigField 'String', 'API_BASE', '"https://api.whale.research.charlotte-fresenius-uni.de/v1"'
         }
     }
 

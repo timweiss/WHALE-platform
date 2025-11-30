@@ -83,8 +83,8 @@ private val permissionTabs = listOf(
 private val categoryTitles = mapOf(
     PermissionCategory.BackgroundOperation to R.string.permission_category_background,
     PermissionCategory.Questionnaires to R.string.permission_category_questionnaire,
-    PermissionCategory.SensorA to R.string.permission_category_questionnaire,
-    PermissionCategory.SensorB to R.string.permission_category_questionnaire
+    PermissionCategory.SensorA to R.string.permission_category_sensor,
+    PermissionCategory.SensorB to R.string.permission_category_sensor
 )
 
 @Composable

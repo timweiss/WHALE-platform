@@ -146,19 +146,19 @@ fun WelcomeScreen(
         ) {
             Icon(
                 painter = painterResource(R.drawable.outline_barcode_scanner_24),
-                contentDescription = "Scan QR Code",
+                contentDescription = "QR Code",
                 modifier = Modifier
                     .size(20.dp)
                     .padding(end = 8.dp)
             )
-            Text("Scan QR Code")
+            Text(stringResource(R.string.onboarding_welcome_scan_qr))
         }
 
         Spacer(modifier = Modifier.padding(8.dp))
 
         // OR divider
         Text(
-            text = "OR",
+            text = stringResource(R.string.onboarding_welcome_or),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
@@ -171,7 +171,7 @@ fun WelcomeScreen(
         TextField(
             value = enrolmentKeyState.value,
             onValueChange = { enrolmentKeyState.value = it },
-            label = { Text("Enrolment Key") },
+            label = { Text(stringResource(R.string.onboarding_welcome_enrolment_key)) },
             modifier = Modifier.fillMaxWidth()
         )
 

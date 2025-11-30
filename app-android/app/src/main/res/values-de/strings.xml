@@ -83,7 +83,7 @@
     <string name="studyinfo_faq_not_available">Für diese Studie wurden keine Informationen zu Fragen &amp; Antworten bereitgestellt.</string>
     <string name="studyinfo_data_protection_not_available">Für diese Studie wurde keine Datenschutzerklärung angegeben.</string>
     <string name="main_study_cancelled_uninstall_hint">Die Teilnahme wurde abgebrochen. Sie können die App jetzt deinstallieren.</string>
-    <string name="main_study_ended_last_questionnaire_hint">Die Studie ist beendet. Möglicherweise müssen Sie den letzten Fragebogen noch ausfüllen, bevor Sie die App deinstallieren.</string>
+    <string name="main_study_ended_last_questionnaire_hint">Die Studie ist beendet. Wenn nicht schon beantwortet, müssen Sie den letzten Fragebogen (Abschlussfragebogen) noch ausfüllen, bevor Sie die App deinstallieren.</string>
     <string name="main_questionnaire_inbox">Aktuelle Fragebögen</string>
     <string name="main_questionnaire_inbox_completion_hint">So bald wie möglich ausfüllen</string>
     <string name="main_questionnaire_inbox_element_duration_validitiy">In den nächsten %1$s Min. ausfüllen</string>
@@ -93,7 +93,7 @@
     <string name="onboarding_permissions">Berechtigungen</string>
     <string name="onboarding_start_study">Studie starten</string>
     <string name="onboarding_completed">Abgeschlossen</string>
-    <string name="onboarding_app_explanation">Hier können wir einen Text darstellen, um die App zu erklären.</string>
+    <string name="onboarding_app_explanation">Willkommen bei WHALE. Um der Studie beizutreten und Ihr Gerät auf die Teilnahme vorzubereiten, scannen Sie bitte den QR-Code. Sollte der Scan nicht funktionieren, können Sie den Teilnahmecode auch manuell eigeben.</string>
     <string name="onboarding_continue">Weiter</string>
     <string name="onboarding_permissions_necessary">Notwendige Berechtigungen</string>
     <string name="onboarding_permissions_hint">Unsere Forschungsapp WHALE erfasst für 13 Tage Daten, die nicht auf Selbstauskunft basieren, sondern auf Informationen von Sensoren in Ihrem Smartphone. Das sind z.B. die Umgebungsgeräusche oder wie oft Sie über Apps und/oder Telefonate mit anderen kommunizieren. WHALE speichert die Umgebungsgeräusche nicht, &lt;b&gt;sondern&lt;/b&gt; kategorisiert sie lediglich (z.B. “Sprache”, “Musik”, “Hundegebell”) und löscht sie danach wieder.&lt;br/&gt;WHALE zeichnet nicht auf, welche Nachrichten Sie in sozialen Medien veröffentlichen oder ansehen, &lt;b&gt;sondern&lt;/b&gt; misst lediglich, &lt;b&gt;&lt;i&gt;dass&lt;/i&gt;&lt;/b&gt; Sie dieses soziale Medium genutzt haben. Telefongespräche werden nicht aufgezeichnet und Telefonnummern werden nicht erkannt, &lt;b&gt;sondern&lt;/b&gt; es wird lediglich registriert, &lt;b&gt;&lt;i&gt;dass&lt;/i&gt;&lt;/b&gt; Sie einen Anruf getätigt haben.&lt;br/&gt;&lt;br/&gt;Diese Smartphone-Daten können für die Studie wichtige zusätzliche Informationen zu Ihrer Alltagsumgebung liefern. Diese Daten helfen uns beispielsweise zu verstehen, in welchem Kontext Sie die Fragebögen beantwortet haben, ohne dass wir Sie extra danach fragen müssen.&lt;br/&gt;Eine genaue Auflistung der erfassten Datentypen finden Sie in der datenschutzrechtlichen Aufklärung und Einwilligungserklärung, die Sie bei der Anmeldung zur Studie erhalten haben.</string>
@@ -107,7 +107,7 @@
     <string name="questionnaire_answer_all_questions">Bitte beantworten Sie alle Fragen.</string>
     <string name="questionnaire_previous">Zurück</string>
     <string name="questionnaire_next">Weiter</string>
-    <string name="questionnaire_save">Speichern</string>
+    <string name="questionnaire_save">Absenden</string>
     <string name="questionnaire_empty_error">Es wurden keine Fragen bereitgestellt. Dies ist wahrscheinlich ein Fehler des Studienerstellers.</string>
     <string name="onboarding_data_protection">Datenschutz</string>
     <string name="onboarding_data_protection_header">Bitte sorgfältig lesen</string>
@@ -159,16 +159,16 @@
     <string name="permission_system_alert_desc">Zeigt Fenster für Fragebögen im Vordergrund an&lt;br/&gt;&lt;i&gt;Hinweis: In Einstellungen zu WHALE-App scrollen&lt;/i&gt;</string>
 
     <string name="permission_notification_listener_name">Benachrichtigungsstatus</string>
-    <string name="permission_notification_listener_desc">Erkennt, wann Benachrichtigungen von welcher App empfangen werden&lt;br/&gt;&lt;i&gt;Hinweis: Sollte Ihr Smartphone den Benachrichtigungszugriff nicht erlauben, werden Sie zu den Einstellungen weitergeleitet. Suchen Sie “Apps” und wählen Sie unter “Apps” die “WHALE” App aus und scrollen Sie zu “Eingeschränkte Einstellungen zulassen” und aktivieren Sie dies. Danach können Sie in der App die Berechtigung erteilen. Keine Sorge, Sie können uns vertrauen. Wir speichern keine Telefonnummern oder Klartext-Inhalte von Benachrichtigungen, sondern lediglich, dass und von welcher App Sie eine Benachrichtigung erhalten haben.&lt;/i&gt;</string>
+    <string name="permission_notification_listener_desc">Erkennt, wann Benachrichtigungen von welcher App empfangen werden&lt;br/&gt;&lt;i&gt;Hinweis: Sollte Ihr Smartphone den Benachrichtigungszugriff nicht erlauben, gehen Sie in die Einstellungen Ihres Smartphones. Suchen Sie “Apps” und wählen Sie unter “Apps” die WHALE-App aus und scrollen Sie zu “Eingeschränkte Einstellungen zulassen” und aktivieren Sie dies. Danach können Sie in der App die Berechtigung erteilen. Keine Sorge, Sie können uns vertrauen. Wir speichern keine Telefonnummern oder Klartext-Inhalte von Benachrichtigungen, sondern lediglich, dass und von welcher App Sie eine Benachrichtigung erhalten haben.&lt;/i&gt;</string>
 
     <string name="permission_accessibility_name">Bedienungshilfen-Dienst</string>
-    <string name="permission_accessibility_desc">Erkennt, welche Tasten oder Menüs Sie während der Nutzung einer App anklicken und wie das Layout einer App ist, die Sie nutzen, und welche Bildschirminteraktion (tippen, wischen etc.) Sie machen.&lt;br/&gt;&lt;i&gt;Hinweis: Klicken Sie auf “Heruntergeladene Apps” und wählen Sie “WHALE” aus. Achtung: Im Hinweisfeld Ihres Smartphones könnten wesentlich mehr Berechtigungen gelistet sein im Vergleich zu denen, auf die die WHALE App laut Datenschutzerklärung tatsächlich zugreift.&lt;/i&gt;</string>
+    <string name="permission_accessibility_desc">Erkennt, welche Tasten oder Menüs Sie während der Nutzung einer App anklicken und wie das Layout einer App ist, die Sie nutzen, und welche Bildschirminteraktion (tippen, wischen etc.) Sie machen.&lt;br/&gt;&lt;i&gt;Hinweis: Klicken Sie auf “Heruntergeladene Apps” und wählen Sie “WHALE” aus. Achtung: Im Hinweisfeld Ihres Smartphones könnten wesentlich mehr Berechtigungen gelistet sein im Vergleich zu denen, auf die die WHALE-App laut Datenschutzerklärung tatsächlich zugreift.&lt;/i&gt;</string>
 
     <string name="permission_usage_stats_name">Nutzungsstatistiken</string>
-    <string name="permission_usage_stats_desc">Erkennt, welche App und wie lange Sie diese nutzen, wann Sie am Smartphone den Bildschirm eingeschaltet haben&lt;br/&gt;&lt;i&gt;Hinweis: Sie werden zur Einstellung "Zugriff auf Nutzungsdaten" weitergeleitet. Wischen Sie nach ganz unten bis Sie die App "WHALE" sehen. Tippen Sie auf "WHALE“ und lassen Sie die Nutzungsverfolgung zu. Im Hinweisfeld Ihres Smartphones könnten wesentlich mehr Berechtigungen gelistet sein im Vergleich zu denen, auf die die WHALE App laut Datenschutzerklärung tatsächlich zugreift.&lt;/i&gt;</string>
+    <string name="permission_usage_stats_desc">Erkennt, welche App und wie lange Sie diese nutzen, wann Sie am Smartphone den Bildschirm eingeschaltet haben&lt;br/&gt;&lt;i&gt;Hinweis: Sie werden zur Einstellung &quot;Zugriff auf Nutzungsdaten&quot; weitergeleitet. Wischen Sie nach ganz unten bis Sie die App &quot;WHALE&quot; sehen. Tippen Sie auf &quot;WHALE&quot; und lassen Sie die Nutzungsverfolgung zu. Im Hinweisfeld Ihres Smartphones könnten wesentlich mehr Berechtigungen gelistet sein im Vergleich zu denen, auf die die WHALE-App laut Datenschutzerklärung tatsächlich zugreift.&lt;/i&gt;</string>
 
     <string name="permission_battery_optimization_name">App von den Batterie-Optimierungen ausschließen</string>
-    <string name="permission_battery_optimization_desc">Verhindert, dass Ihr Smartphone die WHALE App zum Akku sparen beendet. Erlaubt, dass die Informationen von den Sensoren Ihres Smartphones durchgehend aufgezeichnet werden können.&lt;br/&gt;&lt;i&gt;Hinweis: Wählen Sie “keine Beschränkungen”.&lt;/i&gt;</string>
+    <string name="permission_battery_optimization_desc">Verhindert, dass Ihr Smartphone die WHALE-App zum Akku sparen beendet. Erlaubt, dass die Informationen von den Sensoren Ihres Smartphones durchgehend aufgezeichnet werden können.&lt;br/&gt;&lt;i&gt;Hinweis: Wählen Sie “keine Beschränkungen”.&lt;/i&gt;</string>
 
     <string name="permission_category_background">App im Hintergrund aktiv halten</string>
     <string name="permission_category_questionnaire">App-Fragebögen ermöglichen</string>
@@ -217,4 +217,11 @@
 
     <string name="title_activity_questionnaire_finalize">Fragebogen abschließen</string>
     <string name="title_activity_onboarding_start">Anmeldung starten</string>
+    <string name="onboarding_welcome_scan_qr">QR-Code scannen</string>
+    <string name="onboarding_welcome_or">ODER</string>
+    <string name="onboarding_welcome_invalid_qr">Falscher QR-Code oder Link</string>
+    <string name="onboarding_welcome_qr_completed">Anmeldung bereits abgschlossen.</string>
+    <string name="onboarding_welcome_qr_continuing">Anmeldung wird fortgesetzt.</string>
+    <string name="onboarding_welcome_qr_could_not_load_study">Studie konnte nicht geladen werden.</string>
+    <string name="onboarding_welcome_enrolment_key">Anmeldeschlüssel</string>
 </resources>
