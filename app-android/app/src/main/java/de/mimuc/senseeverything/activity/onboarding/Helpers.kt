@@ -32,8 +32,8 @@ fun parseOnboardingUrl(uri: Uri): Pair<String, String>? {
             return null
         }
 
-        // Extract optional source parameter (default to "qr_code")
-        val source = uri.getQueryParameter("source") ?: "qr_code"
+        // Extract optional source parameter (default to "")
+        val source = uri.getQueryParameter("source") ?: ""
 
         WHALELog.i("QRCodeAnalyzer", "Parsed URL successfully: studyKey=$studyKey, source=$source")
         Pair(studyKey, source)

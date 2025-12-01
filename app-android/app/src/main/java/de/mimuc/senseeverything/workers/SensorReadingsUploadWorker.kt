@@ -16,8 +16,6 @@ import androidx.work.workDataOf
 import com.android.volley.ClientError
 import com.android.volley.NetworkError
 import com.android.volley.TimeoutError
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.ktx.Firebase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
@@ -136,11 +134,9 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                     val successfulCount = data.size - droppedCount
 
                     WHALELog.w(TAG, "Upload completed with $droppedCount dropped item(s) out of ${data.size} total ($successfulCount successful)")
-                    Firebase.crashlytics.log("Dropped $droppedCount unuploadable items out of ${data.size} during sync")
 
                     uploadResult.errors.forEach { error ->
                         WHALELog.e(TAG, "Dropped item: $error")
-                        Firebase.crashlytics.log("Dropped item: $error")
                     }
                 }
 
@@ -167,7 +163,6 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                         TAG,
                         "Client error uploading sensor readings: $message with total $currentTotalSynced"
                     )
-                    Firebase.crashlytics.log("Client error uploading sensor readings: $message with total $currentTotalSynced")
                     return Result.failure()
                 }
 
@@ -175,7 +170,6 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                     TAG,
                     "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $currentTotalSynced"
                 )
-                Firebase.crashlytics.log("Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $currentTotalSynced")
 
                 return Result.failure()
             }

@@ -6,8 +6,6 @@ plugins {
     id 'kotlin-parcelize'
     id 'kotlinx-serialization'
     id 'org.jetbrains.kotlin.plugin.serialization'
-    id 'com.google.gms.google-services'
-    id 'com.google.firebase.crashlytics'
     id 'org.jetbrains.kotlin.plugin.compose'
 }
 
@@ -20,8 +18,8 @@ android {
         applicationId "de.mimuc.whale"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
-        versionCode 30
-        versionName "1.0.30"
+        versionCode 31
+        versionName "1.0.31"
 
         multiDexEnabled true
         vectorDrawables {
@@ -159,10 +157,6 @@ dependencies {
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-core:1.4.1"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1"
-
-    implementation platform('com.google.firebase:firebase-bom:33.16.0')
-    implementation("com.google.firebase:firebase-crashlytics")
-    implementation("com.google.firebase:firebase-analytics")
 
     // ML Kit Barcode Scanning (bundled - works immediately without downloads)
     implementation 'com.google.mlkit:barcode-scanning:17.3.0'
