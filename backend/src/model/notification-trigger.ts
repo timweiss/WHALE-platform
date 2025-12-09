@@ -5,6 +5,7 @@ export enum NotificationTriggerStatus {
   Pushed = 'Pushed',
   Displayed = 'Displayed',
   Answered = 'Answered',
+  Cancelled = 'Cancelled',
 }
 
 export enum NotificationTriggerPriority {
