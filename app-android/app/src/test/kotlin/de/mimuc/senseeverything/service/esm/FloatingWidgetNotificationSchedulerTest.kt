@@ -111,7 +111,7 @@ class FloatingWidgetNotificationSchedulerTest {
                 cal.get(Calendar.DAY_OF_MONTH)
             )
         }
-        assert(days.size == 15) { "Expected 15 days of notifications, but got ${days.size}" }
+        assert(days.size == 14) { "Expected 14 days of notifications, but got ${days.size}" }
         for ((day, notifs) in days) {
             assert(notifs.size == trigger.configuration.timeBuckets.size) {
                 "Expected ${trigger.configuration.timeBuckets.size} notifications on $day, but got ${notifs.size}"
@@ -164,7 +164,7 @@ class FloatingWidgetNotificationSchedulerTest {
         val notifications = scheduler.scheduleAllNotificationsWithTimeout(
             listOf(trigger, timeoutTrigger),
             Calendar.getInstance(),
-            Calendar.getInstance(),
+            Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 1) },
             "test"
         )
         println(FloatingWidgetNotificationScheduler.schedulePrint(notifications))
@@ -1007,5 +1007,164 @@ class FloatingWidgetNotificationSchedulerTest {
             "Expected null because N4a (WaveBreaking) from Bucket 2 extended into and completed in Bucket 3, " +
             "which should suppress all Bucket 2 notifications including EventContingent N3, but got '${latest?.name}'"
         }
+    }
+    /**
+     * Test for multi-phase notification scheduling to verify that:
+     * 1. Phase 1 (pseudo_randomized) notifications are scheduled for exactly 4 days (Dec 3-6)
+     * 2. Phase 2 (event_contingent) notifications are scheduled for exactly 4 days (Dec 7-10)
+     * 3. On Dec 7 (first day of Phase 2), there are NO Phase 1 notifications
+     *
+     * This test simulates a real study schedule with multiple phases that have different
+     * notification patterns, ensuring that phases don't overlap.
+     */
+    @Test
+    fun schedulesNotificationsForMultiplePhasesWithoutOverlap() {
+        // Phase 1: Dec 3-6, 2025 (4 days)
+        val phase1Start = Calendar.getInstance().apply {
+            set(2025, Calendar.DECEMBER, 3, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val phase1End = Calendar.getInstance().apply {
+            set(2025, Calendar.DECEMBER, 7, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        // Phase 2: Dec 7-10, 2025 (4 days)
+        val phase2Start = Calendar.getInstance().apply {
+            set(2025, Calendar.DECEMBER, 7, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val phase2End = Calendar.getInstance().apply {
+            set(2025, Calendar.DECEMBER, 11, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        // Create Phase 1 trigger
+        val phase1Trigger = EMAFloatingWidgetNotificationTrigger(
+            id = 1,
+            questionnaireId = 1,
+            validDuration = System.currentTimeMillis() + 30 * 24 * 60 * 60 * 1000L,
+            enabled = true,
+            configuration = EMAFloatingWidgetTriggerConfiguration(
+                name = "Phase1-N1",
+                phaseName = "pseudo_randomized",
+                timeBuckets = listOf("9:00-11:29", "11:30-13:59", "14:00-16:29"),
+                distanceMinutes = 0,
+                delayMinutes = 0,
+                randomToleranceMinutes = 0,
+                modality = NotificationTriggerModality.Push,
+                priority = NotificationTriggerPriority.Default,
+                source = NotificationTriggerSource.Scheduled,
+                notificationText = "Phase 1 Notification",
+                timeoutNotificationTriggerId = null
+            )
+        )
+
+        // Create Phase 2 trigger
+        val phase2Trigger = EMAFloatingWidgetNotificationTrigger(
+            id = 2,
+            questionnaireId = 2,
+            validDuration = System.currentTimeMillis() + 30 * 24 * 60 * 60 * 1000L,
+            enabled = true,
+            configuration = EMAFloatingWidgetTriggerConfiguration(
+                name = "Phase2-N1",
+                phaseName = "event_contingent",
+                timeBuckets = listOf("9:00-11:29", "11:30-13:59", "14:00-16:29"),
+                distanceMinutes = 0,
+                delayMinutes = 0,
+                randomToleranceMinutes = 0,
+                modality = NotificationTriggerModality.Push,
+                priority = NotificationTriggerPriority.Default,
+                source = NotificationTriggerSource.Scheduled,
+                notificationText = "Phase 2 Notification",
+                timeoutNotificationTriggerId = null
+            )
+        )
+
+        val scheduler = FloatingWidgetNotificationScheduler()
+
+        // Schedule notifications for both phases
+        val phase1Notifications = scheduler.planNotificationsForTrigger(phase1Trigger, phase1Start, phase1End)
+        val phase2Notifications = scheduler.planNotificationsForTrigger(phase2Trigger, phase2Start, phase2End)
+
+        // Combine all notifications
+        val allNotifications = phase1Notifications + phase2Notifications
+
+        println("=== Phase 1 Notifications ===")
+        println(FloatingWidgetNotificationScheduler.schedulePrint(phase1Notifications))
+        println("\n=== Phase 2 Notifications ===")
+        println(FloatingWidgetNotificationScheduler.schedulePrint(phase2Notifications))
+
+        // Group notifications by date
+        val notificationsByDate = allNotifications.groupBy { notif ->
+            val cal = Calendar.getInstance().apply { timeInMillis = notif.validFrom }
+            String.format(
+                "%04d-%02d-%02d",
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH) + 1,
+                cal.get(Calendar.DAY_OF_MONTH)
+            )
+        }
+
+        // Get Phase 1 days (Dec 3-6)
+        val phase1Days = notificationsByDate.filterKeys { date ->
+            date in listOf("2025-12-03", "2025-12-04", "2025-12-05", "2025-12-06")
+        }
+
+        // Get Phase 2 days (Dec 7-10)
+        val phase2Days = notificationsByDate.filterKeys { date ->
+            date in listOf("2025-12-07", "2025-12-08", "2025-12-09", "2025-12-10")
+        }
+
+        // Assertion 1: Phase 1 should have exactly 4 days of notifications
+        assert(phase1Days.size == 4) {
+            "Expected Phase 1 to have 4 days of notifications, but got ${phase1Days.size}"
+        }
+
+        // Assertion 2: Phase 2 should have exactly 4 days of notifications
+        assert(phase2Days.size == 4) {
+            "Expected Phase 2 to have 4 days of notifications, but got ${phase2Days.size}"
+        }
+
+        // Assertion 3: Each day in Phase 1 should have 3 notifications (one per time bucket)
+        for ((date, notifs) in phase1Days) {
+            assert(notifs.size == 3) {
+                "Expected 3 notifications on $date (Phase 1), but got ${notifs.size}"
+            }
+            // All notifications on Phase 1 days should have Phase 1 name
+            assert(notifs.all { it.name == "Phase1-N1" }) {
+                "Expected all notifications on $date to be 'Phase1-N1', but found: ${notifs.map { it.name }}"
+            }
+        }
+
+
+        // Assertion 5: Critical test - Dec 7 (first day of Phase 2) should have NO Phase 1 notifications
+        val dec7Notifications = notificationsByDate["2025-12-07"] ?: emptyList()
+        val phase1OnDec7 = dec7Notifications.filter { it.name == "Phase1-N1" }
+        assert(phase1OnDec7.isEmpty()) {
+            "Expected NO Phase 1 notifications on Dec 7, but found ${phase1OnDec7.size}: ${phase1OnDec7.map { it.name }}"
+        }
+
+        // Assertion 4: Each day in Phase 2 should have 3 notifications (one per time bucket)
+        for ((date, notifs) in phase2Days) {
+            assert(notifs.size == 3) {
+                "Expected 3 notifications on $date (Phase 2), but got ${notifs.size}"
+            }
+            // All notifications on Phase 2 days should have Phase 2 name
+            assert(notifs.all { it.name == "Phase2-N1" }) {
+                "Expected all notifications on $date to be 'Phase2-N1', but found: ${notifs.map { it.name }}"
+            }
+        }
+
+        // Assertion 6: Dec 7 should have Phase 2 notifications
+        val phase2OnDec7 = dec7Notifications.filter { it.name == "Phase2-N1" }
+        assert(phase2OnDec7.isNotEmpty()) {
+            "Expected Phase 2 notifications on Dec 7, but found none"
+        }
+
+        println("\n=== Test Results ===")
+        println("Phase 1 days: ${phase1Days.keys.sorted()}")
+        println("Phase 2 days: ${phase2Days.keys.sorted()}")
+        println("Dec 7 notifications: ${dec7Notifications.map { "${it.name} at ${Calendar.getInstance().apply { timeInMillis = it.validFrom }.get(Calendar.HOUR_OF_DAY)}:${Calendar.getInstance().apply { timeInMillis = it.validFrom }.get(Calendar.MINUTE)}" }}")
     }
 }

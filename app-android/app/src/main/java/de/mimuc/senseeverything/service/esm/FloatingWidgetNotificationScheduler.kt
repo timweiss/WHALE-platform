@@ -332,7 +332,7 @@ class FloatingWidgetNotificationScheduler {
         // for each day between emaStart and studyEnd, plan the notifications
         val notifications = mutableListOf<NotificationTrigger>()
         val dayIterator = emaStart.clone() as Calendar
-        while (dayIterator <= studyEnd) {
+        while (dayIterator < studyEnd) {
             notifications.addAll(planNotificationsForDay(trigger, dayIterator))
             dayIterator.add(Calendar.DAY_OF_YEAR, 1)
         }
