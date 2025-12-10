@@ -182,6 +182,24 @@ export function createEnrolmentController(
     });
   });
 
+  app.get('/v2/enrolment', authenticate, async (req, res) => {
+    const enrolmentId = (req.user as UserPayload).enrolmentId;
+    if (!enrolmentId) {
+      return res.status(403).send({ error: 'Token is missing the ID' });
+    }
+
+    const enrolment = await enrolmentRepository.getEnrolmentById(enrolmentId);
+    if (!enrolment) {
+      return res.status(404).send({ error: 'Enrolment not found' });
+    }
+
+    res.json({
+      enrolmentId: enrolment.id,
+      debugEnabled: enrolment.debugEnabled,
+      additionalInformation: enrolment.additionalInformation,
+    });
+  });
+
   const pickExperimentalGroup = async (
     study: Study,
     experimentalGroups: StudyExperimentalGroup[],

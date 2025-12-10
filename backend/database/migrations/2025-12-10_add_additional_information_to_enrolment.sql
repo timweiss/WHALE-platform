@@ -1,0 +1,1 @@
+alter table enrolments add column additional_information text default null;

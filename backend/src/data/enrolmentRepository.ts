@@ -9,6 +9,7 @@ export interface Enrolment {
   enrolledAt: Date;
   debugEnabled: boolean;
   source: string | null;
+  additionalInformation: string | null;
 }
 
 interface EnrolmentRow {
@@ -19,6 +20,7 @@ interface EnrolmentRow {
   enrolled_at: Date;
   debug_enabled: boolean;
   source: string | null;
+  additional_information: string | null;
 }
 
 export interface IEnrolmentRepository {
@@ -132,6 +134,7 @@ export class EnrolmentRepository
       enrolledAt: row.enrolled_at,
       debugEnabled: row.debug_enabled,
       source: row.source,
+      additionalInformation: row.additional_information
     };
   }
 }
