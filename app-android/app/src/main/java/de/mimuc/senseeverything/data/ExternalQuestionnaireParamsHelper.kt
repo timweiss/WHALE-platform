@@ -41,7 +41,7 @@ suspend fun fetchExternalQuestionnaireParams(
         } else if (value.startsWith("completionTracking")) {
             try {
                 val completion = fetchCompletionStatus(apiClient, dataStoreManager)
-                val completedString = completion.filter { (k, v) -> v }.keys.joinToString(",")
+                val completedString = completion.filter { (k, v) -> v }.keys.joinToString("_")
                 results[key] = completedString
             } catch (e: Exception) {
                WHALELog.e("ExternalQuestionnaireParamsHelper", "Error fetching completion status: $e")

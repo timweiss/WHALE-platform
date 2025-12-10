@@ -1008,6 +1008,488 @@ class FloatingWidgetNotificationSchedulerTest {
             "which should suppress all Bucket 2 notifications including EventContingent N3, but got '${latest?.name}'"
         }
     }
+
+    /**
+     * Test for scenario where wave-breaking trigger from previous bucket is answered in current bucket,
+     * which should allow the current bucket to start a new wave.
+     *
+     * Real-world scenario from participant data:
+     * Time Bucket 2 (11:30-13:59) contains:
+     * - N4a: Answered WaveBreaking (validFrom: 13:58, answered at 14:06:29)
+     *
+     * Time Bucket 3 (14:00-16:29) contains:
+     * - N1: Planned Push notification (validFrom: 14:00)
+     *
+     * Check time: 14:10 (after N4a was answered)
+     *
+     * Expected: N1 - The wave-breaking trigger from Bucket 2 was answered, completing that phase,
+     * so Bucket 3 should be allowed to start a new wave with N1.
+     *
+     * Current bug: Returns null because the logic at lines 184-204 blocks current bucket when
+     * a wave-breaking from previous bucket was answered in current bucket timeframe, even though
+     * answering it should complete the previous phase and allow new phase to proceed.
+     */
+    @Test
+    fun returnsN1WhenWaveBreakingFromPreviousBucketAnsweredInCurrentBucket() {
+        // Check time: 14:10 (in Bucket 3, after N4a was answered at 14:06)
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 14)
+        calendar.set(Calendar.MINUTE, 10)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+
+        // N4a answered at 14:06:29
+        val n4aAnsweredTime = calendar.clone() as Calendar
+        n4aAnsweredTime.set(Calendar.HOUR_OF_DAY, 13)
+        n4aAnsweredTime.set(Calendar.MINUTE, 59)
+        n4aAnsweredTime.set(Calendar.SECOND, 0)
+
+        // N4a validFrom at 13:58 (end of Bucket 2)
+        val n4aTime = calendar.clone() as Calendar
+        n4aTime.set(Calendar.HOUR_OF_DAY, 13)
+        n4aTime.set(Calendar.MINUTE, 58)
+        n4aTime.set(Calendar.SECOND, 0)
+
+        // N1 validFrom at 14:00 (start of Bucket 3)
+        val n1Time = calendar.clone() as Calendar
+        n1Time.set(Calendar.HOUR_OF_DAY, 14)
+        n1Time.set(Calendar.MINUTE, 0)
+        n1Time.set(Calendar.SECOND, 0)
+
+        val triggers = listOf(
+            // Bucket 2: N4a WaveBreaking answered in Bucket 3
+            NotificationTrigger(
+                uid = java.util.UUID.randomUUID(),
+                addedAt = System.currentTimeMillis(),
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = n4aTime.timeInMillis,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "11:30-13:59",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = n4aAnsweredTime.timeInMillis,
+                displayedAt = n4aAnsweredTime.timeInMillis - 3000, // displayed 3 seconds before answered
+                answeredAt = n4aAnsweredTime.timeInMillis
+            ),
+            // Bucket 3: N1 should be pushed
+            NotificationTrigger(
+                uid = java.util.UUID.randomUUID(),
+                addedAt = System.currentTimeMillis(),
+                name = "N1",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = n1Time.timeInMillis,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+
+        val latest = FloatingWidgetNotificationScheduler.selectLastValidTrigger(triggers, calendar)
+
+        assert(latest != null) {
+            "Expected to find N1 because N4a from previous bucket was answered, completing that phase " +
+            "and allowing Bucket 3 to start a new wave, but got null"
+        }
+        if (latest != null) {
+            assert(latest.name == "N1") {
+                "Expected 'N1' from Bucket 3 because previous phase (N4a) was completed, but got '${latest.name}'"
+            }
+        }
+    }
+
+    /**
+     * Test for scenario where N3 timeout notification should be retrieved after N1 was pushed,
+     * following a wave-breaking trigger completion from previous bucket.
+     *
+     * Builds on the previous test scenario:
+     * Time Bucket 2 (11:30-13:59) contains:
+     * - N4a: Answered WaveBreaking (validFrom: 13:58, answered at 14:06:29)
+     *
+     * Time Bucket 3 (14:00-16:29) contains:
+     * - N1: Displayed Push notification (validFrom: 14:00, displayed at 14:10)
+     * - N3: Planned EventContingent timeout (validFrom: 14:05, 5 minutes after N1)
+     *
+     * Check time: 14:12 (after N1 was displayed and N3 timeout should trigger)
+     *
+     * Expected: N3 - The timeout notification should be retrieved because N1 was successfully
+     * pushed after the wave-breaking from previous bucket was completed.
+     */
+    /**
+     * Test with real participant data to diagnose why N1 was not pushed after multiple N4a triggers.
+     *
+     * Real-world bug scenario:
+     * - Day 1 (Dec 5): N2 wave-breaking answered at 19:00-21:29
+     * - Day 2 (Dec 6): Multiple N1s pushed/answered, then 7 N4a wave-breaking triggers all answered in 14:00-16:29
+     * - Problem: Final N1 in 16:38-18:59 bucket was NOT pushed but SHOULD have been
+     *
+     * Expected: After all N4a triggers are answered, the final N1 should be pushed
+     * Actual bug: Final N1 remains Planned (not pushed)
+     */
+    @Test
+    fun returnsN3TimeoutWhenN1WasDisplayedAfterWaveBreakingCompleted() {
+        // Check time: 16:40 on Dec 6 (in 16:38-18:59 bucket, after all N4a answered)
+        val checkTime = Calendar.getInstance().apply {
+            timeInMillis = 1765035816192L
+        }
+
+        val triggers = listOf(
+            // Day 1 - N2 WaveBreaking (answered)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                addedAt = 1764716400201L,
+                name = "N2",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1764957375427L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "19:00-21:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 70,
+                triggerJson = "{}",
+                updatedAt = 1764957375427L,
+                displayedAt = 1764957375427L,
+                answeredAt = 1764957375427L
+            ),
+            // Day 1 - N1  (pushed at 9:00-11:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                addedAt = 1764716400201L,
+                name = "N1",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = 1764958236776L,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "19:00-21:29",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = 1765008925252L,
+                displayedAt = null
+            ),
+            // Day 2 - N1 #1 (pushed at 9:00-11:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                addedAt = 1764716400201L,
+                name = "N1",
+                status = NotificationTriggerStatus.Pushed,
+                validFrom = 1765008925252L,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "9:00-11:29",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = 1765008925252L,
+                displayedAt = 1765008925252L
+            ),
+            // Day 2 - N1 #2 (answered at 11:30-13:59)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000003"),
+                addedAt = 1764716400201L,
+                name = "N1",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765018565130L,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "11:30-13:59",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = 1765018861130L,
+                displayedAt = 1765018861130L,
+                answeredAt = 1765018611876L
+            ),
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000003"),
+                addedAt = 1764716400201L,
+                name = "N1",
+                status = NotificationTriggerStatus.Pushed,
+                validFrom = 1765027096846L,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = 1765018861130L,
+                displayedAt = null,
+                answeredAt = null
+            ),
+            // Day 2 - N3 (answered at 14:00-16:29, BEFORE N1 #3)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000004"),
+                addedAt = 1764716400201L,
+                name = "N3",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765027396846L,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 71,
+                triggerJson = "{}",
+                updatedAt = 1765027396846L,
+                displayedAt = 1765027396846L,
+                answeredAt = 1765027566594L
+            ),
+            // Day 2 - N4a #1 (answered at 14:00-16:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000006"),
+                addedAt = 1765027566883L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765027566683L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1765027566883L,
+                displayedAt = 1765027566883L,
+                answeredAt = 1765029036604L
+            ),
+            // Day 2 - N4a #2 (answered at 14:00-16:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000007"),
+                addedAt = 1765029036743L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765029036743L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1765029036743L,
+                displayedAt = 1765029036743L,
+                answeredAt = 1765029996011L
+            ),
+            // Day 2 - N4a #3 (answered at 14:00-16:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000008"),
+                addedAt = 1765029980804L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765029996084L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1765029980804L,
+                displayedAt = 1765029980804L,
+                answeredAt = 1765030056605L
+            ),
+            // Day 2 - N4a #4 (answered at 14:00-16:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-000000000009"),
+                addedAt = 1765030056754L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765030056754L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1765030056754L,
+                displayedAt = 1765030056754L,
+                answeredAt = 1765030056754L
+            ),
+            // Day 2 - N4a #5 (answered at 14:00-16:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-00000000000A"),
+                addedAt = 1765030832492L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765030832492L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1765030832492L,
+                displayedAt = 1765030832492L,
+                answeredAt = 1765030859517L
+            ),
+            // Day 2 - N4a #6 (answered at 14:00-16:29)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-00000000000B"),
+                addedAt = 1765030856617L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765030859617L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1765030856617L,
+                displayedAt = 1765030856617L,
+                answeredAt = 1765031836589L
+            ),
+            // Day 2 - N4a #7 (answered at 14:00-16:29) - LAST wave-breaking
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-00000000000C"),
+                addedAt = 1765031836690L,
+                name = "N4a",
+                status = NotificationTriggerStatus.Answered,
+                validFrom = 1765031836690L,
+                priority = NotificationTriggerPriority.WaveBreaking,
+                timeBucket = "14:00-16:29",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.RuleBased,
+                questionnaireId = 72,
+                triggerJson = "{}",
+                updatedAt = 1765031836690L,
+                displayedAt = 1765031836690L,
+                answeredAt = 1765031884487L
+            ),
+            // Day 2 - N1 (NOT PUSHED)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-00000000000D"),
+                addedAt = 1765031117001L,
+                name = "N1",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = 1765035817091L,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "16:30-18:59",
+                modality = NotificationTriggerModality.Push,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 71,
+                triggerJson = "{}",
+                updatedAt = 1765031117001L,
+                displayedAt = null,
+                answeredAt = null
+            ),
+            /*
+            // Day 2 - FINAL N3 at 16:38-18:59 (NOT PUSHED - BUG!)
+            NotificationTrigger(
+                uid = java.util.UUID.fromString("00000000-0000-0000-0000-00000000000E"),
+                addedAt = 1765051706201L,
+                name = "N3",
+                status = NotificationTriggerStatus.Planned,
+                validFrom = 1765036117091L,
+                priority = NotificationTriggerPriority.Default,
+                timeBucket = "16:30-18:59",
+                modality = NotificationTriggerModality.EventContingent,
+                source = NotificationTriggerSource.Scheduled,
+                questionnaireId = 69,
+                triggerJson = "{}",
+                updatedAt = 1765051706201L,
+            )
+            */
+        )
+
+        println("\n=== Real Participant Data Test ===")
+        println("Check time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(checkTime.time)}")
+        println("Total triggers: ${triggers.size}")
+        println("Trigger summary:")
+        triggers.forEach { trigger ->
+            val date = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(trigger.validFrom)
+            println("  ${trigger.name} - ${trigger.status} - ${trigger.priority} - ${trigger.timeBucket} - $date")
+        }
+
+        val latest = FloatingWidgetNotificationScheduler.selectLastValidTrigger(triggers, checkTime)
+
+        println("\nResult: ${latest?.name ?: "null"}")
+        println("Expected: N1 (final notification bucket)")
+        println("Bug: All N4a wave-breaking triggers were answered, so N1 should be pushed\n")
+
+        assert(latest != null) {
+            "Expected to find final N1 because all N4a wave-breaking triggers were answered, " +
+            "completing the wave and allowing the 16:30-18:59 bucket to proceed, but got null"
+        }
+        if (latest != null) {
+            assert(latest.name == "N1") {
+                "Expected 'N1' (final notification), but got '${latest.name}'"
+            }
+            assert(latest.validFrom == 1765035817091L) {
+                "Expected N1 with validFrom=1765035817091L, but got validFrom=${latest.validFrom}"
+            }
+        }
+    }
+
+    /**
+     * Test with complete participant data imported from Excel export.
+     *
+     * To use this test:
+     * 1. Export notification trigger data to Excel
+     * 2. Run: python convert_excel_to_test.py path/to/file.xlsx
+     * 3. Copy the generated Kotlin code
+     * 4. Paste it in place of the TRIGGERS_PLACEHOLDER comment below
+     * 5. Update checkTime to the time when bug should appear
+     * 6. Run test
+     */
+    @Test
+    fun testWithCompleteParticipantData() {
+        // Check time: Set to the time when you want to check trigger state
+        // This should be after all wave-breaking triggers are answered
+        val checkTime = Calendar.getInstance().apply {
+            timeInMillis = 1765035816184 // UPDATE THIS based on your data
+        }
+
+        val triggers = triggersN1NotPushed
+
+        val filtered = triggers.filter {
+            it.validFrom <= checkTime.timeInMillis || it.validFrom > checkTime.timeInMillis && (listOf(
+                "N1",
+                "N3"
+            ).contains(it.name))
+        }
+            .map{
+                if (it.validFrom <= checkTime.timeInMillis) {
+                    it
+                }
+                else {
+                    it.status = NotificationTriggerStatus.Planned
+                    it
+                }
+            }
+
+        println("\n=== Complete Participant Data Test ===")
+        println("Check time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(checkTime.time)}")
+        println("Total triggers: ${filtered.size}")
+        println("\nTrigger summary:")
+        filtered.forEach { trigger ->
+            val date = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(trigger.validFrom)
+            println("  ${trigger.name} - ${trigger.status} - ${trigger.priority} - ${trigger.modality} - ${trigger.timeBucket} - $date")
+        }
+
+        val latest = FloatingWidgetNotificationScheduler.selectLastValidTrigger(filtered, checkTime)
+
+        println("\nResult: ${latest?.name ?: "null"}")
+        if (latest != null) {
+            println("Found: ${latest.name} (status: ${latest.status}, bucket: ${latest.timeBucket})")
+            val date = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(latest.validFrom)
+            println("ValidFrom: $date")
+        } else {
+            println("No trigger found (returned null)")
+        }
+
+        // Update these assertions based on expected behavior
+        assert(latest != null) {
+            "Expected to find a trigger, but got null"
+        }
+        if (latest != null) {
+            // Add specific assertions here based on what you expect
+            println("\nTest assertion: Found trigger '${latest.name}' as expected")
+        }
+    }
+
     /**
      * Test for multi-phase notification scheduling to verify that:
      * 1. Phase 1 (pseudo_randomized) notifications are scheduled for exactly 4 days (Dec 3-6)
