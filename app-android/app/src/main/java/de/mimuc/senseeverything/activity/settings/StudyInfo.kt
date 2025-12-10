@@ -456,7 +456,15 @@ fun SettingsContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (enrolmentInfo != null && enrolmentInfo.additionalInformation != null) {
+            Text(stringResource(R.string.studyinfo_additional_info), fontWeight = FontWeight.Bold)
+            SelectionContainer {
+                Text(enrolmentInfo.additionalInformation)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         if (!isCancellingParticipation) {
             // only allow premature cancellation if study is running

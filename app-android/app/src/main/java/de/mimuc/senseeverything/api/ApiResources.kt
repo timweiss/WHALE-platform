@@ -23,6 +23,10 @@ class ApiResources {
             return "${API_BASE_V2}/enrolment"
         }
 
+        fun enrolmentInfo(): String {
+            return "${API_BASE_V2}/enrolment"
+        }
+
         fun sensorReadingsBatched(): String {
             return "${API_BASE}/reading/batch"
         }

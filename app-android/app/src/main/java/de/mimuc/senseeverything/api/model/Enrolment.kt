@@ -47,7 +47,7 @@ suspend fun getEnrolmentInfo(
     token: String
 ): EnrolmentResponse {
     return client.getSerialized<EnrolmentResponse>(
-        endpoint = ApiResources.enrolment(),
+        endpoint = ApiResources.enrolmentInfo(),
         token = token
     )
 }
