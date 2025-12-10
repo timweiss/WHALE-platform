@@ -74,10 +74,11 @@ private data class PermissionTab(
 
 private val permissionTabs = listOf(
     PermissionTab("Info", null),
-    PermissionTab("1", PermissionCategory.BackgroundOperation),
-    PermissionTab("2", PermissionCategory.Questionnaires),
-    PermissionTab("3", PermissionCategory.SensorA),
-    PermissionTab("4", PermissionCategory.SensorB)
+    PermissionTab("1", null),
+    PermissionTab("2", PermissionCategory.BackgroundOperation),
+    PermissionTab("3", PermissionCategory.Questionnaires),
+    PermissionTab("4", PermissionCategory.SensorA),
+    PermissionTab("5", PermissionCategory.SensorB)
 )
 
 private val categoryTitles = mapOf(
@@ -149,8 +150,10 @@ fun AcceptPermissionsScreen(
             modifier = Modifier.weight(1f)
         ) { page ->
             val tab = permissionTabs[page]
-            if (tab.category == null) {
+            if (tab.category == null && page == 0) {
                 PermissionIntroduction()
+            } else if (tab.category == null && page == 1) {
+                SpecialPermissionSection()
             } else {
                 val title = if (categoryTitles[tab.category] != null) stringResource(categoryTitles[tab.category]!!) else ""
                 PermissionGroup(
@@ -210,6 +213,18 @@ private fun PermissionIntroduction() {
             .padding(vertical = 12.dp)
     ) {
         Text(AnnotatedString.fromHtml(stringResource(R.string.onboarding_permissions_hint)))
+    }
+}
+
+@Composable
+private fun SpecialPermissionSection() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(vertical = 12.dp)
+    ) {
+        Text(AnnotatedString.fromHtml(stringResource(R.string.onboarding_permissions_special_hint)))
     }
 }
 
