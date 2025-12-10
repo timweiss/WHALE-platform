@@ -11,6 +11,7 @@ import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -316,13 +317,18 @@ fun StudyInfoView(
     }
 
     if (showDataExportDialog) {
+        val exportText = stringResource(
+            R.string.studyinfo_data_export_description,
+            enrolmentId,
+            study?.contactEmail ?: stringResource(R.string.dataprotection_email)
+        )
         ConfirmationDialog(
             title = stringResource(R.string.studyinfo_data_export_title),
-            text = stringResource(R.string.studyinfo_data_export_description, enrolmentId) +
-                    stringResource(R.string.studyinfo_data_export_proceed_email),
-            confirmButtonText = stringResource(R.string.studyinfo_send_email),
+            text = exportText,
+            confirmButtonText = stringResource(R.string.gen_close),
+            dismissable = false,
             onConfirm = {
-                viewModel.sendDataExportEmail(context, enrolmentId)
+                viewModel.hideDataExportDialog()
             },
             onDismiss = {
                 viewModel.hideDataExportDialog()
@@ -418,6 +424,14 @@ fun SettingsContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        if (enrolmentInfo != null && enrolmentInfo.additionalInformation != null) {
+            Text(stringResource(R.string.studyinfo_additional_info), fontWeight = FontWeight.Bold)
+            SelectionContainer {
+                Text(enrolmentInfo.additionalInformation)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Text(stringResource(R.string.studyinfo_remaining_days), fontWeight = FontWeight.Bold)
         if (study == null) {
             when (studyState) {
@@ -435,6 +449,8 @@ fun SettingsContent(
             val remainingDays = study.durationDays - currentDay
             if (remainingDays == 0L) {
                 Text(stringResource(R.string.studyinfo_last_day))
+            } else if (remainingDays < 0L) {
+                Text(stringResource(R.string.studyinfo_study_ended))
             } else {
                 Text(stringResource(R.string.n_days, remainingDays))
             }
@@ -470,13 +486,19 @@ fun SettingsContent(
                 }
             }
 
-            Button(
-                onClick = {
-                    viewModel.requestDataExport(context)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.studyinfo_request_data_export))
+            Column(modifier = Modifier.padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(
+                    onClick = {
+                        viewModel.requestDataExport(context)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.studyinfo_request_data_export))
+                }
+                Text(
+                    "Die Datenkopie nach Art. 15 DSGVO (Auskunftsrecht) enthält ausschließlich \"Rohdaten\", welche von der WHALE-App und externen Fragebögen erfasst wurden.",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             if (enrolmentInfo?.debugEnabled == true || BuildConfig.DEBUG) {
@@ -616,21 +638,35 @@ fun ConfirmationDialog(
     text: String,
     confirmButtonText: String,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: (() -> Unit),
+    dismissable: Boolean = true,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(text) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(confirmButtonText)
+    if (dismissable) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(title) },
+            text = { Text(text) },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(confirmButtonText)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.abort))
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.abort))
+        )
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(title) },
+            text = { Text(text) },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(confirmButtonText)
+                }
             }
-        }
-    )
+        )
+    }
 }

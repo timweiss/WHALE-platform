@@ -4,7 +4,8 @@ import de.mimuc.senseeverything.BuildConfig
 
 class ApiResources {
     companion object {
-        const val API_BASE: String = BuildConfig.API_BASE
+        const val API_BASE: String = BuildConfig.API_BASE + "v1"
+        const val API_BASE_V2: String = BuildConfig.API_BASE + "v2"
 
         fun studyById(studyId: Int): String {
             return "$API_BASE/study/$studyId"
@@ -19,7 +20,7 @@ class ApiResources {
         }
 
         fun enrolment(): String {
-            return "${API_BASE}/enrolment"
+            return "${API_BASE_V2}/enrolment"
         }
 
         fun sensorReadingsBatched(): String {

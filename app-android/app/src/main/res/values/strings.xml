@@ -56,7 +56,7 @@
     <string name="qr_scanner_instruction">Point your camera at the QR code</string>
     <string name="studyinfo_cancelling_pending">Cancelling participation, please wait...</string>
     <string name="studyinfo_open_debug">Open Debug Info</string>
-    <string name="studyinfo_request_data_export">Request Data Export</string>
+    <string name="studyinfo_request_data_export">Request Data Copy</string>
     <string name="studyinfo_request_data_deletion">Request Data Deletion</string>
     <string name="studyinfo_cancel_participation_deletion_hint">If you wish to request data deletion, you can do so after cancelling your participation.</string>
     <string name="studyinfo_cancel_participation">Cancel Participation</string>
@@ -67,7 +67,7 @@
     <string name="studyinfo_no_information_available">No information available right now</string>
     <string name="studyinfo_your_id">Your WHALE ID</string>
     <string name="studyinfo_data_export_title">Confirm Data Export</string>
-    <string name="studyinfo_data_export_description">To request an export of your study data, please send an email with your enrolment ID: %1$s.\n\n</string>
+    <string name="studyinfo_data_export_description">To request an export of your study data, please send an email with your enrolment ID: %1$s to %2$s.\n\n</string>
     <string name="studyinfo_data_export_proceed_email">Do you want to proceed and open your email client?</string>
     <string name="studyinfo_send_email">Send Email</string>
     <string name="studyinfo_data_deletion_description">To request the deletion of your study data, please send an email with your enrolment ID: %1$s.\n\n</string>
@@ -225,4 +225,6 @@
     <string name="onboarding_welcome_qr_continuing">Continuing with onboarding.</string>
     <string name="onboarding_welcome_qr_could_not_load_study">Could not load study. Please check your enrolment key.</string>
     <string name="onboarding_welcome_enrolment_key">Enrolment Key</string>
+    <string name="studyinfo_additional_info">Additional Information</string>
+    <string name="gen_close">Close</string>
 </resources>

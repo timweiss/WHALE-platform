@@ -22,7 +22,8 @@ data class CreateEnrolmentResponse(
 @Serializable
 data class EnrolmentResponse(
     val enrolmentId: Int,
-    val debugEnabled: Boolean
+    val debugEnabled: Boolean,
+    val additionalInformation: String?
 )
 
 @Serializable

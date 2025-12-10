@@ -55,7 +55,7 @@
     <string name="qr_scanner_instruction">Richten Sie Ihre Kamera auf den QR-Code</string>
     <string name="studyinfo_cancelling_pending">Teilnahme wird abgebrochen, bitte warten...</string>
     <string name="studyinfo_open_debug">Debug-Info öffnen</string>
-    <string name="studyinfo_request_data_export">Meine Daten anfordern</string>
+    <string name="studyinfo_request_data_export">Datenkopie anfordern</string>
     <string name="studyinfo_request_data_deletion">Datenlöschung anfordern</string>
     <string name="studyinfo_cancel_participation_deletion_hint">Wenn Sie die Löschung von Daten beantragen möchten, können Sie dies nach dem Abbruch Ihrer Teilnahme tun.</string>
     <string name="studyinfo_cancel_participation">Teilnahme abbrechen</string>
@@ -65,7 +65,7 @@
     <string name="studyinfo_no_information_available">Derzeit keine Informationen verfügbar</string>
     <string name="studyinfo_your_id">Ihre WHALE-ID</string>
     <string name="studyinfo_data_export_title">Datenanforderung bestätigen</string>
-    <string name="studyinfo_data_export_description">Um einen Export Ihrer Studiendaten anzufordern, senden Sie bitte eine E-Mail mit Ihrer Teilnahme-Kennung: %1$s.\n\n</string>
+    <string name="studyinfo_data_export_description">Um einen Export Ihrer Studiendaten anzufordern, senden Sie bitte eine E-Mail mit Ihrer Teilnahme-Kennung: %1$s an %2$s.\n\n</string>
     <string name="studyinfo_data_export_proceed_email">Möchten Sie fortfahren und Ihre E-Mail-App öffnen?</string>
     <string name="studyinfo_send_email">E-Mail senden</string>
     <string name="studyinfo_data_deletion_description">Um die Löschung Ihrer Studiendaten anzufordern, senden Sie bitte eine E-Mail mit Ihrer Teilnahme-Kennung: %1$s.\n\n</string>
@@ -225,4 +225,6 @@
     <string name="onboarding_welcome_qr_continuing">Anmeldung wird fortgesetzt.</string>
     <string name="onboarding_welcome_qr_could_not_load_study">Studie konnte nicht geladen werden.</string>
     <string name="onboarding_welcome_enrolment_key">Anmeldeschlüssel</string>
+    <string name="studyinfo_additional_info">Weitere Informationen</string>
+    <string name="gen_close">Schließen</string>
 </resources>
