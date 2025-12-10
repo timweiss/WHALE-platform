@@ -504,7 +504,7 @@ fun SettingsContent(
                     Text(stringResource(R.string.studyinfo_request_data_export))
                 }
                 Text(
-                    "Die Datenkopie nach Art. 15 DSGVO (Auskunftsrecht) enthält ausschließlich \"Rohdaten\", welche von der WHALE-App und externen Fragebögen erfasst wurden.",
+                    stringResource(R.string.studyinfo_export_disclaimer),
                     style = MaterialTheme.typography.bodySmall
                 )
             }

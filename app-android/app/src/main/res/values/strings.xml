@@ -227,4 +227,5 @@
     <string name="onboarding_welcome_enrolment_key">Enrolment Key</string>
     <string name="studyinfo_additional_info">Additional Information</string>
     <string name="gen_close">Close</string>
+    <string name="studyinfo_export_disclaimer">The data copy pursuant to Art. 15 GDPR (right to information) contains only “raw data” collected by the WHALE app and external questionnaires.</string>
 </resources>

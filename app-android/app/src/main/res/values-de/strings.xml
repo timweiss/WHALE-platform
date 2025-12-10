@@ -227,4 +227,5 @@
     <string name="onboarding_welcome_enrolment_key">Anmeldeschlüssel</string>
     <string name="studyinfo_additional_info">Weitere Informationen</string>
     <string name="gen_close">Schließen</string>
+    <string name="studyinfo_export_disclaimer">Die Datenkopie nach Art. 15 DSGVO (Auskunftsrecht) enthält ausschließlich \"Rohdaten\", welche von der WHALE-App und externen Fragebögen erfasst wurden.</string>
 </resources>
