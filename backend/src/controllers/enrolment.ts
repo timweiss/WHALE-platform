@@ -1,4 +1,4 @@
-import { Express } from 'express';
+import { Express, Request, Response } from 'express';
 import { authenticate, UserPayload } from '../middleware/authenticate';
 import { Config } from '../config';
 import jwt, { JwtPayload } from 'jsonwebtoken';
@@ -32,8 +32,10 @@ export function createEnrolmentController(
 ) {
   const groupAssignmentMutex = new Mutex();
 
-  // creates an enrolment and generates a token
-  app.post('/v1/enrolment', async (req, res) => {
+  async function createEnrolment(
+    req: Request,
+    res: Response,
+  ): Promise<Response> {
     return observability.tracer.startActiveSpan(
       'enrolment:create',
       async (span) => {
@@ -163,6 +165,15 @@ export function createEnrolmentController(
         }
       },
     );
+  }
+
+  // creates an enrolment and generates a token
+  app.post('/v1/enrolment', async (req, res) => {
+    return createEnrolment(req, res);
+  });
+
+  app.post('/v2/enrolment', async (req, res) => {
+    return createEnrolment(req, res);
   });
 
   app.get('/v1/enrolment', authenticate, async (req, res) => {
