@@ -37,6 +37,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.mimuc.senseeverything.BuildConfig
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.getActivity
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
@@ -94,7 +95,7 @@ class OnboardingViewModel @Inject constructor(
         loadStep()
     }
 
-    fun loadFromIntent(context: Context) {
+    fun autoOnboardingOrLoadFromIntent(context: Context) {
         val activity = (context as? Activity)
         val intent = activity?.intent
         if (intent != null) {
@@ -103,6 +104,13 @@ class OnboardingViewModel @Inject constructor(
 
             if (action == Intent.ACTION_VIEW) {
                 handleDeepLink(activity, data)
+                return
+            }
+
+            if (!BuildConfig.AUTO_ENROLMENT.isNullOrEmpty()) {
+                viewModelScope.launch {
+                    handleEnrolmentWithKey(activity, BuildConfig.AUTO_ENROLMENT)
+                }
             }
         }
     }
@@ -122,40 +130,58 @@ class OnboardingViewModel @Inject constructor(
 
             viewModelScope.launch {
                 dataStoreManager.saveOnboardingSource(parsed.second)
-
-                val token = dataStoreManager.tokenFlow.first()
-                val studyState = dataStoreManager.studyStateFlow.first()
-                if (token.isNotBlank() && studyState != StudyState.NOT_ENROLLED) {
-                    activity.runOnUiThread {
-                        Toast.makeText(activity, activity.getString(R.string.onboarding_welcome_qr_completed), Toast.LENGTH_LONG).show()
-                    }
-                    activity.finish()
-                    return@launch
-                }
-
-                val lastStep = dataStoreManager.onboardingStepFlow.first()
-                if (lastStep > OnboardingStep.DATA_PROTECTION) {
-                    activity.runOnUiThread {
-                        Toast.makeText(activity, activity.getString(R.string.onboarding_welcome_qr_continuing), Toast.LENGTH_LONG).show()
-                    }
-                    return@launch
-                }
-
-                val client = ApiClient.getInstance(activity)
-                val study = loadStudyByEnrolmentKey(client, parsed.first)
-
-                if (study != null) {
-                    dataStoreManager.saveStudy(study)
-                    dataStoreManager.saveStudyId(study.id)
-
-                    _step.value = OnboardingStep.DATA_PROTECTION
-                } else {
-                    activity.runOnUiThread {
-                        Toast.makeText(activity, activity.getString(R.string.onboarding_welcome_qr_could_not_load_study), Toast.LENGTH_LONG).show()
-                    }
-                    return@launch
-                }
+                handleEnrolmentWithKey(activity, parsed.first)
             }
+        }
+    }
+
+    private suspend fun handleEnrolmentWithKey(
+        activity: Activity,
+        enrolmentKey: String
+    ) {
+        val token = dataStoreManager.tokenFlow.first()
+        val studyState = dataStoreManager.studyStateFlow.first()
+        if (token.isNotBlank() && studyState != StudyState.NOT_ENROLLED) {
+            activity.runOnUiThread {
+                Toast.makeText(
+                    activity,
+                    activity.getString(R.string.onboarding_welcome_qr_completed),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            activity.finish()
+            return
+        }
+
+        val lastStep = dataStoreManager.onboardingStepFlow.first()
+        if (lastStep > OnboardingStep.DATA_PROTECTION) {
+            activity.runOnUiThread {
+                Toast.makeText(
+                    activity,
+                    activity.getString(R.string.onboarding_welcome_qr_continuing),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            return
+        }
+
+        val client = ApiClient.getInstance(activity)
+        val study = loadStudyByEnrolmentKey(client, enrolmentKey)
+
+        if (study != null) {
+            dataStoreManager.saveStudy(study)
+            dataStoreManager.saveStudyId(study.id)
+
+            _step.value = OnboardingStep.DATA_PROTECTION
+        } else {
+            activity.runOnUiThread {
+                Toast.makeText(
+                    activity,
+                    activity.getString(R.string.onboarding_welcome_qr_could_not_load_study),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            return
         }
     }
 
@@ -202,7 +228,7 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
     val context = LocalContext.current
 
     LaunchedEffect(key1 = true) {
-        viewModel.loadFromIntent(context)
+        viewModel.autoOnboardingOrLoadFromIntent(context)
     }
 
     Scaffold(

@@ -18,8 +18,8 @@ android {
         applicationId "de.mimuc.whale"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
-        versionCode 36
-        versionName "1.0.36"
+        versionCode 37
+        versionName "1.0.37"
 
         multiDexEnabled true
         vectorDrawables {
@@ -41,15 +41,18 @@ android {
             dimension "environment"
             versionNameSuffix "-sisensing"
             buildConfigField 'String', 'API_BASE', '"https://sisensing.medien.ifi.lmu.de/"'
+            buildConfigField 'String', 'AUTO_ENROLMENT', 'null'
         }
         staging {
             dimension "environment"
             versionNameSuffix "-staging"
             buildConfigField 'String', 'API_BASE', '"https://whale-staging.timweiss.dev/"'
+            buildConfigField 'String', 'AUTO_ENROLMENT', '"test-nov6"'
         }
         prod {
             dimension "environment"
             buildConfigField 'String', 'API_BASE', '"https://api.whale.research.charlotte-fresenius-uni.de/"'
+            buildConfigField 'String', 'AUTO_ENROLMENT', '"whale-studie"'
         }
     }
 
