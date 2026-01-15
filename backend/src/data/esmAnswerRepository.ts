@@ -9,6 +9,7 @@ import {
 } from '../model/notification-trigger';
 
 export enum ExperienceSamplingAnswerStatus {
+  Planned = 'planned',
   Notified = 'notified',
   Pending = 'pending',
   Completed = 'completed',
