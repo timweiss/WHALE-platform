@@ -644,7 +644,19 @@ test('should test completion endpoint with sensor data tracking', async () => {
     enrolmentKey: 'completion-test-key',
     name: 'Completion Test Study',
     completionTracking: {
-      oneDayOfSensorData: [
+      x: [
+        {
+          type: 'PassiveSensingParticipationDays',
+          value: 0,
+        },
+      ],
+      x25: [
+        {
+          type: 'PassiveSensingParticipationDays',
+          value: 1,
+        },
+      ],
+      x50: [
         {
           type: 'PassiveSensingParticipationDays',
           value: 1,
@@ -686,7 +698,19 @@ test('should test completion endpoint with sensor data tracking', async () => {
     .send({
       ...study.body,
       completionTracking: {
-        oneDayOfSensorData: [
+        x: [
+          {
+            type: 'PassiveSensingParticipationDays',
+            value: 0,
+          },
+        ],
+        x25: [
+          {
+            type: 'PassiveSensingParticipationDays',
+            value: 1,
+          },
+        ],
+        x50: [
           {
             type: 'PassiveSensingParticipationDays',
             value: 1,
@@ -700,7 +724,7 @@ test('should test completion endpoint with sensor data tracking', async () => {
   // Enroll a participant in the study
   const enrollment = await request(app)
     .post('/v1/enrolment')
-    .send({ enrolmentKey: 'completion-test-key' });
+    .send({ enrolmentKey: 'completion-test-key', source: null });
 
   expect(enrollment.statusCode).toBe(200);
   expect(enrollment.body).toHaveProperty('participantId');
@@ -714,7 +738,7 @@ test('should test completion endpoint with sensor data tracking', async () => {
     .set({ Authorization: 'Bearer ' + participantToken });
 
   expect(completionBefore.statusCode).toBe(200);
-  expect(completionBefore.body.oneDayOfSensorData).toBe(false);
+  expect(completionBefore.body.x).toBe(false);
 
   // Add sensor data for one day
   const today = new Date();

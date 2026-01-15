@@ -424,14 +424,6 @@ fun SettingsContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (enrolmentInfo != null && enrolmentInfo.additionalInformation != null) {
-            Text(stringResource(R.string.studyinfo_additional_info), fontWeight = FontWeight.Bold)
-            SelectionContainer {
-                Text(enrolmentInfo.additionalInformation)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
         Text(stringResource(R.string.studyinfo_remaining_days), fontWeight = FontWeight.Bold)
         if (study == null) {
             when (studyState) {

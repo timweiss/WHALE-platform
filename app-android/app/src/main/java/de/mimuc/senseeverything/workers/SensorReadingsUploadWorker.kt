@@ -31,6 +31,7 @@ import kotlinx.serialization.Serializable
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
 enum class UploadWorkTag(val tag: String) {
@@ -191,6 +192,7 @@ fun enqueueSensorReadingsUploadWorker(context: Context, token: String) {
         .addTag("readingsUpload")
         .setInputData(data)
         .setConstraints(constraints)
+        .setInitialDelay(30.minutes.toJavaDuration()) // ensure that the first setup minutes are logged before first sync
         .build()
 
     // Use enqueueUniquePeriodicWork with REPLACE policy to properly replace existing work

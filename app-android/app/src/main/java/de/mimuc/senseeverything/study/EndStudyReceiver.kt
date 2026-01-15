@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 
 @AndroidEntryPoint
@@ -40,7 +41,9 @@ class EndStudyReceiver : BroadcastReceiver() {
 
         val token = dataStoreManager.tokenFlow.first()
         enqueueSingleSensorReadingsUploadWorker(applicationContext, token, UploadWorkTag.FINAL_UPLOAD_MANUAL, false, 1.minutes)
-        WHALELog.i(TAG, "Scheduled final sensor readings upload")
+        WHALELog.i(TAG, "Scheduled final sensor readings upload (immediately)")
+        enqueueSingleSensorReadingsUploadWorker(applicationContext, token, UploadWorkTag.FINAL_UPLOAD_MANUAL, false, 1.days)
+        WHALELog.i(TAG, "Scheduled final sensor readings upload (1 day after last day)")
     }
 }
 

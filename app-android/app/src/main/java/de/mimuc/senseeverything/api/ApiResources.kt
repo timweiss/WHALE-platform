@@ -20,7 +20,7 @@ class ApiResources {
         }
 
         fun enrolment(): String {
-            return "${API_BASE_V2}/enrolment"
+            return "${API_BASE}/enrolment"
         }
 
         fun enrolmentInfo(): String {

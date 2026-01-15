@@ -75,10 +75,13 @@ class StartStudyViewModel @Inject constructor(
             _pending.value = true
 
             val studyId = dataStoreManager.studyIdFlow.first()
-            val api = ApiClient.Companion.getInstance(getApplication())
+            val api = ApiClient.getInstance(getApplication())
             val study = loadStudy(api, studyId)
             if (study != null) {
                 WHALELog.d("StartStudyViewModel", "Loaded study: $study")
+                val token = dataStoreManager.tokenFlow.first()
+                enqueueSensorReadingsUploadWorker(context, token)
+
                 dataStoreManager.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
@@ -109,8 +112,6 @@ class StartStudyViewModel @Inject constructor(
                     database
                 )
 
-                val token = dataStoreManager.tokenFlow.first()
-                enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUpdateQuestionnaireWorker(context)
                 enqueuePendingQuestionnaireUploadWorker(context, studyId, token)
                 enqueueOldDataCheckWorker(context, LocalTime.of(14, 5))
