@@ -13,7 +13,7 @@ interface PendingQuestionnaireDao {
     @Query("SELECT * FROM pending_questionnaire")
     fun getAll(): List<PendingQuestionnaire>
 
-    @Query("SELECT * FROM pending_questionnaire WHERE (valid_until > :now OR valid_until = -1) AND status != 'COMPLETED'")
+    @Query("SELECT * FROM pending_questionnaire WHERE (valid_until > :now OR valid_until = -1) AND valid_from <= :now AND status != 'COMPLETED'")
     fun getAllNotExpiredFlow(now: Long): Flow<List<PendingQuestionnaire>>
 
     @Query("SELECT * FROM pending_questionnaire WHERE uid = :uid")

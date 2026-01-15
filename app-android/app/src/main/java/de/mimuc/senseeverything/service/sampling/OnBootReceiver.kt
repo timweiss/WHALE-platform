@@ -65,8 +65,11 @@ class OnBootReceiver: BroadcastReceiver() {
                     // study is paused, so we don't start sampling
                     WHALELog.i("BootUpReceiver", "Study is paused until $studyPausedUntil, starting alarm manager to resume study")
                     scheduleResumeSamplingAlarm(currentContext, studyPausedUntil)
+                } else if (studyState == StudyState.ENDED) {
+                    WHALELog.i("BootUpReceiver", "Study has ended, scheduling leftover questionnaires")
+                    EsmHandler.rescheduleQuestionnaires(context, dataStoreManager, database)
                 } else {
-                    WHALELog.i("BootUpReceiver", "Study has ended, not starting sampling")
+                    WHALELog.i("BootUpReceiver", "Study was cancelled/did not start yet, not starting sampling")
                     // todo: disable BootUpReceiver
                 }
             }

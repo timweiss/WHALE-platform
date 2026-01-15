@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 import de.mimuc.senseeverything.db.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 @Entity(tableName = "scheduled_alarms")
 data class ScheduledAlarm(
@@ -14,17 +15,24 @@ data class ScheduledAlarm(
     @ColumnInfo(name = "receiver") val receiver: String,
     @ColumnInfo(name = "identifier") val identifier: String,
     @ColumnInfo(name = "timestamp") val timestamp: Long,
-    @ColumnInfo(name = "request_code") val requestCode: Int
+    @ColumnInfo(name = "request_code") val requestCode: Int,
+    @ColumnInfo(name = "pending_questionnaire_id") val pendingQuestionnaireId: UUID? = null
 ) {
     companion object {
-        fun createEntry(receiver: String, identifier: String, timestamp: Long): ScheduledAlarm {
+        fun createEntry(
+            receiver: String,
+            identifier: String,
+            timestamp: Long,
+            pendingQuestionnaireId: UUID? = null
+        ): ScheduledAlarm {
             return ScheduledAlarm(
                 0,
                 System.currentTimeMillis(),
                 receiver,
                 identifier,
                 timestamp,
-                generateRequestCode(receiver, identifier)
+                generateRequestCode(receiver, identifier),
+                pendingQuestionnaireId
             )
         }
 
@@ -36,10 +44,11 @@ data class ScheduledAlarm(
             database: AppDatabase,
             receiver: String,
             identifier: String,
-            timestamp: Long
+            timestamp: Long,
+            pendingQuestionnaireId: UUID? = null
         ): ScheduledAlarm = withContext(Dispatchers.IO) {
             database.scheduledAlarmDao().getByIdentifier(receiver, identifier)
-                ?: createEntry(receiver, identifier, timestamp)
+                ?: createEntry(receiver, identifier, timestamp, pendingQuestionnaireId)
                     .also { database.scheduledAlarmDao().insert(it) }
         }
     }

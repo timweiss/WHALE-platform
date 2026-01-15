@@ -23,6 +23,7 @@ import de.mimuc.senseeverything.db.models.NotificationTriggerModality
 import de.mimuc.senseeverything.db.models.NotificationTriggerSource
 import de.mimuc.senseeverything.db.models.NotificationTriggerStatus
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
+import de.mimuc.senseeverything.db.models.PendingQuestionnaireStatus
 import de.mimuc.senseeverything.db.models.ScheduledAlarm
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
@@ -639,12 +640,47 @@ class EsmHandler {
                         calendar.timeInMillis
                     )
 
+                    val pendingQuestionnaire = withContext(Dispatchers.IO) {
+                        if (scheduledAlarm.pendingQuestionnaireId != null) {
+                            val previouslyPlannedQuestionnaire = database.pendingQuestionnaireDao().getById(scheduledAlarm.pendingQuestionnaireId)
+                            if (previouslyPlannedQuestionnaire == null) {
+                                WHALELog.i("EsmHandler", "Previously scheduled pending questionnaire ${scheduledAlarm.pendingQuestionnaireId} was deleted, skipping")
+                                return@withContext null
+                            }
+                            if (previouslyPlannedQuestionnaire.status == PendingQuestionnaireStatus.COMPLETED) {
+                                WHALELog.i("EsmHandler", "Questionnaire ${scheduledAlarm.pendingQuestionnaireId} already completed, skipping schedule")
+                                return@withContext null
+                            }
+                            return@withContext previouslyPlannedQuestionnaire
+                        } else {
+                            PendingQuestionnaire.createPlanned(
+                                database,
+                                dataStoreManager,
+                                trigger,
+                                validFrom = calendar.timeInMillis
+                            )
+                        }
+                    }
+
+                    if (pendingQuestionnaire == null) {
+                        continue
+                    }
+
+                    // update ScheduledAlarm with pendingQuestionnaireId if not already set
+                    if (scheduledAlarm.pendingQuestionnaireId == null) {
+                        database.scheduledAlarmDao().updatePendingQuestionnaireId(
+                            scheduledAlarm.uid,
+                            pendingQuestionnaire.uid
+                        )
+                    }
+
                     val intent = Intent(context.applicationContext, OneTimeNotificationReceiver::class.java)
                     intent.apply {
                         putExtra(INTENT_TITLE, trigger.configuration.notificationText)
                         putExtra(INTENT_TRIGGER_ID, trigger.id)
                         putExtra(INTENT_TRIGGER_JSON, fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger))
                         putExtra(INTENT_QUESTIONNAIRE_NAME, questionnaire.name)
+                        putExtra(INTENT_PENDING_QUESTIONNAIRE_ID, pendingQuestionnaire.uid.toString())
                     }
 
                     val pendingIntent = PendingIntent.getBroadcast(
@@ -664,7 +700,7 @@ class EsmHandler {
 
                     WHALELog.i(
                         "EsmHandler",
-                        "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.configuration.studyDay} at ${calendar.timeInMillis}"
+                        "Scheduled one time questionnaire for ${questionnaire.name}, on study day: ${trigger.configuration.studyDay} at ${calendar.timeInMillis} with pending questionnaire ${pendingQuestionnaire.uid}"
                     )
                 }
             }

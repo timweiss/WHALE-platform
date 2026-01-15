@@ -21,6 +21,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @Serializable
 enum class PendingQuestionnaireStatus {
+    @SerialName("planned") PLANNED,
     @SerialName("notified") NOTIFIED,
     @SerialName("pending") PENDING,
     @SerialName("completed") COMPLETED
@@ -50,6 +51,7 @@ data class PendingQuestionnaire(
     @PrimaryKey() var uid: UUID,
     @ColumnInfo(name = "added_at") val addedAt: Long,
     @ColumnInfo(name = "valid_until") val validUntil: Long,
+    @ColumnInfo(name = "valid_from", defaultValue = "0") val validFrom: Long,
     @ColumnInfo(name = "questionnaire_json") val questionnaireJson: String,
     @ColumnInfo(name = "trigger_json") val triggerJson: String,
     @ColumnInfo(name = "saved_values") var elementValuesJson: String? = null,
@@ -68,7 +70,9 @@ data class PendingQuestionnaire(
             dataStoreManager: DataStoreManager,
             trigger: QuestionnaireTrigger,
             notificationTriggerUid: UUID? = null,
-            sourcePendingNotificationId: UUID? = null
+            sourcePendingNotificationId: UUID? = null,
+            validFrom: Long? = null,
+            status: PendingQuestionnaireStatus? = null
         ): PendingQuestionnaire? {
             val questionnaire = dataStoreManager.questionnairesFlow.first()
                 .find { q -> q.questionnaire.id == trigger.questionnaireId }
@@ -84,16 +88,51 @@ data class PendingQuestionnaire(
                 uid = UUID.randomUUID(),
                 System.currentTimeMillis(),
                 validUntil,
+                validFrom ?: System.currentTimeMillis(),
                 fullQuestionnaireJson.encodeToString(questionnaire),
                 fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger),
                 null,
                 System.currentTimeMillis(),
                 -1,
-                PendingQuestionnaireStatus.NOTIFIED,
+                status ?: PendingQuestionnaireStatus.NOTIFIED,
                 null,
                 notificationTriggerUid,
                 sourcePendingNotificationId,
                 displayType
+            )
+
+            database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
+            return pendingQuestionnaire
+        }
+
+        suspend fun createPlanned(
+            database: AppDatabase,
+            dataStoreManager: DataStoreManager,
+            trigger: QuestionnaireTrigger,
+            validFrom: Long
+        ): PendingQuestionnaire? {
+            val questionnaire = dataStoreManager.questionnairesFlow.first()
+                .find { q -> q.questionnaire.id == trigger.questionnaireId }
+            if (questionnaire == null) return null
+
+            val validUntil =
+                if (trigger.validDuration != -1L) validFrom + trigger.validDuration * 1000L * 60L else -1L
+
+            val pendingQuestionnaire = PendingQuestionnaire(
+                uid = UUID.randomUUID(),
+                System.currentTimeMillis(),
+                validUntil,
+                validFrom,
+                fullQuestionnaireJson.encodeToString(questionnaire),
+                fullQuestionnaireJson.encodeToString<QuestionnaireTrigger>(trigger),
+                null,
+                System.currentTimeMillis(),
+                -1,
+                PendingQuestionnaireStatus.PLANNED,
+                null,
+                null,
+                null,
+                PendingQuestionnaireDisplayType.INBOX
             )
 
             database.pendingQuestionnaireDao().insert(pendingQuestionnaire)
@@ -128,6 +167,15 @@ data class PendingQuestionnaire(
         if (elementValues.isNotEmpty()) {
             this.elementValuesJson = ElementValue.valueMapToJson(elementValues).toString()
         }
+
+        database.pendingQuestionnaireDao().update(this)
+    }
+
+    fun markNotified(
+        database: AppDatabase
+    ) {
+        this.updatedAt = System.currentTimeMillis()
+        this.status = PendingQuestionnaireStatus.NOTIFIED
 
         database.pendingQuestionnaireDao().update(this)
     }
