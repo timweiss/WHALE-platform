@@ -641,8 +641,9 @@ class EsmHandler {
                     )
 
                     val pendingQuestionnaire = withContext(Dispatchers.IO) {
-                        if (scheduledAlarm.pendingQuestionnaireId != null) {
-                            val previouslyPlannedQuestionnaire = database.pendingQuestionnaireDao().getById(scheduledAlarm.pendingQuestionnaireId)
+                        val alarmPendingQuestionnaireId = scheduledAlarm.pendingQuestionnaireId
+                        if (alarmPendingQuestionnaireId != null) {
+                            val previouslyPlannedQuestionnaire = database.pendingQuestionnaireDao().getById(alarmPendingQuestionnaireId)
                             if (previouslyPlannedQuestionnaire == null) {
                                 WHALELog.i("EsmHandler", "Previously scheduled pending questionnaire ${scheduledAlarm.pendingQuestionnaireId} was deleted, skipping")
                                 return@withContext null
@@ -668,10 +669,10 @@ class EsmHandler {
 
                     // update ScheduledAlarm with pendingQuestionnaireId if not already set
                     if (scheduledAlarm.pendingQuestionnaireId == null) {
-                        database.scheduledAlarmDao().updatePendingQuestionnaireId(
-                            scheduledAlarm.uid,
-                            pendingQuestionnaire.uid
-                        )
+                        withContext(Dispatchers.IO) {
+                            scheduledAlarm.pendingQuestionnaireId = pendingQuestionnaire.uid
+                            database.scheduledAlarmDao().update(scheduledAlarm)
+                        }
                     }
 
                     val intent = Intent(context.applicationContext, OneTimeNotificationReceiver::class.java)

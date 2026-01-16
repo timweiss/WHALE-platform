@@ -16,7 +16,7 @@ data class ScheduledAlarm(
     @ColumnInfo(name = "identifier") val identifier: String,
     @ColumnInfo(name = "timestamp") val timestamp: Long,
     @ColumnInfo(name = "request_code") val requestCode: Int,
-    @ColumnInfo(name = "pending_questionnaire_id") val pendingQuestionnaireId: UUID? = null
+    @ColumnInfo(name = "pending_questionnaire_id") var pendingQuestionnaireId: UUID? = null
 ) {
     companion object {
         fun createEntry(
@@ -48,8 +48,10 @@ data class ScheduledAlarm(
             pendingQuestionnaireId: UUID? = null
         ): ScheduledAlarm = withContext(Dispatchers.IO) {
             database.scheduledAlarmDao().getByIdentifier(receiver, identifier)
-                ?: createEntry(receiver, identifier, timestamp, pendingQuestionnaireId)
-                    .also { database.scheduledAlarmDao().insert(it) }
+                ?: createEntry(receiver, identifier, timestamp, pendingQuestionnaireId).let { entry ->
+                    val uid = database.scheduledAlarmDao().insert(entry)
+                    entry.copy(uid = uid)
+                }
         }
     }
 }

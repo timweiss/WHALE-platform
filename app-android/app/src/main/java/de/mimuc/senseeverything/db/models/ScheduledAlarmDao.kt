@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
-import java.util.UUID
+import androidx.room.Update
 
 @Dao
 interface ScheduledAlarmDao {
@@ -26,6 +26,6 @@ interface ScheduledAlarmDao {
     @Query("DELETE FROM scheduled_alarms")
     fun deleteAll()
 
-    @Query("UPDATE scheduled_alarms SET pending_questionnaire_id = :pendingQuestionnaireId WHERE uid = :uid")
-    fun updatePendingQuestionnaireId(uid: Long, pendingQuestionnaireId: UUID?)
+    @Update
+    fun update(scheduledAlarm: ScheduledAlarm)
 }
