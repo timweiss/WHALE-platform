@@ -11,10 +11,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -91,6 +95,9 @@ class OnboardingViewModel @Inject constructor(
     private val _step = MutableStateFlow(OnboardingStep.WELCOME)
     val step: StateFlow<OnboardingStep> get() = _step
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> get() = _isLoading
+
     init {
         loadStep()
     }
@@ -111,6 +118,8 @@ class OnboardingViewModel @Inject constructor(
                 viewModelScope.launch {
                     handleEnrolmentWithKey(activity, BuildConfig.AUTO_ENROLMENT)
                 }
+            } else {
+                _isLoading.value = false
             }
         }
     }
@@ -161,6 +170,8 @@ class OnboardingViewModel @Inject constructor(
                     activity.getString(R.string.onboarding_welcome_qr_continuing),
                     Toast.LENGTH_LONG
                 ).show()
+
+                _isLoading.value = false
             }
             return
         }
@@ -172,6 +183,7 @@ class OnboardingViewModel @Inject constructor(
             dataStoreManager.saveStudy(study)
             dataStoreManager.saveStudyId(study.id)
 
+            _isLoading.value = false
             _step.value = OnboardingStep.DATA_PROTECTION
         } else {
             activity.runOnUiThread {
@@ -181,6 +193,7 @@ class OnboardingViewModel @Inject constructor(
                     Toast.LENGTH_LONG
                 ).show()
             }
+            _isLoading.value = false
             return
         }
     }
@@ -225,6 +238,7 @@ class OnboardingViewModel @Inject constructor(
 @Composable
 fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
     val step = viewModel.step.collectAsState()
+    val loading = viewModel.isLoading.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(key1 = true) {
@@ -250,20 +264,32 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
             )
         }
     ) { innerPadding ->
-        when (step.value) {
-            OnboardingStep.WELCOME -> WelcomeScreen(viewModel::nextStep, innerPadding)
-            OnboardingStep.DATA_PROTECTION -> DataProtectionScreen(viewModel::nextStep, innerPadding)
-            OnboardingStep.ACCEPT_PERMISSIONS -> AcceptPermissionsScreen(
-                viewModel::nextStep,
-                innerPadding
-            )
+        if (loading.value) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column {
+                    CircularProgressIndicator()
+                    Text(stringResource(R.string.onboarding_welcome_loading))
+                }
+            }
+        } else {
+            when (step.value) {
+                OnboardingStep.WELCOME -> WelcomeScreen(viewModel::nextStep, innerPadding)
+                OnboardingStep.DATA_PROTECTION -> DataProtectionScreen(viewModel::nextStep, innerPadding)
+                OnboardingStep.ACCEPT_PERMISSIONS -> AcceptPermissionsScreen(
+                    viewModel::nextStep,
+                    innerPadding
+                )
 
-            OnboardingStep.START_STUDY -> StartStudyScreen(
-                { viewModel.finishOnboarding(context) },
-                innerPadding
-            )
+                OnboardingStep.START_STUDY -> StartStudyScreen(
+                    { viewModel.finishOnboarding(context) },
+                    innerPadding
+                )
 
-            OnboardingStep.COMPLETED -> {}
+                OnboardingStep.COMPLETED -> {}
+            }
         }
     }
 }

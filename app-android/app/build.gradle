@@ -47,7 +47,7 @@ android {
             dimension "environment"
             versionNameSuffix "-staging"
             buildConfigField 'String', 'API_BASE', '"https://whale-staging.timweiss.dev/"'
-            buildConfigField 'String', 'AUTO_ENROLMENT', '"test-nov6"'
+            buildConfigField 'String', 'AUTO_ENROLMENT', '"test-jan1"'
         }
         prod {
             dimension "environment"
