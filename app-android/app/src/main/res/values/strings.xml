@@ -108,9 +108,9 @@
     <string name="questionnaire_already_completed_toast">This questionnaire was already completed.</string>
     <string name="questionnaire_not_found_toast">Questionnaire was not found.</string>
     <string name="questionnaire_answer_all_questions">Please answer all questions.</string>
-    <string name="questionnaire_previous">Previous</string>
+    <string name="questionnaire_previous">Back</string>
     <string name="questionnaire_next">Next</string>
-    <string name="questionnaire_save">Save</string>
+    <string name="questionnaire_save">Send</string>
     <string name="questionnaire_empty_error">No questions have been provided. This is likely a mistake of the study creator.</string>
     <string name="onboarding_data_protection">Data Protection</string>
     <string name="onboarding_data_protection_header">Please read carefully</string>
