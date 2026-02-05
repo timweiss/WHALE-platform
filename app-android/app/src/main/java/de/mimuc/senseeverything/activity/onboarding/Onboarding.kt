@@ -269,7 +269,7 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Column {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Text(stringResource(R.string.onboarding_welcome_loading))
                 }
