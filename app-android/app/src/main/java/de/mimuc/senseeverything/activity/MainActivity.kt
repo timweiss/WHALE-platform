@@ -92,6 +92,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,8 +136,15 @@ class StudyHomeViewModel @Inject constructor(
     val onboardingStepFlow = dataStoreManager.onboardingStepFlow.stateIn(viewModelScope, SharingStarted.Lazily, OnboardingStep.WELCOME)
     val studyStateFlow = dataStoreManager.studyStateFlow.stateIn(viewModelScope, SharingStarted.Lazily, StudyState.LOADING)
 
-    val pendingQuestionnairesFlow: StateFlow<List<PendingQuestionnaire>> = database.pendingQuestionnaireDao().getAllNotExpiredFlow(
-        System.currentTimeMillis()).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    private val _pendingQuestionnairesTimestamp = MutableStateFlow(System.currentTimeMillis())
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val pendingQuestionnairesFlow: StateFlow<List<PendingQuestionnaire>> =
+        _pendingQuestionnairesTimestamp
+            .flatMapLatest { timestamp ->
+                database.pendingQuestionnaireDao().getAllNotExpiredFlow(timestamp)
+            }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _hasPermissionIssues = MutableStateFlow(false)
     val hasPermissionIssues: StateFlow<Boolean> get() = _hasPermissionIssues
@@ -167,6 +175,11 @@ class StudyHomeViewModel @Inject constructor(
         getStudyDetails()
         checkPermissions()
         checkUnsyncedBeforeEnd()
+        refreshPendingQuestionnaires()
+    }
+
+    fun refreshPendingQuestionnaires() {
+        _pendingQuestionnairesTimestamp.value = System.currentTimeMillis()
     }
 
     private fun checkPermissions() {
