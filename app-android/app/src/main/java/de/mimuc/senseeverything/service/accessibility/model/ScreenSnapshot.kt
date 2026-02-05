@@ -206,6 +206,15 @@ data class InteractionEvent(
                 tapY = json.getDouble("tapY").toFloat()
             )
         }
+
+        fun unpositioned(type: InteractionType, targetNodeId: Int): InteractionEvent {
+            return InteractionEvent(
+                type = type,
+                targetNodeId = targetNodeId,
+                tapX = 0f,
+                tapY = 0f
+            )
+        }
     }
 }
 

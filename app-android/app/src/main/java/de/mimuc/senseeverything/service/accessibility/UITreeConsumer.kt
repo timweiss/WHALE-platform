@@ -376,19 +376,24 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             val nodeId = findNodeIdByBounds(bounds, currentSkel)
 
             if (nodeId != null) {
-                val interaction = InteractionEvent(
-                    type = type,
-                    targetNodeId = nodeId,
-                    tapX = bounds.centerX().toFloat() / screenSize.x,
-                    tapY = bounds.centerY().toFloat() / screenSize.y
-                )
+                // while positioning on keyboard is not precise anyway, don't return any position anyway for text entry
+                val interaction =
+                    if (type == InteractionType.TEXT_INPUT) InteractionEvent.unpositioned(
+                        type = type,
+                        targetNodeId = nodeId
+                    ) else InteractionEvent(
+                        type = type,
+                        targetNodeId = nodeId,
+                        tapX = bounds.centerX().toFloat() / screenSize.x,
+                        tapY = bounds.centerY().toFloat() / screenSize.y
+                    )
 
                 val snapshot = ScreenSnapshot(
                     timestamp = System.currentTimeMillis(),
                     appPackage = source.packageName?.toString() ?: "unknown",
                     framework = "", // Not needed for interaction-only events
                     skeleton = TreeSkeleton(lastSignature ?: "", emptyList()), // Reference only
-                    interaction = interaction
+                    interaction =  interaction
                 )
 
                 processSnapshot(snapshot)
