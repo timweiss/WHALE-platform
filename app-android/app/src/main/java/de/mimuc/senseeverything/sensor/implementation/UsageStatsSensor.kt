@@ -45,8 +45,7 @@ class UsageStatsSensor(applicationContext: Context?, database: AppDatabase?) :
                     mySortedMap.put(usageStats.packageName, usageStats.totalTimeInForeground)
                 }
             }
-
-            onLogDataItem(t, mySortedMap.toString())
+            onLogDataItem(t, mySortedMap.toString(), "Apps")
         }
 
         val standbyBucket = usm.appStandbyBucket
@@ -58,7 +57,7 @@ class UsageStatsSensor(applicationContext: Context?, database: AppDatabase?) :
             UsageStatsManager.STANDBY_BUCKET_RESTRICTED -> "Restricted"
             else -> "Unknown"
         }
-        onLogDataItem(t, "App Standby Bucket: $standbyBucket ($enum)")
+        onLogDataItem(t, "App Standby Bucket: $standbyBucket ($enum)", "StandbyBucket")
 
         m_IsRunning = true
     }

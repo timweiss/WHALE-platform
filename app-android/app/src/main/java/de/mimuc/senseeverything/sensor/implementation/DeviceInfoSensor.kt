@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.sensor.implementation
 
 import android.content.Context
+import android.icu.util.TimeZone
 import android.os.Build
 import de.mimuc.senseeverything.BuildConfig
 import de.mimuc.senseeverything.db.AppDatabase
@@ -37,8 +38,10 @@ class DeviceInfoSensor(val context: Context, database: AppDatabase) :
             BuildConfig.VERSION_NAME,
             BuildConfig.DEBUG
         )
+        onLogDataItem(System.currentTimeMillis(), Json.encodeToString(info), "Version")
 
-        onLogDataItem(System.currentTimeMillis(), Json.encodeToString(info))
+        val timeZone = TimeZone.getDefault()
+        onLogDataItem(System.currentTimeMillis(), timeZone.id, "Timezone")
     }
 
     override fun isAvailable(context: Context?): Boolean {

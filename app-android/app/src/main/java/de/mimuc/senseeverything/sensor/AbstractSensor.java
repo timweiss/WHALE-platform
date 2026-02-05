@@ -65,9 +65,15 @@ public abstract class AbstractSensor implements Serializable  {
 
 	protected void onLogDataItem(Long timestamp, String data){
 		AsyncTask.execute(() -> {
-			db.logDataDao().insertAll(new LogData(timestamp,SENSOR_NAME, data));
+			db.logDataDao().insertAll(new LogData(timestamp, SENSOR_NAME, data));
 		});
 	}
+
+    protected void onLogDataItem(Long timestamp, String data, String subsensor){
+        AsyncTask.execute(() -> {
+            db.logDataDao().insertAll(new LogData(timestamp, SENSOR_NAME + "+" + subsensor, data));
+        });
+    }
 
 	public void tryLogStringData(String data) throws SensorNotRunningException {
 		if (m_IsRunning) {
