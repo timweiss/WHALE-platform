@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.data
 
+import de.mimuc.senseeverything.activity.calculateCurrentStudyDay
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchCompletionStatus
 import de.mimuc.senseeverything.db.AppDatabase
@@ -25,9 +26,14 @@ suspend fun fetchExternalQuestionnaireParams(
             }
         } else if (value.startsWith("configuration")) {
             when (value) {
-                "configuration.enrolmentId" -> {
-                    val enrolmentId = dataStoreManager.participantIdFlow.first()
-                    results[key] = enrolmentId
+                // keeping enrolmentId for backwards compat -- it was incorrectly called enrolmentId, but enrolmentId != participantId
+                "configuration.participantId", "configuration.enrolmentId" -> {
+                    val participantId = dataStoreManager.participantIdFlow.first()
+                    results[key] = participantId
+                }
+                "configuration.currentStudyDay" -> {
+                    val timestampStudyStarted = dataStoreManager.timestampStudyStartedFlow.first()
+                    results[key] = calculateCurrentStudyDay(timestampStudyStarted).toString()
                 }
             }
         } else if (value.startsWith("questionnaire")) {

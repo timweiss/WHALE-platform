@@ -91,13 +91,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Instant
-import java.time.ZoneId
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -293,10 +291,7 @@ class StudyHomeViewModel @Inject constructor(
 
     private suspend fun setCurrentStudyDay() {
         val unixStarted = dataStoreManager.timestampStudyStartedFlow.first()
-        val date = Instant.ofEpochMilli(unixStarted).atZone(ZoneId.systemDefault()).toLocalDate()
-        val today = Instant.now().atZone(ZoneId.systemDefault()).toLocalDate()
-        val days = today.toEpochDay() - date.toEpochDay() + 1
-        _currentDay.value = days.toInt()
+        _currentDay.value = calculateCurrentStudyDay(unixStarted)
     }
 
     fun enqueueUploadJob(workTag: UploadWorkTag = UploadWorkTag.FINAL_UPLOAD_MANUAL) {
