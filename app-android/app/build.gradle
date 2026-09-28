@@ -54,6 +54,11 @@ android {
             buildConfigField 'String', 'API_BASE', '"https://api.whale.research.charlotte-fresenius-uni.de/"'
             buildConfigField 'String', 'AUTO_ENROLMENT', '"whale-studie"'
         }
+        prodNoAutoEnrolment {
+            dimension "environment"
+            buildConfigField 'String', 'API_BASE', '"https://api.whale.research.charlotte-fresenius-uni.de/"'
+            buildConfigField 'String', 'AUTO_ENROLMENT', 'null'
+        }
     }
 
     buildTypes {

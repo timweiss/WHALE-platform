@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.activity.esm
 
 import android.app.Application
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -116,6 +117,18 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
             }
     }
 
+    fun proceedWhenAnswered(proceed: () -> Unit, context: Context) {
+        if (stepElementsAnswered()) {
+            proceed()
+        } else {
+            Toast.makeText(
+                context,
+                context.getString(R.string.questionnaire_answer_all_questions),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     fun nextStep() {
         _activeStep.value++
         onStepChanged(_activeStep.value, _elementValues.value)
@@ -202,6 +215,7 @@ private fun QuestionnaireHostContent(
                 .sortedBy { it.position }
         }
         val answerValues = viewModel.elementValues.collectAsState()
+        val context = LocalContext.current
 
         if (embedded) {
             // column layout as we cannot nest LazyColumn inside LazyColumn
@@ -219,7 +233,7 @@ private fun QuestionnaireHostContent(
                         })
                 }
 
-                // Navigation after content
+                // Navigation is displayed after content
                 if (maxStep == 1) {
                     TextButton(onClick = { viewModel.save() }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.questionnaire_save))
@@ -234,11 +248,11 @@ private fun QuestionnaireHostContent(
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         if (currentStep < maxStep) {
-                            TextButton(onClick = { viewModel.nextStep() }) {
+                            TextButton(onClick = { viewModel.proceedWhenAnswered(viewModel::nextStep, context) }) {
                                 Text(stringResource(R.string.questionnaire_next))
                             }
                         } else {
-                            TextButton(onClick = { viewModel.save() }) {
+                            TextButton(onClick = { viewModel.proceedWhenAnswered(viewModel::save, context) }) {
                                 Text(stringResource(R.string.questionnaire_save))
                             }
                         }
@@ -308,15 +322,7 @@ private fun QuestionnaireHostContent(
                         }
                     } else {
                         TextButton(onClick = {
-                            if (viewModel.stepElementsAnswered()) {
-                                viewModel.save()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.questionnaire_answer_all_questions),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            viewModel.proceedWhenAnswered(viewModel::save, context)
                         }) {
                             Text(stringResource(R.string.questionnaire_save))
                         }

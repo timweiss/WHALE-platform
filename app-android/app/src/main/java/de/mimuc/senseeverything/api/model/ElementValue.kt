@@ -163,6 +163,10 @@ class SocialNetworkEntryValue(elementId: Int, elementName: String, var values: L
         json.put("values", JSONArray(values))
         return json
     }
+
+    override fun isAnswered(): Boolean {
+        return values.isNotEmpty()
+    }
 }
 
 class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: Map<Int, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SOCIAL_NETWORK_RATING) {
