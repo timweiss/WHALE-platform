@@ -1,0 +1,12 @@
+# keep local secrets, host builds and tooling out of the images;
+# database/ must stay, the Postgres image copies its migrations from there
+.env
+.env.*
+node_modules
+dist
+tests
+coverage
+*.log
+.git
+.idea
+.DS_Store
