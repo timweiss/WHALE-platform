@@ -10,12 +10,17 @@ import { createESMAnswerController } from './controllers/esmResponse';
 import { initializeRepositories, Repositories } from './data/repositoryHelper';
 import { createCompletionController } from './controllers/completion';
 import { Observability, setupO11y } from './o11y';
-import { createSensorReadingQueue } from './queues/sensorReadingQueue';
+import {
+  createSensorReadingQueue,
+  SensorReadingJobData,
+} from './queues/sensorReadingQueue';
+import { Queue } from 'bullmq';
 
 export function makeExpressApp(
   pool: Pool,
   repositories: Repositories,
   observability: Observability,
+  sensorReadingQueue?: Queue<SensorReadingJobData>,
 ) {
   const app = express();
   app.use(express.json({ limit: '100mb' }));
@@ -23,20 +28,6 @@ export function makeExpressApp(
   app.get('/', (req, res) => {
     res.send('Social Interaction Sensing!');
   });
-
-  // Initialize the sensor reading queue
-  let sensorReadingQueue;
-  try {
-    sensorReadingQueue = createSensorReadingQueue();
-    observability.logger.info('Sensor reading queue initialized');
-  } catch (error) {
-    observability.logger.error('Failed to initialize sensor reading queue', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    observability.logger.warn(
-      'API will continue without queue, using synchronous processing',
-    );
-  }
 
   createStudyController(repositories.study, app, observability);
   createEnrolmentController(
@@ -82,7 +73,26 @@ export async function main() {
 
   const pool = usePool(olly);
 
-  const app = makeExpressApp(pool, initializeRepositories(pool, olly), olly);
+  // Initialize the sensor reading queue
+  let sensorReadingQueue;
+  try {
+    sensorReadingQueue = createSensorReadingQueue();
+    olly.logger.info('Sensor reading queue initialized');
+  } catch (error) {
+    olly.logger.error('Failed to initialize sensor reading queue', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    olly.logger.warn(
+      'API will continue without queue, using synchronous processing',
+    );
+  }
+
+  const app = makeExpressApp(
+    pool,
+    initializeRepositories(pool, olly),
+    olly,
+    sensorReadingQueue,
+  );
 
   const server = app.listen(Config.app.port, () => {
     olly.logger.info(`Server listening on port ${Config.app.port}`);

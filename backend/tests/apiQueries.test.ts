@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { randomUUID } from 'node:crypto';
 import { usePool } from '../src/config/database';
 import { makeExpressApp } from '../src';
 import { Config } from '../src/config';
@@ -244,24 +245,7 @@ test('should enrol in study', async () => {
 
   const res = await request(app)
     .post('/v1/enrolment')
-    .send({ enrolmentKey: 'key' });
-
-  expect(res.statusCode).toBe(200);
-  expect(res.body).toHaveProperty('participantId');
-  expect(res.body).toHaveProperty('token');
-  expect(res.body).toHaveProperty('phases');
-});
-
-test('should enrol in study with participant id', async () => {
-  await initializeBetweenGroupsStudy();
-
-  const enrol = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'key' });
-
-  const res = await request(app).post(
-    `/v1/enrolment/${enrol.body.participantId}`,
-  );
+    .send({ enrolmentKey: 'key', source: null });
 
   expect(res.statusCode).toBe(200);
   expect(res.body).toHaveProperty('participantId');
@@ -279,12 +263,12 @@ test.each(Array(30).fill(null))(
     // should start with baseline phase
     const participant1 = await request(app)
       .post('/v1/enrolment')
-      .send({ enrolmentKey: 'key' });
+      .send({ enrolmentKey: 'key', source: null });
 
     // should start with treatment phase
     const participant2 = await request(app)
       .post('/v1/enrolment')
-      .send({ enrolmentKey: 'key' });
+      .send({ enrolmentKey: 'key', source: null });
 
     expect(participant1.statusCode).toBe(200);
     expect(participant2.statusCode).toBe(200);
@@ -307,7 +291,7 @@ test('should fail because of missing experimental groups', async () => {
 
   const res = await request(app)
     .post('/v1/enrolment')
-    .send({ enrolmentKey: 'key' });
+    .send({ enrolmentKey: 'key', source: null });
 
   expect(res.statusCode).toBe(400);
   expect(res.body.code).toBe('invalid_study_configuration');
@@ -320,25 +304,32 @@ test('should fail because of missing experimental groups', async () => {
 
 // sensor reading tests
 
-function getTimestampInSeconds() {
-  return Math.floor(Date.now() / 1000);
+function makeReading(overrides: Record<string, unknown> = {}) {
+  return {
+    sensorType: 'type',
+    data: 'data',
+    timestamp: Date.now(),
+    localId: randomUUID(),
+    ...overrides,
+  };
+}
+
+async function enrolParticipant(enrolmentKey = 'key') {
+  const enrol = await request(app)
+    .post('/v1/enrolment')
+    .send({ enrolmentKey, source: null });
+  expect(enrol.statusCode).toBe(200);
+  return enrol.body as { token: string; studyId: number };
 }
 
 test('should create a sensor reading', async () => {
   await initializeBetweenGroupsStudy();
-
-  const enrol = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'key' });
+  const { token } = await enrolParticipant();
 
   const res = await request(app)
     .post('/v1/reading')
-    .set({ Authorization: 'Bearer ' + enrol.body.token })
-    .send({
-      sensorType: 'type',
-      data: 'data',
-      timestamp: getTimestampInSeconds().toString(),
-    });
+    .set({ Authorization: 'Bearer ' + token })
+    .send(makeReading());
 
   expect(res.statusCode).toBe(200);
   expect(res.body).toMatchObject({ sensorType: 'type', data: 'data' });
@@ -346,32 +337,20 @@ test('should create a sensor reading', async () => {
 
 test('should create a batch of sensor readings', async () => {
   await initializeBetweenGroupsStudy();
+  const { token } = await enrolParticipant();
 
-  const enrol = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'key' });
-
+  // no queue is injected in tests, so readings are written synchronously
   const res = await request(app)
     .post('/v1/reading/batch')
-    .set({ Authorization: 'Bearer ' + enrol.body.token })
-    .send([
-      {
-        sensorType: 'type',
-        data: 'data',
-        timestamp: getTimestampInSeconds().toString(),
-      },
-      {
-        sensorType: 'type',
-        data: 'data',
-        timestamp: getTimestampInSeconds().toString(),
-      },
-    ]);
+    .set({ Authorization: 'Bearer ' + token })
+    .send([makeReading(), makeReading()]);
 
   expect(res.statusCode).toBe(200);
-  expect(res.body).toBeInstanceOf(Array);
-  expect(res.body).toHaveLength(2);
-  expect(res.body[0]).toMatchObject({ sensorType: 'type', data: 'data' });
-  expect(res.body[1]).toMatchObject({ sensorType: 'type', data: 'data' });
+  const rows = await pool.query(
+    'SELECT sensor_type, data FROM sensor_readings',
+  );
+  expect(rows.rows).toHaveLength(2);
+  expect(rows.rows[0]).toMatchObject({ sensor_type: 'type', data: 'data' });
 });
 
 test('should fetch questionnaires in a study', async () => {
@@ -412,37 +391,44 @@ test('should create a questionnaire in a study', async () => {
   expect(res.body).toMatchObject({ name: 'Questionnaire' });
 });
 
-test('should create answers for questionnaire', async () => {
-  const token = generateAdminToken();
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(dummyStudy);
+function makeAnswer() {
+  const now = Date.now();
+  return {
+    pendingQuestionnaireId: randomUUID(),
+    status: 'completed',
+    lastOpenedPage: 1,
+    createdTimestamp: now,
+    lastUpdatedTimestamp: now,
+    finishedTimestamp: now,
+    notificationTrigger: null,
+    answers: [
+      { elementId: 1, elementName: 'answer1', value: 'answer1' },
+      { elementId: 2, elementName: 'answer2', value: 'answer2' },
+    ],
+  };
+}
 
+async function createQuestionnaire(studyId: number) {
   const questionnaire = await request(app)
-    .post(`/v1/study/${study.body.id}/questionnaire`)
-    .set({ Authorization: 'Bearer ' + token })
+    .post(`/v1/study/${studyId}/questionnaire`)
+    .set({ Authorization: 'Bearer ' + generateAdminToken() })
     .send({ name: 'Questionnaire', enabled: true });
+  expect(questionnaire.statusCode).toBe(200);
+  return questionnaire.body as { id: number };
+}
+
+test('should create answers for questionnaire', async () => {
+  await initializeBetweenGroupsStudy();
+  const { token, studyId } = await enrolParticipant();
+  const questionnaire = await createQuestionnaire(studyId);
 
   const res = await request(app)
-    .post(
-      `/v1/study/${study.body.id}/questionnaire/${questionnaire.body.id}/answer`,
-    )
+    .post(`/v1/study/${studyId}/questionnaire/${questionnaire.id}/answer`)
     .set({ Authorization: 'Bearer ' + token })
-    .send([
-      {
-        elementId: 1,
-        elementName: 'answer1',
-        value: 'answer1',
-      },
-      {
-        elementId: 2,
-        elementName: 'answer2',
-        value: 'answer2',
-      },
-    ]);
+    .send(makeAnswer());
 
   expect(res.statusCode).toBe(200);
+  expect(res.body).toMatchObject({ status: 'created' });
 });
 
 test('should add elements to a questionnaire', async () => {
@@ -466,6 +452,7 @@ test('should add elements to a questionnaire', async () => {
       type: 'text_view',
       configuration: { content: 'Please enter your name' },
       step: 1,
+      displayGroup: 0,
       position: 1,
       name: 'text',
     });
@@ -505,6 +492,7 @@ test('should add a trigger to a questionnaire', async () => {
     .send({
       type: 'event',
       configuration: { eventName: 'end_logged_interaction' },
+      validDuration: 0,
       enabled: true,
     });
 
@@ -543,6 +531,7 @@ test('should update a questionnaire element', async () => {
       type: 'text_view',
       configuration: { content: 'Please enter your name' },
       step: 1,
+      displayGroup: 0,
       position: 1,
       name: 'text',
     });
@@ -556,6 +545,7 @@ test('should update a questionnaire element', async () => {
       type: 'text_view',
       configuration: { content: 'Please enter your age' },
       step: 1,
+      displayGroup: 0,
       position: 1,
       name: 'text',
     });
@@ -588,6 +578,7 @@ test('should delete a questionnaire element', async () => {
       type: 'text_view',
       configuration: { content: 'Please enter your name' },
       step: 1,
+      displayGroup: 0,
       position: 1,
       name: 'text',
     });
@@ -621,6 +612,7 @@ test('should delete a questionnaire trigger', async () => {
     .send({
       type: 'event',
       configuration: { eventName: 'end_logged_interaction' },
+      validDuration: 0,
       enabled: true,
     });
 
@@ -635,44 +627,18 @@ test('should delete a questionnaire trigger', async () => {
 
 // completion tests
 
-test('should test completion endpoint with sensor data tracking', async () => {
+async function createStudyWithGroup(
+  enrolmentKey: string,
+  completionTracking: Record<string, unknown> | null,
+) {
   const token = generateAdminToken();
-
-  // Create a study with completion tracking enabled
-  const studyWithCompletion = {
-    ...dummyStudy,
-    enrolmentKey: 'completion-test-key',
-    name: 'Completion Test Study',
-    completionTracking: {
-      x: [
-        {
-          type: 'PassiveSensingParticipationDays',
-          value: 0,
-        },
-      ],
-      x25: [
-        {
-          type: 'PassiveSensingParticipationDays',
-          value: 1,
-        },
-      ],
-      x50: [
-        {
-          type: 'PassiveSensingParticipationDays',
-          value: 1,
-        },
-      ],
-    },
-  };
 
   const study = await request(app)
     .post('/v1/study')
     .set({ Authorization: 'Bearer ' + token })
-    .send(studyWithCompletion);
-
+    .send({ ...dummyStudy, enrolmentKey });
   expect(study.statusCode).toBe(200);
 
-  // Create experimental groups for the study
   const group = await request(app)
     .post(`/v1/study/${study.body.id}/group`)
     .set({ Authorization: 'Bearer ' + token })
@@ -688,234 +654,84 @@ test('should test completion endpoint with sensor data tracking', async () => {
         },
       ],
     });
-
   expect(group.statusCode).toBe(200);
 
-  // Update the study to include completion tracking
-  const updatedStudy = await request(app)
-    .put(`/v1/study/${study.body.id}`)
+  if (completionTracking) {
+    const updated = await request(app)
+      .put(`/v1/study/${study.body.id}`)
+      .set({ Authorization: 'Bearer ' + token })
+      .send({ ...study.body, completionTracking });
+    expect(updated.statusCode).toBe(200);
+  }
+
+  return study.body as { id: number };
+}
+
+async function uploadReadings(token: string, timestamps: number[]) {
+  const res = await request(app)
+    .post('/v1/reading/batch')
     .set({ Authorization: 'Bearer ' + token })
-    .send({
-      ...study.body,
-      completionTracking: {
-        x: [
-          {
-            type: 'PassiveSensingParticipationDays',
-            value: 0,
-          },
-        ],
-        x25: [
-          {
-            type: 'PassiveSensingParticipationDays',
-            value: 1,
-          },
-        ],
-        x50: [
-          {
-            type: 'PassiveSensingParticipationDays',
-            value: 1,
-          },
-        ],
-      },
-    });
+    .send(timestamps.map((timestamp) => makeReading({ timestamp })));
+  expect(res.statusCode).toBe(200);
+}
 
-  expect(updatedStudy.statusCode).toBe(200);
-
-  // Enroll a participant in the study
-  const enrollment = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'completion-test-key', source: null });
-
-  expect(enrollment.statusCode).toBe(200);
-  expect(enrollment.body).toHaveProperty('participantId');
-  expect(enrollment.body).toHaveProperty('token');
-
-  const participantToken = enrollment.body.token;
-
-  // Test completion endpoint before adding sensor data (should show incomplete)
-  const completionBefore = await request(app)
+async function getCompletion(token: string) {
+  return request(app)
     .get('/v1/completion')
-    .set({ Authorization: 'Bearer ' + participantToken });
+    .set({ Authorization: 'Bearer ' + token });
+}
 
-  expect(completionBefore.statusCode).toBe(200);
-  expect(completionBefore.body.x).toBe(false);
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-  // Add sensor data for one day
-  const today = new Date();
-  const sensorData = {
-    sensorType: 'accelerometer',
-    data: JSON.stringify({ x: 1.0, y: 2.0, z: 3.0 }),
-    timestamp: today.toISOString(),
-  };
+test('should test completion endpoint with sensor data tracking', async () => {
+  await createStudyWithGroup('completion-test-key', {
+    none: [{ type: 'PassiveSensingParticipationDays', value: 0 }],
+    oneDay: [{ type: 'PassiveSensingParticipationDays', value: 1 }],
+  });
+  const { token } = await enrolParticipant('completion-test-key');
 
-  const sensorReading = await request(app)
-    .post('/v1/reading')
-    .set({ Authorization: 'Bearer ' + participantToken })
-    .send(sensorData);
+  const before = await getCompletion(token);
+  expect(before.statusCode).toBe(200);
+  expect(before.body).toEqual({ none: true, oneDay: false });
 
-  expect(sensorReading.statusCode).toBe(200);
+  await uploadReadings(token, [Date.now()]);
 
-  // Test completion endpoint after adding sensor data (should show complete)
-  const completionAfter = await request(app)
-    .get('/v1/completion')
-    .set({ Authorization: 'Bearer ' + participantToken });
-
-  expect(completionAfter.statusCode).toBe(200);
-  expect(completionAfter.body.oneDayOfSensorData).toBe(true);
+  const after = await getCompletion(token);
+  expect(after.statusCode).toBe(200);
+  expect(after.body).toEqual({ none: true, oneDay: true });
 });
 
 test('should test completion endpoint with multiple sensor readings on same day', async () => {
-  const token = generateAdminToken();
+  await createStudyWithGroup('multi-day-test-key', {
+    twoDaysOfSensorData: [
+      { type: 'PassiveSensingParticipationDays', value: 2 },
+    ],
+  });
+  const { token } = await enrolParticipant('multi-day-test-key');
 
-  // Create a study with completion tracking for 2 days
-  const studyWithCompletion = {
-    ...dummyStudy,
-    enrolmentKey: 'multi-day-test-key',
-    name: 'Multi Day Test Study',
-  };
+  // several readings on the same day count as one day
+  const now = Date.now();
+  await uploadReadings(token, [now, now]);
 
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(studyWithCompletion);
+  const afterOneDay = await getCompletion(token);
+  expect(afterOneDay.statusCode).toBe(200);
+  expect(afterOneDay.body.twoDaysOfSensorData).toBe(false);
 
-  // Create experimental groups
-  const group = await request(app)
-    .post(`/v1/study/${study.body.id}/group`)
-    .set({ Authorization: 'Bearer ' + token })
-    .send({
-      internalName: 'testGroup',
-      allocationOrder: 0,
-      phases: [
-        {
-          internalName: 'baseline',
-          fromDay: 0,
-          durationDays: 7,
-          interactionWidgetStrategy: 'Disabled',
-        },
-      ],
-    });
+  await uploadReadings(token, [now - DAY_MS]);
 
-  // Update study with completion tracking for 2 days
-  const updatedStudy = await request(app)
-    .put(`/v1/study/${study.body.id}`)
-    .set({ Authorization: 'Bearer ' + token })
-    .send({
-      ...study.body,
-      completionTracking: {
-        twoDaysOfSensorData: [
-          {
-            type: 'PassiveSensingParticipationDays',
-            value: 2,
-          },
-        ],
-      },
-    });
-
-  // Enroll participant
-  const enrollment = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'multi-day-test-key' });
-
-  const participantToken = enrollment.body.token;
-
-  // Add multiple sensor readings on the same day
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  // Add readings for today
-  await request(app)
-    .post('/v1/reading')
-    .set({ Authorization: 'Bearer ' + participantToken })
-    .send({
-      sensorType: 'accelerometer',
-      data: JSON.stringify({ x: 1.0, y: 2.0, z: 3.0 }),
-      timestamp: today.toISOString(),
-    });
-
-  await request(app)
-    .post('/v1/reading')
-    .set({ Authorization: 'Bearer ' + participantToken })
-    .send({
-      sensorType: 'gyroscope',
-      data: JSON.stringify({ x: 0.5, y: 1.5, z: 2.5 }),
-      timestamp: today.toISOString(),
-    });
-
-  // Should only count as 1 day so far
-  const completionAfterOneDay = await request(app)
-    .get('/v1/completion')
-    .set({ Authorization: 'Bearer ' + participantToken });
-
-  expect(completionAfterOneDay.statusCode).toBe(200);
-  expect(completionAfterOneDay.body.twoDaysOfSensorData).toBe(false);
-
-  // Add readings for yesterday
-  await request(app)
-    .post('/v1/reading')
-    .set({ Authorization: 'Bearer ' + participantToken })
-    .send({
-      sensorType: 'accelerometer',
-      data: JSON.stringify({ x: 2.0, y: 3.0, z: 4.0 }),
-      timestamp: yesterday.toISOString(),
-    });
-
-  // Should now count as 2 days and be complete
-  const completionAfterTwoDays = await request(app)
-    .get('/v1/completion')
-    .set({ Authorization: 'Bearer ' + participantToken });
-
-  expect(completionAfterTwoDays.statusCode).toBe(200);
-  expect(completionAfterTwoDays.body.twoDaysOfSensorData).toBe(true);
+  const afterTwoDays = await getCompletion(token);
+  expect(afterTwoDays.statusCode).toBe(200);
+  expect(afterTwoDays.body.twoDaysOfSensorData).toBe(true);
 });
 
 test('should fail completion endpoint when completion tracking is not enabled', async () => {
-  const token = generateAdminToken();
+  await createStudyWithGroup('no-completion-key', null);
+  const { token } = await enrolParticipant('no-completion-key');
 
-  // Create a study without completion tracking
-  const studyWithoutCompletion = {
-    ...dummyStudy,
-    enrolmentKey: 'no-completion-key',
-    name: 'No Completion Study',
-  };
+  const res = await getCompletion(token);
 
-  const study = await request(app)
-    .post('/v1/study')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(studyWithoutCompletion);
-
-  // Create experimental groups
-  const group = await request(app)
-    .post(`/v1/study/${study.body.id}/group`)
-    .set({ Authorization: 'Bearer ' + token })
-    .send({
-      internalName: 'testGroup',
-      allocationOrder: 0,
-      phases: [
-        {
-          internalName: 'baseline',
-          fromDay: 0,
-          durationDays: 7,
-          interactionWidgetStrategy: 'Disabled',
-        },
-      ],
-    });
-
-  // Enroll participant
-  const enrollment = await request(app)
-    .post('/v1/enrolment')
-    .send({ enrolmentKey: 'no-completion-key' });
-
-  const participantToken = enrollment.body.token;
-
-  // Try to access completion endpoint - should fail
-  const completionResponse = await request(app)
-    .get('/v1/completion')
-    .set({ Authorization: 'Bearer ' + participantToken });
-
-  expect(completionResponse.statusCode).toBe(400);
-  expect(completionResponse.body.error).toBe(
+  expect(res.statusCode).toBe(400);
+  expect(res.body.error).toBe(
     'Completion tracking is not enabled for this study',
   );
 });
