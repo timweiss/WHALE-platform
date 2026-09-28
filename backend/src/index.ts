@@ -81,7 +81,7 @@ export async function main() {
   const pool = usePool(olly);
 
   // Initialize the sensor reading queue
-  let sensorReadingQueue;
+  let sensorReadingQueue: Queue<SensorReadingJobData> | undefined;
   try {
     sensorReadingQueue = createSensorReadingQueue();
     olly.logger.info('Sensor reading queue initialized');
@@ -105,13 +105,22 @@ export async function main() {
     olly.logger.info(`Server listening on port ${Config.app.port}`);
   });
 
-  // close the pool when app shuts down
+  // stop accepting requests and let in-flight ones finish before closing the
+  // queue and pool they use
   process.on('SIGTERM', async () => {
-    await pool.end();
-    server.close(() => {
+    olly.logger.info('Received SIGTERM, shutting down gracefully');
+    try {
+      await new Promise((resolve) => server.close(resolve));
       olly.logger.info('HTTP server closed');
-    });
-    await olly.onShutdown();
+      await sensorReadingQueue?.close();
+      await pool.end();
+      await olly.onShutdown();
+    } catch (error) {
+      olly.logger.error('Error during shutdown', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      process.exit(1);
+    }
     process.exit(0);
   });
 }
