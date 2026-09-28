@@ -1,5 +1,6 @@
 import { Repository } from './repository';
 import { DatabaseError } from '../config/errors';
+import { ExperienceSamplingAnswerStatus } from './esmAnswerRepository';
 
 export interface ICompletionRepository {
   getCountOfDaysWithSensorData(enrolmentId: number): Promise<number>;
@@ -24,9 +25,11 @@ export class CompletionRepository
 
   async getCountOfEMAsAnswered(enrolmentId: number): Promise<number> {
     try {
+      // every upload of a questionnaire is kept as its own row (history), so
+      // each completed questionnaire is only counted once
       const res = await this.pool.query(
-        'SELECT COUNT(*) AS count FROM esm_answers WHERE enrolment_id=$1;',
-        [enrolmentId],
+        'SELECT COUNT(DISTINCT pending_questionnaire_id) AS count FROM esm_answers WHERE enrolment_id=$1 AND status=$2;',
+        [enrolmentId, ExperienceSamplingAnswerStatus.Completed],
       );
       return res.rows[0].count;
     } catch (e) {

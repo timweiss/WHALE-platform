@@ -1074,3 +1074,36 @@ test('should allocate groups by allocation order, not creation order', async () 
   expect(first.phases[0].interactionWidgetStrategy).toBe('Disabled');
   expect(second.phases[0].interactionWidgetStrategy).toBe('Bucketed');
 });
+
+test('should count each completed questionnaire once for EMA completion', async () => {
+  await createStudyWithGroup('ema-completion-key', {
+    twoEmas: [{ type: 'EMAAnswered', value: 2 }],
+  });
+  const { token, studyId } = await enrolParticipant('ema-completion-key');
+  const questionnaire = await createQuestionnaire(studyId);
+
+  const upload = (answer: object) =>
+    request(app)
+      .post(`/v1/study/${studyId}/questionnaire/${questionnaire.id}/answer`)
+      .set({ Authorization: 'Bearer ' + token })
+      .send(answer);
+
+  // the app re-uploads stored questionnaires daily, whatever their status
+  const first = makeAnswer();
+  await upload({ ...first, status: 'pending', finishedTimestamp: null });
+  await upload({ ...first, status: 'pending', finishedTimestamp: null });
+  await upload(first);
+  await upload(first);
+
+  const afterOne = await getCompletion(token);
+  expect(afterOne.body).toEqual({ twoEmas: false });
+
+  await upload(makeAnswer());
+
+  const afterTwo = await getCompletion(token);
+  expect(afterTwo.body).toEqual({ twoEmas: true });
+
+  // the upload history itself is kept
+  const rows = await pool.query('SELECT id FROM esm_answers');
+  expect(rows.rows.length).toBeGreaterThan(2);
+});
