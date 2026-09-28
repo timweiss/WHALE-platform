@@ -61,7 +61,7 @@ export async function setupO11y(): Promise<{
       exporter: metricExporter,
     }),
 
-    logRecordProcessors: [new SimpleLogRecordProcessor(logsExporter)],
+    logRecordProcessors: [new SimpleLogRecordProcessor({ exporter: logsExporter })],
 
     instrumentations: [getNodeAutoInstrumentations()],
   });
@@ -81,7 +81,7 @@ export async function setupO11y(): Promise<{
   // Export logs
   const logProvider = new LoggerProvider({
     resource: resourceFromAttributes({ "service.name": "whale" }),
-    processors: [new SimpleLogRecordProcessor(logsExporter)],
+    processors: [new SimpleLogRecordProcessor({ exporter: logsExporter })],
   });
 
   const logger = logProvider.getLogger("whale");
