@@ -1,6 +1,5 @@
 package de.mimuc.senseeverything.service.accessibility
 
-import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import de.mimuc.senseeverything.activity.CONST
 
@@ -27,9 +26,8 @@ class AccessibilityNameConsumer: AccessibilityLoggingConsumer {
             event.packageName
         )
 
-        val message = Intent(TAG)
-        message.putExtra(Intent.EXTRA_TEXT, s)
-        service.sendBroadcast(message)
+        // AccessibilitySensor runs in the same process, hand the line over directly
+        AccessibilityDataBus.nameListener?.onNameEvent(s)
     }
 
     private fun getEventType(event: AccessibilityEvent): String {

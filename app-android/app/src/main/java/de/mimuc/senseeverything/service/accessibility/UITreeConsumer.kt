@@ -2,6 +2,11 @@ package de.mimuc.senseeverything.service.accessibility
 
 import android.graphics.Point
 import android.graphics.Rect
+import android.os.Debug
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Process
+import android.os.SystemClock
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -15,23 +20,68 @@ import de.mimuc.senseeverything.service.accessibility.model.SizeClass
 import de.mimuc.senseeverything.service.accessibility.model.SkeletonNode
 import de.mimuc.senseeverything.service.accessibility.model.TextCategory
 import de.mimuc.senseeverything.service.accessibility.model.TreeSkeleton
-import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Captures privacy-preserving UI tree skeletons and interactions.
+ *
+ * [consumeEvent] is called on the main thread of the `:remote` process, which is shared with the
+ * LogService and its sensors. It therefore only does cheap bookkeeping and hands all tree traversal
+ * (binder calls into the foreground app) to a dedicated worker thread. The worker is a single thread,
+ * so captures and interactions are processed in the order the events arrived.
+ */
 class UITreeConsumer : AccessibilityLoggingConsumer {
     companion object {
         const val TAG = "UITreeConsumer"
+
+        private val WHITESPACE = "\\s+".toRegex()
+        private const val FRAMEWORK_SEARCH_DEPTH = 3
+        private const val MAX_PENDING_INTERACTIONS = 200
+        private val STATS_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5)
     }
 
     lateinit var service: AccessibilityLogService
 
-    private var lastSignature: String? = null
-    private var currentSkeleton: TreeSkeleton? = null
     private val screenSize = Point()
     private lateinit var batchManager: SnapshotBatchManager
 
+    private lateinit var workerThread: HandlerThread
+    private lateinit var worker: Handler
+
+    // Main-thread state
     // Debouncing for WINDOW_CONTENT_CHANGED events
     private var lastContentChangeTime = 0L
     private val contentChangeDebounceMs = 500L
+    private val scrollCoalescer = ScrollCoalescer()
+
+    // Worker-thread state
+    private var lastSignature: String? = null
+    private var currentSkeleton: TreeSkeleton? = null
+    private val nodeBounds = Rect()
+
+    // Shared between main thread and worker
+    private val capturePending = AtomicBoolean(false)
+    // wall-clock time of the latest event that requested a capture
+    private val captureTriggerTime = AtomicLong(0L)
+    private val pendingInteractions = AtomicInteger(0)
+    private val stats = CaptureStats()
+
+    private val captureRunnable = Runnable {
+        capturePending.set(false)
+        val eventTime = captureTriggerTime.get()
+        stats.recordCaptureDelay(System.currentTimeMillis() - eventTime)
+        runSafely("capture") { captureTreeSkeleton(eventTime) }
+    }
+
+    private val statsRunnable = object : Runnable {
+        override fun run() {
+            logStats()
+            worker.postDelayed(this, STATS_INTERVAL_MS)
+        }
+    }
 
     override fun init(service: AccessibilityLogService) {
         this.service = service
@@ -40,7 +90,11 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         val windowManager = service.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
         windowManager.defaultDisplay.getSize(screenSize)
 
-        batchManager = SnapshotBatchManager(service, service.database)
+        batchManager = SnapshotBatchManager(service.database)
+
+        workerThread = HandlerThread("UITreeCapture", Process.THREAD_PRIORITY_BACKGROUND).apply { start() }
+        worker = Handler(workerThread.looper)
+        worker.postDelayed(statsRunnable, STATS_INTERVAL_MS)
 
         WHALELog.i(TAG, "Initialized with screen size: ${screenSize.x}x${screenSize.y}")
     }
@@ -48,38 +102,49 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     override fun consumeEvent(event: AccessibilityEvent) {
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                captureTreeSkeleton(event)
+                stats.stateEvents.incrementAndGet()
+                scheduleCapture(event)
             }
 
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                stats.contentEvents.incrementAndGet()
                 // Debounced capture for content changes
-                captureTreeSkeletonDebounced(event)
+                val now = System.currentTimeMillis()
+                if (now - lastContentChangeTime < contentChangeDebounceMs) {
+                    // Too soon, skip this event
+                    stats.contentDebounced.incrementAndGet()
+                    return
+                }
+                lastContentChangeTime = now
+                scheduleCapture(event)
             }
 
             AccessibilityEvent.TYPE_VIEW_CLICKED -> {
-                recordInteraction(event, InteractionType.TAP)
+                scheduleInteraction(event, InteractionType.TAP)
             }
 
             AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> {
-                recordInteraction(event, InteractionType.LONG_PRESS)
+                scheduleInteraction(event, InteractionType.LONG_PRESS)
             }
 
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
-                recordInteraction(event, InteractionType.SCROLL)
+                // one SCROLL interaction per scroll gesture instead of one per scroll event
+                if (scrollCoalescer.shouldRecord(event.packageName, event.className)) {
+                    scheduleInteraction(event, InteractionType.SCROLL)
+                } else {
+                    stats.scrollsCoalesced.incrementAndGet()
+                }
             }
 
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                val source = event.source
-                if (source?.isEditable == true) {
-                    recordInteraction(event, InteractionType.TEXT_INPUT)
-                }
-                source?.recycle()
+                // whether the source is editable is checked on the worker
+                scheduleInteraction(event, InteractionType.TEXT_INPUT)
             }
 
             // Gesture events for interactions like double-tap
             AccessibilityEvent.TYPE_GESTURE_DETECTION_START,
             AccessibilityEvent.TYPE_GESTURE_DETECTION_END -> {
-                recordInteraction(event, InteractionType.TAP)
+                scheduleInteraction(event, InteractionType.TAP)
             }
 
             // Touch exploration for accessibility features
@@ -88,12 +153,63 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             }
 
             AccessibilityEvent.TYPE_TOUCH_INTERACTION_END -> {
-                recordInteraction(event, InteractionType.TAP)
+                scheduleInteraction(event, InteractionType.TAP)
             }
         }
     }
 
-    private fun captureTreeSkeleton(event: AccessibilityEvent) {
+    /**
+     * Converts the event's creation time (uptime in the emitting app) to wall-clock time, so snapshots
+     * are stamped with when the event happened rather than when it was processed.
+     */
+    private fun eventWallTime(event: AccessibilityEvent): Long =
+        System.currentTimeMillis() - (SystemClock.uptimeMillis() - event.eventTime)
+
+    /**
+     * Queues a capture unless one is already waiting. A waiting capture reads the live tree when it
+     * runs, so a second one would see the same screen and be dropped by the signature check anyway.
+     * The capture is stamped with the latest triggering event, since that is the state it reads.
+     */
+    private fun scheduleCapture(event: AccessibilityEvent) {
+        captureTriggerTime.set(eventWallTime(event))
+        if (capturePending.compareAndSet(false, true)) {
+            worker.post(captureRunnable)
+        } else {
+            stats.capturesCoalesced.incrementAndGet()
+        }
+    }
+
+    private fun scheduleInteraction(event: AccessibilityEvent, type: InteractionType) {
+        if (pendingInteractions.incrementAndGet() > MAX_PENDING_INTERACTIONS) {
+            // the worker is far behind, don't let the queue grow without bound
+            pendingInteractions.decrementAndGet()
+            stats.interactionsDropped.incrementAndGet()
+            return
+        }
+
+        // the framework may reuse the event after onAccessibilityEvent returns, so keep a copy
+        val copy = AccessibilityEvent(event)
+        val eventTime = eventWallTime(event)
+        worker.post {
+            try {
+                runSafely("interaction") { handleInteraction(copy, type, eventTime) }
+            } finally {
+                pendingInteractions.decrementAndGet()
+            }
+        }
+    }
+
+    private inline fun runSafely(what: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: Exception) {
+            // an uncaught exception on the worker would take down the whole :remote process
+            WHALELog.e(TAG, "Failed to process $what: ${e.message}", e)
+        }
+    }
+
+    private fun captureTreeSkeleton(eventTime: Long) {
+        val start = SystemClock.elapsedRealtime()
         val rootNode = service.rootInActiveWindow ?: return
 
         try {
@@ -102,6 +218,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
             // Build flattened skeleton tree
             buildSkeleton(rootNode, null, 0, nodes)
+            stats.capturesRun.incrementAndGet()
+            stats.nodesVisited.addAndGet(nodes.size.toLong())
 
             // Skip if tree is empty (all nodes were invisible)
             if (nodes.isEmpty()) {
@@ -109,19 +227,14 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                 return
             }
 
-            val skeleton = TreeSkeleton(
-                signature = "", // Will be computed next
-                nodes = nodes
-            )
-
             // Generate signature for deduplication
-            val signature = generateTreeSignature(skeleton)
-            skeleton.signature = signature
+            val signature = TreeSignature.compute(nodes)
+            val skeleton = TreeSkeleton(signature = signature, nodes = nodes)
 
             // Only create snapshot if screen structure changed
             if (signature != lastSignature) {
                 val snapshot = ScreenSnapshot(
-                    timestamp = System.currentTimeMillis(),
+                    timestamp = eventTime,
                     appPackage = rootNode.packageName?.toString() ?: "unknown",
                     framework = framework,
                     skeleton = skeleton,
@@ -132,22 +245,14 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                 lastSignature = signature
 
                 processSnapshot(snapshot)
+                stats.screensRecorded.incrementAndGet()
 
                 WHALELog.d(TAG, "New screen captured: ${snapshot.appPackage}, signature: ${signature.take(8)}..., nodes: ${nodes.size}")
             }
         } finally {
             rootNode.recycle()
+            stats.recordCaptureTime(SystemClock.elapsedRealtime() - start)
         }
-    }
-
-    private fun captureTreeSkeletonDebounced(event: AccessibilityEvent) {
-        val now = System.currentTimeMillis()
-        if (now - lastContentChangeTime < contentChangeDebounceMs) {
-            // Too soon, skip this event
-            return
-        }
-        lastContentChangeTime = now
-        captureTreeSkeleton(event)
     }
 
     private fun buildSkeleton(
@@ -158,7 +263,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     ) {
         val nodeId = nodes.size
 
-        val bounds = Rect()
+        // only used before recursing, so a single instance can be reused on the worker thread
+        val bounds = nodeBounds
         node.getBoundsInScreen(bounds)
 
         // Skip invisible or out-of-bounds nodes
@@ -166,10 +272,12 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             return
         }
 
+        val className = node.className?.toString()?.lowercase()
+
         val skeletonNode = SkeletonNode(
             id = nodeId,
             parentId = parentId,
-            type = classifyNodeType(node),
+            type = classifyNodeType(node, className),
             depth = depth,
             region = calculateRegion(bounds),
             sizeClass = calculateSizeClass(bounds),
@@ -183,7 +291,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             focusable = node.isFocusable,
             hasText = node.text != null || node.contentDescription != null,
             textCategory = categorizeText(node),
-            hasImage = isImageNode(node),
+            hasImage = isImageNode(className),
             role = extractRole(node)
         )
 
@@ -198,8 +306,9 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         }
     }
 
-    private fun classifyNodeType(node: AccessibilityNodeInfo): NodeType {
-        val className = node.className?.toString()?.lowercase() ?: return NodeType.UNKNOWN
+    /** @param className the node's class name, already lowercased */
+    private fun classifyNodeType(node: AccessibilityNodeInfo, className: String?): NodeType {
+        if (className == null) return NodeType.UNKNOWN
 
         return when {
             // List containers
@@ -244,7 +353,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     private fun categorizeText(node: AccessibilityNodeInfo): TextCategory? {
         val text = node.text?.toString() ?: node.contentDescription?.toString() ?: return null
 
-        val wordCount = text.trim().split("\\s+".toRegex()).size
+        val wordCount = text.trim().split(WHITESPACE).size
 
         return when {
             wordCount == 0 || text.isBlank() -> TextCategory.EMPTY
@@ -256,9 +365,9 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         }
     }
 
-    private fun isImageNode(node: AccessibilityNodeInfo): Boolean {
-        val className = node.className?.toString()?.lowercase() ?: return false
-        return className.contains("image")
+    /** @param className the node's class name, already lowercased */
+    private fun isImageNode(className: String?): Boolean {
+        return className?.contains("image") ?: false
     }
 
     private fun extractRole(node: AccessibilityNodeInfo): String? {
@@ -311,58 +420,51 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         }
     }
 
+    /**
+     * Walks the top [FRAMEWORK_SEARCH_DEPTH] levels once (including invisible nodes) and matches
+     * the collected class names in priority order. Same result as searching once per marker.
+     */
     private fun detectFramework(rootNode: AccessibilityNodeInfo): String {
-        if (searchForClassName(rootNode, "com.facebook.react.ReactRootView")) {
-            return "REACT_NATIVE"
+        val classNames = ArrayList<String>()
+        collectClassNames(rootNode, FRAMEWORK_SEARCH_DEPTH, classNames)
+
+        fun found(marker: String) = classNames.any { it.contains(marker) }
+
+        return when {
+            found("com.facebook.react.ReactRootView") -> "REACT_NATIVE"
+            found("io.flutter.embedding.android.FlutterView") ||
+                found("io.flutter.view.FlutterView") -> "FLUTTER"
+            found("android.webkit.WebView") -> "WEBVIEW"
+            found("com.unity3d.player.UnityPlayer") -> "UNITY"
+            found("md5") || found("mono.android") -> "XAMARIN"
+            else -> "NATIVE"
         }
-        if (searchForClassName(rootNode, "io.flutter.embedding.android.FlutterView") ||
-            searchForClassName(rootNode, "io.flutter.view.FlutterView")) {
-            return "FLUTTER"
-        }
-        if (searchForClassName(rootNode, "android.webkit.WebView")) {
-            return "WEBVIEW"
-        }
-        if (searchForClassName(rootNode, "com.unity3d.player.UnityPlayer")) {
-            return "UNITY"
-        }
-        if (searchForClassName(rootNode, "md5") ||
-            searchForClassName(rootNode, "mono.android")) {
-            return "XAMARIN"
-        }
-        return "NATIVE"
     }
 
-    private fun searchForClassName(node: AccessibilityNodeInfo, className: String, maxDepth: Int = 3): Boolean {
-        if (maxDepth <= 0) return false
+    private fun collectClassNames(node: AccessibilityNodeInfo, maxDepth: Int, out: MutableList<String>) {
+        if (maxDepth <= 0) return
 
-        if (node.className?.toString()?.contains(className) == true) {
-            return true
-        }
+        node.className?.let { out.add(it.toString()) }
         for (i in 0 until node.childCount) {
             node.getChild(i)?.let { child ->
-                val found = searchForClassName(child, className, maxDepth - 1)
+                collectClassNames(child, maxDepth - 1, out)
                 child.recycle()
-                if (found) return true
             }
         }
-        return false
     }
 
-    private fun generateTreeSignature(skeleton: TreeSkeleton): String {
-        val structureString = skeleton.nodes.joinToString("|") { node ->
-            "${node.type.name}:${node.depth}:${node.region.name}:${node.sizeClass.name}:${node.clickable}"
+    private fun handleInteraction(event: AccessibilityEvent, type: InteractionType, eventTime: Long) {
+        val source = event.source ?: return
+
+        if (type == InteractionType.TEXT_INPUT && !source.isEditable) {
+            source.recycle()
+            return
         }
 
-        return hashString(structureString)
+        recordInteraction(source, type, eventTime)
     }
 
-    private fun hashString(input: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
-    private fun recordInteraction(event: AccessibilityEvent, type: InteractionType) {
-        val source = event.source ?: return
+    private fun recordInteraction(source: AccessibilityNodeInfo, type: InteractionType, eventTime: Long) {
         val currentSkel = currentSkeleton ?: run {
             source.recycle()
             return
@@ -389,7 +491,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                     )
 
                 val snapshot = ScreenSnapshot(
-                    timestamp = System.currentTimeMillis(),
+                    timestamp = eventTime,
                     appPackage = source.packageName?.toString() ?: "unknown",
                     framework = "", // Not needed for interaction-only events
                     skeleton = TreeSkeleton(lastSignature ?: "", emptyList()), // Reference only
@@ -397,6 +499,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                 )
 
                 processSnapshot(snapshot)
+                stats.interactionsRecorded.incrementAndGet()
 
                 WHALELog.d(TAG, "Interaction recorded: ${type.name} on node $nodeId at (${interaction.tapX}, ${interaction.tapY})")
             }
@@ -433,10 +536,65 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
     private fun processSnapshot(snapshot: ScreenSnapshot) {
         batchManager.addSnapshot(snapshot)
-        WHALELog.d(TAG, "Snapshot added to batch manager")
+    }
+
+    /** Logs pipeline load for the last interval so outages can be related to capture work. */
+    private fun logStats() {
+        val runtime = Runtime.getRuntime()
+        val heapUsedMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+        val heapMaxMb = runtime.maxMemory() / (1024 * 1024)
+        val nativeHeapMb = Debug.getNativeHeapAllocatedSize() / (1024 * 1024)
+
+        WHALELog.i(TAG, "stats: " + stats.drain() +
+                " pendingInteractions=${pendingInteractions.get()}" +
+                " heapUsedMb=$heapUsedMb heapMaxMb=$heapMaxMb nativeHeapMb=$nativeHeapMb")
     }
 
     override fun shutdown() {
+        worker.removeCallbacksAndMessages(null)
+        workerThread.quitSafely()
         batchManager.shutdown()
+    }
+
+    /** Counters for the periodic stats log, reset on every report. */
+    private class CaptureStats {
+        val stateEvents = AtomicLong()
+        val contentEvents = AtomicLong()
+        val contentDebounced = AtomicLong()
+        val capturesCoalesced = AtomicLong()
+        val capturesRun = AtomicLong()
+        val screensRecorded = AtomicLong()
+        val nodesVisited = AtomicLong()
+        val captureMsTotal = AtomicLong()
+        val captureMsMax = AtomicLong()
+        val captureDelayMsMax = AtomicLong()
+        val interactionsRecorded = AtomicLong()
+        val scrollsCoalesced = AtomicLong()
+        val interactionsDropped = AtomicLong()
+
+        fun recordCaptureTime(ms: Long) {
+            captureMsTotal.addAndGet(ms)
+            captureMsMax.accumulateAndGet(ms) { a, b -> maxOf(a, b) }
+        }
+
+        /** Time from the triggering event to the start of the capture on the worker. */
+        fun recordCaptureDelay(ms: Long) {
+            captureDelayMsMax.accumulateAndGet(ms) { a, b -> maxOf(a, b) }
+        }
+
+        fun drain(): String =
+            "stateEvents=${stateEvents.getAndSet(0)}" +
+                " contentEvents=${contentEvents.getAndSet(0)}" +
+                " contentDebounced=${contentDebounced.getAndSet(0)}" +
+                " capturesCoalesced=${capturesCoalesced.getAndSet(0)}" +
+                " capturesRun=${capturesRun.getAndSet(0)}" +
+                " screensRecorded=${screensRecorded.getAndSet(0)}" +
+                " nodesVisited=${nodesVisited.getAndSet(0)}" +
+                " captureMsTotal=${captureMsTotal.getAndSet(0)}" +
+                " captureMsMax=${captureMsMax.getAndSet(0)}" +
+                " captureDelayMsMax=${captureDelayMsMax.getAndSet(0)}" +
+                " interactionsRecorded=${interactionsRecorded.getAndSet(0)}" +
+                " scrollsCoalesced=${scrollsCoalesced.getAndSet(0)}" +
+                " interactionsDropped=${interactionsDropped.getAndSet(0)}"
     }
 }

@@ -20,6 +20,7 @@ import androidx.room.Room;
 
 import dagger.hilt.android.HiltAndroidApp;
 import de.mimuc.senseeverything.db.AppDatabase;
+import de.mimuc.senseeverything.logging.ProcessDiagnostics;
 import de.mimuc.senseeverything.service.esm.EsmHandler;
 
 @HiltAndroidApp
@@ -62,6 +63,14 @@ public class SEApplicationController extends Application implements Configuratio
 
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
+
+        ProcessDiagnostics.logUnreportedExitReasons(this);
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        ProcessDiagnostics.onTrimMemory(level);
     }
 
     /**

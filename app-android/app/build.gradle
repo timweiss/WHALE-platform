@@ -22,6 +22,7 @@ android {
         versionName "1.0.40"
 
         multiDexEnabled true
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary true
         }
@@ -127,6 +128,8 @@ dependencies {
 
     // UI Tests
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 
     // Optional - Integration with activities

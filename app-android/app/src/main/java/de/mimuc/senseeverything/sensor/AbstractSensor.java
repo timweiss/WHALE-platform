@@ -23,6 +23,8 @@ public abstract class AbstractSensor implements Serializable  {
 
 	private final AppDatabase db;
 
+	private transient BufferedLogWriter bufferedWriter;
+
 	protected AbstractSensor(Context applicationContext, AppDatabase database) {
 		db = database;
 	}
@@ -67,6 +69,24 @@ public abstract class AbstractSensor implements Serializable  {
 		AsyncTask.execute(() -> {
 			db.logDataDao().insertAll(new LogData(timestamp, SENSOR_NAME, data));
 		});
+	}
+
+	/** Like {@link #onLogDataItem(Long, String)}, but batches rows for high-frequency sensors. */
+	protected void onLogDataItemBuffered(Long timestamp, String data) {
+		getBufferedWriter().add(new LogData(timestamp, SENSOR_NAME, data));
+	}
+
+	protected void flushBufferedLogData() {
+		if (bufferedWriter != null) {
+			bufferedWriter.flush();
+		}
+	}
+
+	private synchronized BufferedLogWriter getBufferedWriter() {
+		if (bufferedWriter == null) {
+			bufferedWriter = new BufferedLogWriter(db.logDataDao(), 50, 2000L);
+		}
+		return bufferedWriter;
 	}
 
     protected void onLogDataItem(Long timestamp, String data, String subsensor){

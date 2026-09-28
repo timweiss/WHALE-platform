@@ -1,24 +1,19 @@
 package de.mimuc.senseeverything.sensor.implementation;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
+import de.mimuc.senseeverything.service.accessibility.AccessibilityDataBus;
 import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService;
-import de.mimuc.senseeverything.service.accessibility.AccessibilityNameConsumer;
 
 public class AccessibilitySensor extends AbstractSensor {
 
 	private static final long serialVersionUID = 1L;
-	
+
 	private Context m_Context = null;
 	private Intent m_Intent;
-
-	private DataUpdateReceiver m_Receiver;
-
 
 	public AccessibilitySensor(Context applicationContext, AppDatabase database) {
 		super(applicationContext, database);
@@ -49,44 +44,29 @@ public class AccessibilitySensor extends AbstractSensor {
 		super.start(context);
 		if (!m_isSensorAvailable)
 			return;
-		
+
 		m_Context = context;
-		
+
 		m_Intent = new Intent(m_Context, AccessibilityLogService.class);
 		context.startService(m_Intent);
-		
-		if (m_Receiver == null)
-			m_Receiver = new DataUpdateReceiver();
-        
-		IntentFilter intentFilter = new IntentFilter(AccessibilityNameConsumer.TAG);
-		intentFilter.addAction(AccessibilityNameConsumer.TAG);
-		m_Context.registerReceiver(m_Receiver, intentFilter);
-				
+
+		// AccessibilityLogService runs in the same process, so events are handed over directly
+		AccessibilityDataBus.setNameListener(line -> {
+			if (m_IsRunning) {
+				onLogDataItemBuffered(System.currentTimeMillis(), line);
+			}
+		});
+
 		m_IsRunning = true;
 	}
 
 	@Override
 	public void stop() {
 		m_IsRunning = false;
+		AccessibilityDataBus.setNameListener(null);
+		flushBufferedLogData();
 		if (m_Context == null)
 			return;
-		m_Context.unregisterReceiver(m_Receiver);
 		m_Context.stopService(m_Intent);
 	}
-	
-	private class DataUpdateReceiver extends BroadcastReceiver {
- 		
-        public DataUpdateReceiver() {
-        	super();
-        }
- 
-        @Override
-        public void onReceive(Context context, Intent intent) {
-	        if (intent.getAction().equals(AccessibilityNameConsumer.TAG)) {
-	        	if(m_IsRunning) {
-					onLogDataItem(System.currentTimeMillis(), intent.getStringExtra(android.content.Intent.EXTRA_TEXT));
-	        	}
-        	}
-        }
-    }
 }
