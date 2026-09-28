@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.os.Debug
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Build
 import android.os.Process
 import android.os.SystemClock
 import android.view.WindowManager
@@ -41,6 +42,16 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         private const val FRAMEWORK_SEARCH_DEPTH = 3
         private const val MAX_PENDING_INTERACTIONS = 200
         private val STATS_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5)
+
+        /**
+         * Android 13+: fetch up to 50 descendants depth-first (the order [buildSkeleton] walks) in the
+         * same answer as the requested node. The default strategy sends prefetched nodes separately
+         * and stops as soon as the app has input pending, so while the user scrolls almost every
+         * getChild() became its own round trip to the app's UI thread.
+         */
+        private const val PREFETCH_STRATEGY =
+            AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_DEPTH_FIRST or
+                AccessibilityNodeInfo.FLAG_PREFETCH_UNINTERRUPTIBLE
     }
 
     lateinit var service: AccessibilityLogService
@@ -210,7 +221,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
     private fun captureTreeSkeleton(eventTime: Long) {
         val start = SystemClock.elapsedRealtime()
-        val rootNode = service.rootInActiveWindow ?: return
+        val rootNode = rootInActiveWindow() ?: return
 
         try {
             val framework = detectFramework(rootNode)
@@ -299,7 +310,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
         // Recurse to children
         for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { child ->
+            childAt(node, i)?.let { child ->
                 buildSkeleton(child, nodeId, depth + 1, nodes)
                 child.recycle()
             }
@@ -446,12 +457,27 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
         node.className?.let { out.add(it.toString()) }
         for (i in 0 until node.childCount) {
-            node.getChild(i)?.let { child ->
+            childAt(node, i)?.let { child ->
                 collectClassNames(child, maxDepth - 1, out)
                 child.recycle()
             }
         }
     }
+
+    private fun rootInActiveWindow(): AccessibilityNodeInfo? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            service.getRootInActiveWindow(PREFETCH_STRATEGY)
+        } else {
+            service.rootInActiveWindow
+        }
+
+    /** Children already delivered by a prefetch come from the local cache without a round trip. */
+    private fun childAt(node: AccessibilityNodeInfo, index: Int): AccessibilityNodeInfo? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            node.getChild(index, PREFETCH_STRATEGY)
+        } else {
+            node.getChild(index)
+        }
 
     private fun handleInteraction(event: AccessibilityEvent, type: InteractionType, eventTime: Long) {
         val source = event.source ?: return
