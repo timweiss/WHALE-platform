@@ -9,7 +9,6 @@ export const Config = {
   app: {
     hostname: process.env.APP_HOSTNAME || 'localhost',
     port: process.env.APP_PORT || 8080,
-    uploadLocation: process.env.APP_UPLOAD_LOCATION || './uploads',
   },
   database: {
     connectionString: process.env.DB_CONNECTION || 'localhost:5432',

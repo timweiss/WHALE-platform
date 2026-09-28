@@ -494,33 +494,6 @@ paths:
                     description: The database ID for the study.
         '400':
           description: The participant ID was invalid (does not exist).
-  /reading:
-    post:
-      description:
-        Adds a new singular sensor reading to the system.
-      tags:
-        - reading
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SensorReading'
-      security:
-        - token: [ ]
-      responses:
-        '201':
-          description: The sensor reading was added successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SensorReading'
-        '400':
-          description: The sensor reading was invalid (missing data).
-        '403':
-          description: The sensor reading was not allowed (participant not enrolled).
-        '401':
-          description: The participant is not authenticated.
   /reading/batch:
     post:
       description:
@@ -552,40 +525,6 @@ paths:
           description: The sensor readings were not allowed (participant not enrolled).
         '401':
           description: The participant is not authenticated.
-  /reading/{reading_id}/file:
-    post:
-      description:
-        Adds a file to a specific reading.
-      tags:
-        - reading
-      parameters:
-        - name: reading_id
-          in: path
-          description: The ID of the reading to attach the file to.
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/File'
-      security:
-        - token: [ ]
-      responses:
-        '201':
-          description: The file was attached successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/File'
-        '400':
-          description: The file was invalid (missing data).
-        '403':
-          description: The file was not allowed (participant not enrolled).
-        '401':
-          description: The participant is not authenticated.
 
 components:
   securitySchemes:
@@ -594,26 +533,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    File:
-      description: Attached file for a reading
-      type: object
-      required:
-        - readingId
-          - filename
-      properties:
-        id:
-          type: integer
-          description: The unique identifier for the file.
-        readingId:
-          type: integer
-          description: The database ID for the reading.
-        filename:
-          type: string
-          description: The name of the file.
-        path:
-          type: string
-          description: The path to the file on the server.
-
     SensorReading:
       description: An atomic reading of a sensor. Tied to a specific participant and study.
       type: object

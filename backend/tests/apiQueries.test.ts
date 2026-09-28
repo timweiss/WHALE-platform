@@ -322,18 +322,20 @@ async function enrolParticipant(enrolmentKey = 'key') {
   return enrol.body as { token: string; studyId: number };
 }
 
-test('should create a sensor reading', async () => {
-  await initializeBetweenGroupsStudy();
-  const { token } = await enrolParticipant();
+test.each(['/v1/reading', '/v1/reading/1/file'])(
+  'should not expose removed endpoint %s',
+  async (path) => {
+    await initializeBetweenGroupsStudy();
+    const { token } = await enrolParticipant();
 
-  const res = await request(app)
-    .post('/v1/reading')
-    .set({ Authorization: 'Bearer ' + token })
-    .send(makeReading());
+    const res = await request(app)
+      .post(path)
+      .set({ Authorization: 'Bearer ' + token })
+      .send(makeReading());
 
-  expect(res.statusCode).toBe(200);
-  expect(res.body).toMatchObject({ sensorType: 'type', data: 'data' });
-});
+    expect(res.statusCode).toBe(404);
+  },
+);
 
 test('should create a batch of sensor readings', async () => {
   await initializeBetweenGroupsStudy();
