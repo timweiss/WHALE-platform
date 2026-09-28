@@ -17,7 +17,7 @@ export enum ExperienceSamplingAnswerStatus {
 
 export interface ExperienceSamplingAnswer {
   id: number;
-  enrolmentId: string;
+  enrolmentId: number;
   questionnaireId: number;
   answers: string;
   pendingQuestionnaireId: string;
@@ -31,7 +31,7 @@ export interface ExperienceSamplingAnswer {
 
 interface ExperienceSamplingAnswerRow {
   id: number;
-  enrolment_id: string;
+  enrolment_id: number;
   questionnaire_id: number;
   answers: string;
   pending_questionnaire_id: string;

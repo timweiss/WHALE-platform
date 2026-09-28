@@ -15,6 +15,7 @@ import {
   NotificationTriggerValidation,
 } from '../model/notification-trigger';
 import { EntityId } from './validation';
+import { IEnrolmentRepository } from '../data/enrolmentRepository';
 
 const QuestionnaireAnswerBody = z.object({
   pendingQuestionnaireId: z.uuid(),
@@ -49,6 +50,7 @@ type EntityUpdate<T> = { status: EntityUpdateStatus; id: T };
 export function createESMAnswerController(
   esmResponseRepository: IESMAnswerRepository,
   esmConfigRepository: IESMConfigRepository,
+  enrolmentRepository: IEnrolmentRepository,
   app: Express,
   observability: Observability,
 ) {
@@ -78,7 +80,7 @@ export function createESMAnswerController(
 
   async function saveOrUpdateAnswer(
     questionnaire: ExperienceSamplingQuestionnaire,
-    user: RequestUser,
+    enrolmentId: number,
     answer: z.infer<typeof QuestionnaireAnswerBody>,
   ): Promise<EntityUpdate<number>> {
     const existingAnswer =
@@ -98,14 +100,14 @@ export function createESMAnswerController(
     let notificationTriggerId: string | null = null;
     if (answer.notificationTrigger) {
       notificationTriggerId = await saveOrUpdateNotificationTrigger(
-        (user as RequestUser).enrolmentId,
+        enrolmentId,
         answer.notificationTrigger,
       ).then((result) => result.id);
     }
 
     const createdAnswer = await esmResponseRepository.createESMAnswer({
       questionnaireId: questionnaire.id,
-      enrolmentId: (user! as RequestUser).enrolmentId,
+      enrolmentId,
       answers: JSON.stringify(answer.answers),
       pendingQuestionnaireId: answer.pendingQuestionnaireId,
       status: answer.status,
@@ -168,9 +170,20 @@ export function createESMAnswerController(
         });
       }
 
+      // participants can only answer questionnaires of their own study
+      const enrolment = await enrolmentRepository.getEnrolmentById(
+        (req.user as RequestUser).enrolmentId,
+      );
+      if (!enrolment) {
+        return res.status(403).send({ error: 'Enrolment not found' });
+      }
+      if (enrolment.studyId !== questionnaire.studyId) {
+        return res.status(403).send({ error: 'Forbidden' });
+      }
+
       const result = await saveOrUpdateAnswer(
         questionnaire,
-        req.user as RequestUser,
+        enrolment.id,
         answerSchema.data,
       );
 

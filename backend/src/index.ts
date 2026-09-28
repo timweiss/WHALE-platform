@@ -56,6 +56,7 @@ export function makeExpressApp(
   createESMAnswerController(
     repositories.esmAnswer,
     repositories.esmConfig,
+    repositories.enrolment,
     app,
     observability,
   );

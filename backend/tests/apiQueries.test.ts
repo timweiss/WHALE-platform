@@ -1000,3 +1000,36 @@ test('should reject batches with more than 1000 readings', async () => {
 
   expect(res.statusCode).toBe(400);
 });
+
+// answers are bound to the participant's study
+
+test("should reject answers to another study's questionnaire", async () => {
+  await initializeBetweenGroupsStudy();
+  const { token } = await enrolParticipant();
+  const otherStudy = await createStudyWithGroup('other-key', null);
+  const otherQuestionnaire = await createQuestionnaire(otherStudy.id);
+
+  const res = await request(app)
+    .post(
+      `/v1/study/${otherStudy.id}/questionnaire/${otherQuestionnaire.id}/answer`,
+    )
+    .set({ Authorization: 'Bearer ' + token })
+    .send(makeAnswer());
+
+  expect(res.statusCode).toBe(403);
+  const answers = await pool.query('SELECT id FROM esm_answers');
+  expect(answers.rows).toHaveLength(0);
+});
+
+test('should reject answers from tokens without an enrolment', async () => {
+  await initializeBetweenGroupsStudy();
+  const { studyId } = await enrolParticipant();
+  const questionnaire = await createQuestionnaire(studyId);
+
+  const res = await request(app)
+    .post(`/v1/study/${studyId}/questionnaire/${questionnaire.id}/answer`)
+    .set({ Authorization: 'Bearer ' + generateAdminToken() })
+    .send(makeAnswer());
+
+  expect(res.statusCode).toBe(403);
+});
