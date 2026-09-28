@@ -7,11 +7,17 @@ import {
 } from '../data/esmConfigRepository';
 import { IStudyRepository } from '../data/studyRepository';
 import { Observability } from '../o11y';
+import { EntityId } from './validation';
+
+const StudyPath = z.object({
+  studyId: EntityId,
+});
 
 const QuestionnairePath = z.object({
-  studyId: z.coerce.number(),
-  questionnaireId: z.coerce.number(),
-  elementId: z.coerce.number().optional(),
+  studyId: EntityId,
+  questionnaireId: EntityId,
+  elementId: EntityId.optional(),
+  triggerId: EntityId.optional(),
 });
 
 export function createESMConfigController(
@@ -41,13 +47,19 @@ export function createESMConfigController(
       return null;
     }
 
-    return questionnaire;
+    return { questionnaire, path: path.data };
   }
 
   app.get('/v1/study/:studyId/questionnaire', async (req, res) => {
-    const studyId = parseInt(req.params.studyId);
+    const path = StudyPath.safeParse(req.params);
+    if (!path.success) {
+      return res.status(400).send({ error: 'Invalid request' });
+    }
+
     const questionnaires =
-      await esmConfigRepository.getESMQuestionnairesByStudyId(studyId);
+      await esmConfigRepository.getESMQuestionnairesByStudyId(
+        path.data.studyId,
+      );
     if (!questionnaires) {
       return res.status(404).send({ error: 'Study not found' });
     }
@@ -60,7 +72,12 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const studyId = parseInt(req.params.studyId);
+      const path = StudyPath.safeParse(req.params);
+      if (!path.success) {
+        return res.status(400).send({ error: 'Invalid request' });
+      }
+      const studyId = path.data.studyId;
+
       const study = await studyRepository.getStudyById(studyId);
       if (!study) {
         return res.status(400).send({ error: 'Study not found' });
@@ -78,8 +95,9 @@ export function createESMConfigController(
   app.get(
     '/v1/study/:studyId/questionnaire/:questionnaireId',
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { questionnaire } = found;
 
       const elements =
         await esmConfigRepository.getESMElementsByQuestionnaireId(
@@ -100,12 +118,15 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { questionnaire } = found;
 
-      const updated = await esmConfigRepository.updateESMQuestionnaire(
-        req.body as ExperienceSamplingQuestionnaire,
-      );
+      // the id in the path is authoritative, not one in the body
+      const updated = await esmConfigRepository.updateESMQuestionnaire({
+        ...(req.body as ExperienceSamplingQuestionnaire),
+        id: questionnaire.id,
+      });
       res.json(updated);
     },
   );
@@ -115,8 +136,9 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { questionnaire } = found;
 
       const element = await esmConfigRepository.createESMElement({
         questionnaireId: questionnaire.id,
@@ -132,12 +154,13 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { path } = found;
 
       const element = await esmConfigRepository.updateESMElement({
-        id: parseInt(req.params.elementId),
         ...req.body,
+        id: path.elementId!,
       });
 
       res.json(element);
@@ -149,12 +172,11 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { path } = found;
 
-      await esmConfigRepository.deleteESMElement(
-        parseInt(req.params.elementId),
-      );
+      await esmConfigRepository.deleteESMElement(path.elementId!);
 
       res.status(204).send();
     },
@@ -165,8 +187,9 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { questionnaire } = found;
 
       const trigger = await esmConfigRepository.createESMQuestionnaireTrigger({
         questionnaireId: questionnaire.id,
@@ -182,12 +205,13 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { path } = found;
 
       const trigger = await esmConfigRepository.updateESMQuestionnaireTrigger({
-        id: parseInt(req.params.triggerId),
         ...req.body,
+        id: path.triggerId!,
       });
 
       res.json(trigger);
@@ -199,12 +223,11 @@ export function createESMConfigController(
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const questionnaire = await fetchOrFailQuestionnaire(req, res);
-      if (!questionnaire) return;
+      const found = await fetchOrFailQuestionnaire(req, res);
+      if (!found) return;
+      const { path } = found;
 
-      await esmConfigRepository.deleteESMQuestionnaireTrigger(
-        parseInt(req.params.triggerId),
-      );
+      await esmConfigRepository.deleteESMQuestionnaireTrigger(path.triggerId!);
 
       res.status(204).send();
     },

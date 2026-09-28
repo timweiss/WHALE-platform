@@ -14,6 +14,7 @@ import {
   NotificationTrigger,
   NotificationTriggerValidation,
 } from '../model/notification-trigger';
+import { EntityId } from './validation';
 
 const QuestionnaireAnswerBody = z.object({
   pendingQuestionnaireId: z.uuid(),
@@ -33,8 +34,8 @@ const QuestionnaireAnswerBody = z.object({
 });
 
 const QuestionnairePath = z.object({
-  studyId: z.coerce.number(),
-  questionnaireId: z.coerce.number(),
+  studyId: EntityId,
+  questionnaireId: EntityId,
 });
 
 enum EntityUpdateStatus {

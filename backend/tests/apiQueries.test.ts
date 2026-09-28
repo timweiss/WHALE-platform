@@ -6,6 +6,7 @@ import { Config } from '../src/config';
 import jwt from 'jsonwebtoken';
 import { initializeRepositories } from '../src/data/repositoryHelper';
 import { Observability } from '../src/o11y';
+import { DatabaseError } from '../src/config/errors';
 
 // Mock observability to avoid actual logging during tests
 const mockObservability: Observability = {
@@ -736,4 +737,54 @@ test('should fail completion endpoint when completion tracking is not enabled', 
   expect(res.body.error).toBe(
     'Completion tracking is not enabled for this study',
   );
+});
+
+// input validation and error handling
+
+test.each([
+  '/v1/study/abc/questionnaire',
+  '/v1/study/1/questionnaire/99999999999',
+  '/v1/study/1/questionnaire/abc',
+  '/v1/study/99999999999',
+])('should reject invalid ids in %s', async (path) => {
+  const res = await request(app).get(path);
+
+  expect(res.statusCode).toBe(400);
+});
+
+test('should fetch a study by enrolment key', async () => {
+  await initializeBetweenGroupsStudy();
+
+  const res = await request(app).get('/v1/study/key');
+
+  expect(res.statusCode).toBe(200);
+  expect(res.body).toMatchObject({ name: 'name' });
+});
+
+test('should reject malformed JSON with a JSON error', async () => {
+  const res = await request(app)
+    .post('/v1/enrolment')
+    .set('Content-Type', 'application/json')
+    .send('{"enrolmentKey": ');
+
+  expect(res.statusCode).toBe(400);
+  expect(res.body).toHaveProperty('error');
+});
+
+test('should answer internal errors with 500 without leaking details', async () => {
+  const repositories = initializeRepositories(pool, mockObservability);
+  const failingStudyRepository = Object.create(repositories.study);
+  failingStudyRepository.getStudyById = async () => {
+    throw new DatabaseError('secret connection detail');
+  };
+  const failingApp = makeExpressApp(
+    pool,
+    { ...repositories, study: failingStudyRepository },
+    mockObservability,
+  );
+
+  const res = await request(failingApp).get('/v1/study/1');
+
+  expect(res.statusCode).toBe(500);
+  expect(res.body).toEqual({ error: 'Internal server error' });
 });

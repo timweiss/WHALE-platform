@@ -5,6 +5,10 @@ import {
   StudyExperimentalGroupPhase,
 } from '../data/studyRepository';
 import { Observability } from '../o11y';
+import * as z from 'zod';
+import { EntityId } from './validation';
+
+const StudyPath = z.object({ id: EntityId });
 
 export function createStudyController(
   studyRepository: IStudyRepository,
@@ -36,60 +40,60 @@ export function createStudyController(
     res.json(study);
   });
 
-  app.put(
-    '/v1/study/:id(\\d+)',
-    authenticate,
-    requireAdmin,
-    async (req, res) => {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).send({ error: 'Invalid study ID' });
-      }
+  app.put('/v1/study/:id', authenticate, requireAdmin, async (req, res) => {
+    const path = StudyPath.safeParse(req.params);
+    if (!path.success) {
+      return res.status(400).send({ error: 'Invalid study ID' });
+    }
+    const id = path.data.id;
 
-      const study = await studyRepository.getStudyById(id);
+    const study = await studyRepository.getStudyById(id);
+    if (!study) {
+      return res.status(404).send({ error: 'Study not found' });
+    }
+
+    // the id in the path is authoritative, not one in the body
+    const updatedStudy = await studyRepository.updateStudy({
+      ...req.body,
+      id,
+    });
+    res.json(updatedStudy);
+  });
+
+  app.get('/v1/study/:idOrKey', async (req, res) => {
+    const { idOrKey } = req.params;
+
+    // digits-only values are study ids, everything else is an enrolment key
+    if (!/^\d+$/.test(idOrKey)) {
+      const study = await studyRepository.getStudyByEnrolmentKey(idOrKey);
       if (!study) {
         return res.status(404).send({ error: 'Study not found' });
       }
+      return res.json(study);
+    }
 
-      const updatedStudy = await studyRepository.updateStudy(req.body);
-      res.json(updatedStudy);
-    },
-  );
-
-  app.get('/v1/study/:id(\\d+)', async (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
+    const id = EntityId.safeParse(idOrKey);
+    if (!id.success) {
       return res.status(400).send({ error: 'Invalid study ID' });
     }
 
-    const study = await studyRepository.getStudyById(id);
+    const study = await studyRepository.getStudyById(id.data);
     if (!study) {
       return res.status(404).send({ error: 'Study not found' });
     }
     res.json(study);
   });
 
-  app.get('/v1/study/:enrolmentKey', async (req, res) => {
-    const study = await studyRepository.getStudyByEnrolmentKey(
-      req.params.enrolmentKey as string,
-    );
-
-    if (!study) {
-      return res.status(404).send({ error: 'Study not found' });
-    } else {
-      res.json(study);
-    }
-  });
-
   app.post(
-    '/v1/study/:id(\\d+)/group',
+    '/v1/study/:id/group',
     authenticate,
     requireAdmin,
     async (req, res) => {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
+      const path = StudyPath.safeParse(req.params);
+      if (!path.success) {
         return res.status(400).send({ error: 'Invalid study ID' });
       }
+      const id = path.data.id;
 
       const study = await studyRepository.getStudyById(id);
       if (!study) {

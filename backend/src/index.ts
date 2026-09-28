@@ -15,6 +15,7 @@ import {
   SensorReadingJobData,
 } from './queues/sensorReadingQueue';
 import { Queue } from 'bullmq';
+import { createErrorHandler } from './middleware/errorHandler';
 
 export function makeExpressApp(
   pool: Pool,
@@ -62,6 +63,8 @@ export function makeExpressApp(
     app,
     observability,
   );
+
+  app.use(createErrorHandler(observability));
 
   return app;
 }

@@ -47,10 +47,13 @@ export function createCompletionController(
       const completion = await getCompletionLabels(study, enrolment);
       res.json(Object.fromEntries(completion));
     } catch (error) {
-      return res.status(500).send({
-        error: 'Error retrieving completion labels',
-        details: (error as Error).message,
+      observability.logger.error('Error retrieving completion labels', {
+        enrolmentId: enrolment.id,
+        error: (error as Error).message,
       });
+      return res
+        .status(500)
+        .send({ error: 'Error retrieving completion labels' });
     }
   });
 
