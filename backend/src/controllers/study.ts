@@ -7,6 +7,8 @@ import {
 import { Observability } from '../o11y';
 import * as z from 'zod';
 import { EntityId } from './validation';
+import { createHourlyRateLimit } from '../middleware/rateLimit';
+import { Config } from '../config';
 
 const StudyPath = z.object({ id: EntityId });
 
@@ -15,11 +17,6 @@ export function createStudyController(
   app: Express,
   observability: Observability,
 ) {
-  app.get('/v1/study', async (req, res) => {
-    const studies = await studyRepository.getStudies();
-    res.json(studies);
-  });
-
   app.post('/v1/study', authenticate, requireAdmin, async (req, res) => {
     if (!req.body.enrolmentKey || !req.body.name) {
       return res
@@ -60,11 +57,19 @@ export function createStudyController(
     res.json(updatedStudy);
   });
 
-  app.get('/v1/study/:idOrKey', async (req, res) => {
-    const { idOrKey } = req.params;
+  // digits-only values are study ids, everything else is an enrolment key
+  const isStudyId = (idOrKey: string) => /^\d+$/.test(idOrKey);
 
-    // digits-only values are study ids, everything else is an enrolment key
-    if (!/^\d+$/.test(idOrKey)) {
+  // only lookups by key are limited, they could be used to guess keys
+  const studyKeyLookupRateLimit = createHourlyRateLimit(
+    Config.rateLimit.studyKeyLookupsPerHour,
+    (req) => isStudyId(req.params.idOrKey as string),
+  );
+
+  app.get('/v1/study/:idOrKey', studyKeyLookupRateLimit, async (req, res) => {
+    const idOrKey = req.params.idOrKey as string;
+
+    if (!isStudyId(idOrKey)) {
       const study = await studyRepository.getStudyByEnrolmentKey(idOrKey);
       if (!study) {
         return res.status(404).send({ error: 'Study not found' });
@@ -81,7 +86,10 @@ export function createStudyController(
     if (!study) {
       return res.status(404).send({ error: 'Study not found' });
     }
-    res.json(study);
+
+    // ids can be enumerated, so the key is only returned to callers that
+    // already know it (lookup by key). The app expects a string here.
+    res.json({ ...study, enrolmentKey: '' });
   });
 
   app.post(

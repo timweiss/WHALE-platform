@@ -24,6 +24,7 @@ export function makeExpressApp(
   sensorReadingQueue?: Queue<SensorReadingJobData>,
 ) {
   const app = express();
+  app.set('trust proxy', Config.app.trustProxy);
   app.use(express.json({ limit: '100mb' }));
 
   app.get('/', (req, res) => {

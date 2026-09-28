@@ -144,10 +144,9 @@ async function initializeBetweenGroupsStudy() {
     });
 }
 
-test('should fetch studies', async () => {
+test('should not list studies', async () => {
   const res = await request(app).get('/v1/study');
-  expect(res.statusCode).toBe(200);
-  expect(res.body).toBeInstanceOf(Array);
+  expect(res.statusCode).toBe(404);
 });
 
 test('should create a study', async () => {
@@ -169,8 +168,9 @@ test('should fetch a study by id', async () => {
 
   const res = await request(app).get(`/v1/study/${study.body.id}`);
   expect(res.statusCode).toBe(200);
+  // the enrolment key is not revealed through the (enumerable) id
   expect(res.body).toMatchObject({
-    enrolmentKey: 'key',
+    enrolmentKey: '',
     name: 'name',
     id: study.body.id,
   });
@@ -841,4 +841,82 @@ test('should reject tokens signed with another algorithm', async () => {
     .send(dummyStudy);
 
   expect(res.statusCode).toBe(401);
+});
+
+// rate limiting
+
+async function withRateLimits(
+  limits: Partial<typeof Config.rateLimit>,
+  fn: () => Promise<void>,
+) {
+  const original = { ...Config.rateLimit };
+  Object.assign(Config.rateLimit, limits);
+  try {
+    await fn();
+  } finally {
+    Object.assign(Config.rateLimit, original);
+  }
+}
+
+test('should rate limit enrolments across API versions', async () => {
+  await withRateLimits({ enrolmentsPerHour: 2 }, async () => {
+    const limitedApp = makeExpressApp(
+      pool,
+      initializeRepositories(pool, mockObservability),
+      mockObservability,
+    );
+    await initializeBetweenGroupsStudy();
+
+    const enrol = (version: string) =>
+      request(limitedApp)
+        .post(`/${version}/enrolment`)
+        .send({ enrolmentKey: 'key', source: null });
+
+    expect((await enrol('v1')).statusCode).toBe(200);
+    expect((await enrol('v2')).statusCode).toBe(200);
+
+    const limited = await enrol('v1');
+    expect(limited.statusCode).toBe(429);
+    expect(limited.body).toEqual({
+      error: 'Too many requests',
+      code: 'rate_limited',
+    });
+  });
+});
+
+test('should rate limit study lookups by key but not by id', async () => {
+  await withRateLimits({ studyKeyLookupsPerHour: 1 }, async () => {
+    const limitedApp = makeExpressApp(
+      pool,
+      initializeRepositories(pool, mockObservability),
+      mockObservability,
+    );
+
+    expect((await request(limitedApp).get('/v1/study/key')).statusCode).toBe(
+      404,
+    );
+    expect((await request(limitedApp).get('/v1/study/other')).statusCode).toBe(
+      429,
+    );
+    expect((await request(limitedApp).get('/v1/study/1')).statusCode).toBe(404);
+    expect((await request(limitedApp).get('/v1/study/2')).statusCode).toBe(404);
+  });
+});
+
+test('should rate limit by the client IP forwarded by a local proxy', async () => {
+  await withRateLimits({ studyKeyLookupsPerHour: 1 }, async () => {
+    const limitedApp = makeExpressApp(
+      pool,
+      initializeRepositories(pool, mockObservability),
+      mockObservability,
+    );
+
+    // requests from supertest arrive from loopback, like from nginx
+    const lookup = (clientIp: string) =>
+      request(limitedApp).get('/v1/study/key').set('X-Forwarded-For', clientIp);
+
+    expect((await lookup('203.0.113.1')).statusCode).toBe(404);
+    expect((await lookup('203.0.113.1')).statusCode).toBe(429);
+    expect((await lookup('203.0.113.2')).statusCode).toBe(404);
+  });
 });

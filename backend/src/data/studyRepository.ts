@@ -83,8 +83,6 @@ export interface EMAAnsweredCompletionItem extends CompletionItem {
 }
 
 export interface IStudyRepository {
-  getStudies(): Promise<Study[]>;
-
   createStudy(study: Pick<Study, 'name' | 'enrolmentKey'>): Promise<Study>;
 
   getStudyById(id: number): Promise<Study | null>;
@@ -173,15 +171,6 @@ export class StudyRepository extends Repository implements IStudyRepository {
         ],
       );
       return this.studyFromRow(res.rows[0]);
-    } catch (e) {
-      throw new DatabaseError((e as Error).message.toString());
-    }
-  }
-
-  async getStudies(): Promise<Study[]> {
-    try {
-      const res = await this.pool.query('SELECT * FROM studies');
-      return res.rows.map((row) => this.studyFromRow(row));
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
     }

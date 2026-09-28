@@ -13,6 +13,7 @@ import { InvalidStudyConfigurationError } from '../config/errors';
 import { Mutex } from 'async-mutex';
 import { Observability } from '../o11y';
 import { customAlphabet } from 'nanoid';
+import { createHourlyRateLimit } from '../middleware/rateLimit';
 
 const CreateEnrolment = z.object({
   enrolmentKey: z.string(),
@@ -167,12 +168,17 @@ export function createEnrolmentController(
     );
   }
 
+  // shared between both versions, so switching versions does not reset it
+  const enrolmentRateLimit = createHourlyRateLimit(
+    Config.rateLimit.enrolmentsPerHour,
+  );
+
   // creates an enrolment and generates a token
-  app.post('/v1/enrolment', async (req, res) => {
+  app.post('/v1/enrolment', enrolmentRateLimit, async (req, res) => {
     return createEnrolment(req, res);
   });
 
-  app.post('/v2/enrolment', async (req, res) => {
+  app.post('/v2/enrolment', enrolmentRateLimit, async (req, res) => {
     return createEnrolment(req, res);
   });
 
