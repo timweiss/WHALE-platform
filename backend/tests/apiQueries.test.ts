@@ -323,7 +323,11 @@ async function enrolParticipant(enrolmentKey = 'key') {
     .post('/v1/enrolment')
     .send({ enrolmentKey, source: null });
   expect(enrol.statusCode).toBe(200);
-  return enrol.body as { token: string; studyId: number };
+  return enrol.body as {
+    token: string;
+    studyId: number;
+    phases: { interactionWidgetStrategy: string }[];
+  };
 }
 
 test.each(['/v1/reading', '/v1/reading/1/file'])(
@@ -1032,4 +1036,41 @@ test('should reject answers from tokens without an enrolment', async () => {
     .send(makeAnswer());
 
   expect(res.statusCode).toBe(403);
+});
+
+// group allocation
+
+test('should allocate groups by allocation order, not creation order', async () => {
+  const token = generateAdminToken();
+  const study = await request(app)
+    .post('/v1/study')
+    .set({ Authorization: 'Bearer ' + token })
+    .send(dummyStudy);
+
+  const createGroup = (allocationOrder: number, strategy: string) =>
+    request(app)
+      .post(`/v1/study/${study.body.id}/group`)
+      .set({ Authorization: 'Bearer ' + token })
+      .send({
+        internalName: `group${allocationOrder}`,
+        allocationOrder,
+        phases: [
+          {
+            internalName: 'phase',
+            fromDay: 0,
+            durationDays: 7,
+            interactionWidgetStrategy: strategy,
+          },
+        ],
+      });
+
+  // created in reverse allocation order
+  await createGroup(1, 'Bucketed');
+  await createGroup(0, 'Disabled');
+
+  const first = await enrolParticipant();
+  const second = await enrolParticipant();
+
+  expect(first.phases[0].interactionWidgetStrategy).toBe('Disabled');
+  expect(second.phases[0].interactionWidgetStrategy).toBe('Bucketed');
 });

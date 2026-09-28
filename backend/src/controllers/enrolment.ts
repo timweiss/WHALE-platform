@@ -221,7 +221,9 @@ export function createEnrolmentController(
     study: Study,
     experimentalGroups: StudyExperimentalGroup[],
   ): Promise<StudyExperimentalGroup> => {
-    const sortedGroups = experimentalGroups.sort((g) => g.allocationOrder);
+    const sortedGroups = [...experimentalGroups].sort(
+      (a, b) => a.allocationOrder - b.allocationOrder,
+    );
 
     if (study.allocationStrategy === 'Sequential') {
       const lastEnrolment = await enrolmentRepository.getLastEnrolmentByStudyId(
