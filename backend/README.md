@@ -6,7 +6,7 @@ built.
 
 ## Setup
 
-We use Node.js v20.13.1. If you use nvm, you can run `nvm use` to switch to the correct version.
+We use Node.js v24.21.0 (LTS). If you use nvm, you can run `nvm use` to switch to the correct version.
 
 To install all dependencies, run:
 
