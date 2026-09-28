@@ -65,7 +65,6 @@ services:
     #  - .env
     environment:
       - DB_CONNECTION=postgres://postgres:postgres@postgres:5432/postgres
-      - DB_USE_ENV=true
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-changeme}
