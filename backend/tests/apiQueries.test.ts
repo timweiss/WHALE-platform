@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import { initializeRepositories } from '../src/data/repositoryHelper';
 import { Observability } from '../src/o11y';
 import { DatabaseError } from '../src/config/errors';
+import { tokenLifetimeDays } from '../src/controllers/enrolment';
 
 // Mock observability to avoid actual logging during tests
 const mockObservability: Observability = {
@@ -787,4 +788,57 @@ test('should answer internal errors with 500 without leaking details', async () 
 
   expect(res.statusCode).toBe(500);
   expect(res.body).toEqual({ error: 'Internal server error' });
+});
+
+// token lifetime
+
+const DAY_SECONDS = 24 * 60 * 60;
+
+test('should issue participant tokens valid for twice the study duration', async () => {
+  await initializeBetweenGroupsStudy();
+  const { token } = await enrolParticipant();
+
+  const decoded = jwt.decode(token) as jwt.JwtPayload;
+
+  expect(decoded.iat).toBeLessThanOrEqual(Math.ceil(Date.now() / 1000));
+  expect(decoded.exp! - decoded.iat!).toBe(
+    dummyStudy.durationDays * 2 * DAY_SECONDS,
+  );
+});
+
+test('should fall back to 60 days for studies without a duration', () => {
+  expect(tokenLifetimeDays({ durationDays: 0 })).toBe(60);
+  expect(tokenLifetimeDays({ durationDays: 14 })).toBe(28);
+});
+
+test('should reject legacy tokens with a millisecond iat', async () => {
+  await initializeBetweenGroupsStudy();
+  await enrolParticipant();
+
+  // how tokens were issued before wave 2
+  const legacyToken = jwt.sign(
+    { role: 'participant', enrolmentId: 1, iat: Date.now() },
+    Config.auth.jwtSecret,
+    { expiresIn: '30d' },
+  );
+
+  const res = await request(app)
+    .get('/v2/enrolment')
+    .set({ Authorization: 'Bearer ' + legacyToken });
+
+  expect(res.statusCode).toBe(401);
+});
+
+test('should reject tokens signed with another algorithm', async () => {
+  const token = jwt.sign({ role: 'admin' }, Config.auth.jwtSecret, {
+    algorithm: 'HS512',
+    expiresIn: '1d',
+  });
+
+  const res = await request(app)
+    .post('/v1/study')
+    .set({ Authorization: 'Bearer ' + token })
+    .send(dummyStudy);
+
+  expect(res.statusCode).toBe(401);
 });

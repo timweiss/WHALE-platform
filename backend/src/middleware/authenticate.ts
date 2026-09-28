@@ -11,6 +11,20 @@ export interface UserPayload {
 
 export type RequestUser = UserPayload | JwtPayload;
 
+// Tokens issued before wave 2 set `iat` in milliseconds, which pushed their
+// expiry tens of thousands of years into the future. A seconds-based `iat`
+// stays below this threshold until the year 5138, so anything above it is
+// one of those tokens and is no longer accepted.
+const MILLISECOND_IAT_THRESHOLD = 1e11;
+
+function isLegacyToken(data: string | JwtPayload) {
+  return (
+    typeof data === 'object' &&
+    typeof data.iat === 'number' &&
+    data.iat > MILLISECOND_IAT_THRESHOLD
+  );
+}
+
 export const authenticate = async (
   req: Request,
   res: Response,
@@ -21,8 +35,10 @@ export const authenticate = async (
   if (authHeader) {
     const token = authHeader.replace('Bearer ', '');
     try {
-      const data = jwt.verify(token, Config.auth.jwtSecret);
-      if (!data) {
+      const data = jwt.verify(token, Config.auth.jwtSecret, {
+        algorithms: ['HS256'],
+      });
+      if (!data || isLegacyToken(data)) {
         return res
           .status(401)
           .send({ error: 'Not authorized to access this resource' });

@@ -130,7 +130,7 @@ export function createEnrolmentController(
               return [enrolment, experimentalGroup];
             });
 
-          const token = generateTokenForEnrolment(enrolment.id);
+          const token = generateTokenForEnrolment(enrolment.id, study);
 
           const phases =
             await studyRepository.getExperimentalGroupPhasesByExperimentalGroupId(
@@ -243,19 +243,33 @@ export function createEnrolmentController(
   observability.logger.info('loaded enrolment controller');
 }
 
-function generateTokenForEnrolment(enrolmentId: number) {
+// tokens outlive the study so participants can still upload remaining data
+// and answer the last questionnaires after the study has ended
+const TOKEN_LIFETIME_STUDY_DURATION_FACTOR = 2;
+// used for studies without a configured duration (duration_days defaults to 0)
+const FALLBACK_TOKEN_LIFETIME_DAYS = 60;
+
+export function tokenLifetimeDays(study: Pick<Study, 'durationDays'>) {
+  if (study.durationDays > 0) {
+    return study.durationDays * TOKEN_LIFETIME_STUDY_DURATION_FACTOR;
+  }
+  return FALLBACK_TOKEN_LIFETIME_DAYS;
+}
+
+function generateTokenForEnrolment(enrolmentId: number, study: Study) {
   const payload: UserPayload = {
     role: 'participant',
     enrolmentId: enrolmentId,
   };
 
+  // `iat` is set by jwt.sign (in seconds), `exp` is derived from it
   const token: JwtPayload = {
     iss: Config.app.hostname,
     sub: enrolmentId.toString(),
-    iat: Date.now(),
   };
 
   return jwt.sign(Object.assign({}, payload, token), Config.auth.jwtSecret, {
-    expiresIn: '30d',
+    algorithm: 'HS256',
+    expiresIn: tokenLifetimeDays(study) * 24 * 60 * 60,
   });
 }
