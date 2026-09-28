@@ -6,9 +6,11 @@ import { Observability } from '../o11y';
 import { ClientSensorReading } from '../model/sensor-reading';
 import { z } from 'zod';
 import { Queue } from 'bullmq';
+import { randomUUID } from 'node:crypto';
 import { SensorReadingJobData } from '../queues/sensorReadingQueue';
 
-const ReadingBatchRequestBody = z.array(ClientSensorReading);
+// the app uploads at most 200 readings per request
+const ReadingBatchRequestBody = z.array(ClientSensorReading).max(1000);
 
 export function createReadingController(
   sensorReadingRepository: ISensorReadingRepository,
@@ -36,8 +38,8 @@ export function createReadingController(
       return res.status(403).send({ error: 'Enrolment not found' });
     }
 
-    try {
-      if (sensorReadingQueue) {
+    if (sensorReadingQueue) {
+      try {
         const job = await sensorReadingQueue.add(
           'batch-sensor-reading',
           {
@@ -45,7 +47,9 @@ export function createReadingController(
             readings: parsed.data,
           },
           {
-            jobId: `enrolment-${enrolment.id}-${Date.now()}`,
+            // unique per batch: BullMQ silently ignores jobs whose id already
+            // exists, which dropped batches arriving in the same millisecond
+            jobId: `enrolment-${enrolment.id}-${randomUUID()}`,
           },
         );
 
@@ -55,20 +59,30 @@ export function createReadingController(
           readingCount: parsed.data.length,
         });
 
-        res.status(202).json({ jobId: job.id });
-      } else {
-        // Fallback to synchronous processing if queue is not available
-        observability.logger.warn(
-          'Queue not available, falling back to synchronous processing',
-        );
-
-        await sensorReadingRepository.createSensorReadingBatched(
-          enrolment.id,
-          parsed.data,
-        );
-
-        res.json({});
+        return res.status(202).json({ jobId: job.id });
+      } catch (e) {
+        // e.g. Redis is out of memory; the app keeps the readings and retries
+        observability.logger.error('Error queueing sensor reading batch', {
+          enrolmentId: enrolment.id,
+          error: e instanceof Error ? e.message : String(e),
+        });
+        return res
+          .status(503)
+          .send({ error: 'Readings cannot be accepted right now' });
       }
+    }
+
+    // Fallback to synchronous processing if queue is not available
+    observability.logger.warn(
+      'Queue not available, falling back to synchronous processing',
+    );
+
+    try {
+      await sensorReadingRepository.createSensorReadingBatched(
+        enrolment.id,
+        parsed.data,
+      );
+      res.json({});
     } catch (e) {
       observability.logger.error(`Error creating readings ${e}`, {
         error: JSON.stringify(e),

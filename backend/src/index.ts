@@ -25,7 +25,9 @@ export function makeExpressApp(
 ) {
   const app = express();
   app.set('trust proxy', Config.app.trustProxy);
-  app.use(express.json({ limit: '100mb' }));
+  // the app splits sensor uploads to stay below nginx's default 1 MB limit
+  // and shrinks its chunks when it receives a 413
+  app.use(express.json({ limit: '2mb' }));
 
   app.get('/', (req, res) => {
     res.send('Social Interaction Sensing!');

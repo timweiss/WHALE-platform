@@ -28,7 +28,7 @@ services:
       --appendfsync everysec
       --requirepass ${REDIS_PASSWORD:-changeme}
       --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
+      --maxmemory-policy noeviction
       --bind 0.0.0.0
       --protected-mode yes
 

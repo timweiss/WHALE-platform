@@ -8,6 +8,8 @@ import { initializeRepositories } from '../src/data/repositoryHelper';
 import { Observability } from '../src/o11y';
 import { DatabaseError } from '../src/config/errors';
 import { tokenLifetimeDays } from '../src/controllers/enrolment';
+import { Queue } from 'bullmq';
+import { SensorReadingJobData } from '../src/queues/sensorReadingQueue';
 
 // Mock observability to avoid actual logging during tests
 const mockObservability: Observability = {
@@ -919,4 +921,82 @@ test('should rate limit by the client IP forwarded by a local proxy', async () =
     expect((await lookup('203.0.113.1')).statusCode).toBe(429);
     expect((await lookup('203.0.113.2')).statusCode).toBe(404);
   });
+});
+
+// queued sensor reading ingestion
+
+function makeAppWithQueue(add: (...args: unknown[]) => Promise<unknown>) {
+  const queue = { add } as unknown as Queue<SensorReadingJobData>;
+  return makeExpressApp(
+    pool,
+    initializeRepositories(pool, mockObservability),
+    mockObservability,
+    queue,
+  );
+}
+
+test('should queue every batch under its own job id', async () => {
+  const add = jest.fn(
+    async (name: unknown, data: unknown, opts: { jobId: string }) => ({
+      id: opts.jobId,
+    }),
+  );
+  const queuedApp = makeAppWithQueue(add as never);
+  await initializeBetweenGroupsStudy();
+  const { token } = await enrolParticipant();
+
+  const upload = () =>
+    request(queuedApp)
+      .post('/v1/reading/batch')
+      .set({ Authorization: 'Bearer ' + token })
+      .send([makeReading()]);
+  // two batches arriving within the same millisecond
+  const now = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+  const [first, second] = await Promise.all([upload(), upload()]);
+  now.mockRestore();
+
+  expect(first.statusCode).toBe(202);
+  expect(second.statusCode).toBe(202);
+  expect(first.body.jobId).not.toBe(second.body.jobId);
+  expect(add).toHaveBeenCalledTimes(2);
+});
+
+test('should answer 503 when the queue rejects a batch', async () => {
+  const queuedApp = makeAppWithQueue(async () => {
+    throw new Error('OOM command not allowed when used memory > maxmemory');
+  });
+  await initializeBetweenGroupsStudy();
+  const { token } = await enrolParticipant();
+
+  const res = await request(queuedApp)
+    .post('/v1/reading/batch')
+    .set({ Authorization: 'Bearer ' + token })
+    .send([makeReading()]);
+
+  expect(res.statusCode).toBe(503);
+});
+
+test('should reject request bodies over the size limit with 413', async () => {
+  await initializeBetweenGroupsStudy();
+  const { token } = await enrolParticipant();
+
+  const res = await request(app)
+    .post('/v1/reading/batch')
+    .set({ Authorization: 'Bearer ' + token })
+    .send([makeReading({ data: 'x'.repeat(3 * 1024 * 1024) })]);
+
+  expect(res.statusCode).toBe(413);
+  expect(res.body).toHaveProperty('error');
+});
+
+test('should reject batches with more than 1000 readings', async () => {
+  await initializeBetweenGroupsStudy();
+  const { token } = await enrolParticipant();
+
+  const res = await request(app)
+    .post('/v1/reading/batch')
+    .set({ Authorization: 'Bearer ' + token })
+    .send(Array.from({ length: 1001 }, () => makeReading()));
+
+  expect(res.statusCode).toBe(400);
 });
