@@ -53,7 +53,7 @@ public class AccessibilitySensor extends AbstractSensor {
 		// AccessibilityLogService runs in the same process, so events are handed over directly
 		AccessibilityDataBus.setNameListener(line -> {
 			if (m_IsRunning) {
-				onLogDataItemBuffered(System.currentTimeMillis(), line);
+				onLogDataItem(System.currentTimeMillis(), line);
 			}
 		});
 
@@ -64,7 +64,7 @@ public class AccessibilitySensor extends AbstractSensor {
 	public void stop() {
 		m_IsRunning = false;
 		AccessibilityDataBus.setNameListener(null);
-		flushBufferedLogData();
+		flushLogData();
 		if (m_Context == null)
 			return;
 		m_Context.stopService(m_Intent);

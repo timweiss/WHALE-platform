@@ -61,6 +61,7 @@ public class MyProximitySensor extends AbstractSensor implements SensorEventList
 			m_IsRunning = false;
 			sensorManager.unregisterListener(this);
 			closeDataSource();
+			flushLogData();
 		}	
 	}
 

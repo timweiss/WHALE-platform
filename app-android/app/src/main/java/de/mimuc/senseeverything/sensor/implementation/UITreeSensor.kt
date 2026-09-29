@@ -39,7 +39,7 @@ class UITreeSensor(applicationContext: Context, database: AppDatabase) :
         AccessibilityDataBus.snapshotBatchListener = AccessibilityDataBus.SnapshotBatchListener { payload, count, _ ->
             if (!m_IsRunning) return@SnapshotBatchListener
             WHALELog.d(TAG, "Received batch ($count snapshots, ${payload.length} chars compressed)")
-            onLogDataItemBuffered(System.currentTimeMillis(), payload)
+            onLogDataItem(System.currentTimeMillis(), payload)
         }
 
         m_IsRunning = true
@@ -48,6 +48,6 @@ class UITreeSensor(applicationContext: Context, database: AppDatabase) :
     override fun stop() {
         m_IsRunning = false
         AccessibilityDataBus.snapshotBatchListener = null
-        flushBufferedLogData()
+        flushLogData()
     }
 }

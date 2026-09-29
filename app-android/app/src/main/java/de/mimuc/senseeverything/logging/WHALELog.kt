@@ -2,11 +2,8 @@ package de.mimuc.senseeverything.logging
 
 import android.util.Log
 import de.mimuc.senseeverything.db.models.LogData
+import de.mimuc.senseeverything.sensor.BufferedLogWriter
 import de.mimuc.senseeverything.service.SEApplicationController
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 /**
@@ -22,7 +19,9 @@ import org.json.JSONObject
  */
 object WHALELog {
     private const val SENSOR_NAME = "Logging"
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // batches log rows like the sensors do; created once the database is available
+    private var writer: BufferedLogWriter? = null
 
     private const val DB_LOG_LEVEL = Log.INFO // Log level to store in DB
 
@@ -116,42 +115,44 @@ object WHALELog {
         saveToDatabase("VERBOSE", tag, message, throwable)
     }
 
+    @Synchronized
+    private fun writer(): BufferedLogWriter? {
+        if (writer == null) {
+            val appController = SEApplicationController.getInstance() ?: return null
+            writer = BufferedLogWriter(appController.getAppDatabase().logDataDao())
+        }
+        return writer
+    }
+
     /**
-     * Save log entry to database asynchronously.
+     * Queue log entry for the database. Rows are written in batches; warnings and errors are
+     * written right away so the lines before a crash are not lost.
      */
     private fun saveToDatabase(level: String, tag: String, message: String, throwable: Throwable?) {
-        scope.launch {
-            try {
-                val appController = SEApplicationController.getInstance()
-                if (appController == null) {
-                    Log.w("WHALELog", "SEApplicationController not initialized, skipping database log")
-                    return@launch
-                }
-
-                val db = appController.getAppDatabase()
-                val logDataDao = db.logDataDao()
-
-                val jsonData = JSONObject().apply {
-                    put("level", level)
-                    put("tag", tag)
-                    put("message", message)
-                    if (throwable != null) {
-                        put("exception", throwable.toString())
-                        put("stackTrace", Log.getStackTraceString(throwable))
-                    }
-                }
-
-                val logData = LogData(
-                    System.currentTimeMillis(),
-                    SENSOR_NAME,
-                    jsonData.toString()
-                )
-
-                logDataDao.insertAll(logData)
-            } catch (e: Exception) {
-                // Fallback to Android Log if database operation fails
-                Log.e("WHALELog", "Failed to save log to database", e)
+        try {
+            val writer = writer()
+            if (writer == null) {
+                Log.w("WHALELog", "SEApplicationController not initialized, skipping database log")
+                return
             }
+
+            val jsonData = JSONObject().apply {
+                put("level", level)
+                put("tag", tag)
+                put("message", message)
+                if (throwable != null) {
+                    put("exception", throwable.toString())
+                    put("stackTrace", Log.getStackTraceString(throwable))
+                }
+            }
+
+            writer.add(LogData(System.currentTimeMillis(), SENSOR_NAME, jsonData.toString()))
+            if (level == "WARN" || level == "ERROR") {
+                writer.flush()
+            }
+        } catch (e: Exception) {
+            // Fallback to Android Log if database operation fails
+            Log.e("WHALELog", "Failed to save log to database", e)
         }
     }
 }

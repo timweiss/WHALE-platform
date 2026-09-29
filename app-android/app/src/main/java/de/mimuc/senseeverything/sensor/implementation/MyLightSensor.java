@@ -54,6 +54,7 @@ public class MyLightSensor extends AbstractSensor implements SensorEventListener
 			m_IsRunning = false;
 			sensorManager.unregisterListener(this);
 			closeDataSource();
+			flushLogData();
 		}	
 	}
 
