@@ -15,6 +15,7 @@ import de.mimuc.senseeverything.sensor.implementation.BluetoothSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor;
 import de.mimuc.senseeverything.sensor.implementation.DeviceInfoSensor;
 import de.mimuc.senseeverything.sensor.implementation.InteractionLogSensor;
+import de.mimuc.senseeverything.sensor.implementation.MemorySensor;
 import de.mimuc.senseeverything.sensor.implementation.MyLightSensor;
 import de.mimuc.senseeverything.sensor.implementation.MyProximitySensor;
 import de.mimuc.senseeverything.sensor.implementation.NotificationSensor;
@@ -51,6 +52,7 @@ public class SingletonSensorList {
 		this.list.add(new UsageStatsSensor(aContext, database));
 		this.list.add(new ActivityRecognitionSensor(aContext, database));
 		this.list.add(new DeviceInfoSensor(aContext, database));
+		this.list.add(new MemorySensor(aContext, database));
 	}
 
 	public List<AbstractSensor> getOrInitializeList(Context pContext, AppDatabase database, String sensitiveDataSalt) {

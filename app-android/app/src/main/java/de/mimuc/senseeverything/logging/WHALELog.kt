@@ -125,6 +125,19 @@ object WHALELog {
     }
 
     /**
+     * Queue a data row that is not a log message (e.g. a memory snapshot) through the same
+     * batched writer, so diagnostics don't need a writer of their own.
+     */
+    internal fun saveDataRow(sensorName: String, data: String) {
+        val writer = writer()
+        if (writer == null) {
+            Log.w("WHALELog", "SEApplicationController not initialized, skipping $sensorName row")
+            return
+        }
+        writer.add(LogData(System.currentTimeMillis(), sensorName, data))
+    }
+
+    /**
      * Queue log entry for the database. Rows are written in batches; warnings and errors are
      * written right away so the lines before a crash are not lost.
      */

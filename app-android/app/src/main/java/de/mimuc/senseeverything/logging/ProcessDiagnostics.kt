@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.ApplicationExitInfo
 import android.content.ComponentCallbacks2
 import android.content.Context
+import android.os.SystemClock
 import de.mimuc.senseeverything.sensor.BufferedLogWriter
 
 /**
@@ -16,6 +17,11 @@ object ProcessDiagnostics {
     private const val PREFS = "process_diagnostics"
     private const val MAX_EXIT_REASONS = 20
     private const val CRASH_FLUSH_TIMEOUT_MS = 2_000L
+    private const val BACKGROUND_TRIM_MIN_INTERVAL_MS = 15 * 60 * 1000L
+
+    // per process, as every process has its own copy of this object
+    @Volatile
+    private var lastBackgroundTrimAt: Long? = null
 
     /**
      * Logs every exit of the current process that has not been reported yet. Each process reports
@@ -66,13 +72,50 @@ object ProcessDiagnostics {
         }
     }
 
+    /**
+     * Since Android 14 only TRIM_MEMORY_UI_HIDDEN and TRIM_MEMORY_BACKGROUND are delivered, so the
+     * absence of the RUNNING_*, MODERATE and COMPLETE levels does not mean absence of pressure.
+     * Exit reasons and [logMemorySnapshot] are the reliable signals there.
+     */
     @JvmStatic
-    fun onTrimMemory(level: Int) {
+    fun onTrimMemory(context: Context, level: Int) {
         // UI_HIDDEN only means the app's UI went to the background, not memory pressure
         if (level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) return
 
+        val isBackground = level == ComponentCallbacks2.TRIM_MEMORY_BACKGROUND
+        if (isBackground) {
+            // a cached :remote process (LogService stopped, accessibility service still bound)
+            // receives BACKGROUND every few seconds, so handle it at most every 15 minutes
+            val now = SystemClock.elapsedRealtime()
+            if (!MemorySnapshot.hasIntervalPassed(now, lastBackgroundTrimAt, BACKGROUND_TRIM_MIN_INTERVAL_MS)) return
+            lastBackgroundTrimAt = now
+        }
+
         WHALELog.i(TAG, "onTrimMemory process=${Application.getProcessName()} level=${trimLevelName(level)}")
+        if (isBackground) {
+            // inline so the row is buffered before the flush below
+            writeMemorySnapshot(context, "background")
+        }
         BufferedLogWriter.flushAll()
+    }
+
+    /**
+     * Writes a [MemorySnapshot] row for this process. Runs on its own short-lived thread so
+     * callers on the main thread don't do file IO.
+     */
+    @JvmStatic
+    fun logMemorySnapshot(context: Context, reason: String) {
+        Thread({ writeMemorySnapshot(context, reason) }, "MemorySnapshot").start()
+    }
+
+    private fun writeMemorySnapshot(context: Context, reason: String) {
+        try {
+            val json = MemorySnapshot.collect(context, reason).toJson()
+            WHALELog.d(TAG, "memorySnapshot $json")
+            WHALELog.saveDataRow(MemorySnapshot.SENSOR_NAME, json)
+        } catch (e: Exception) {
+            WHALELog.e(TAG, "Failed to write memory snapshot: ${e.message}", e)
+        }
     }
 
     private fun describe(exit: ApplicationExitInfo): String =

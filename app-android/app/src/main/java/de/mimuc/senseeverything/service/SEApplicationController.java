@@ -66,12 +66,13 @@ public class SEApplicationController extends Application implements Configuratio
 
         ProcessDiagnostics.installCrashFlush();
         ProcessDiagnostics.logUnreportedExitReasons(this);
+        ProcessDiagnostics.logMemorySnapshot(this, "start");
     }
 
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
-        ProcessDiagnostics.onTrimMemory(level);
+        ProcessDiagnostics.onTrimMemory(this, level);
     }
 
     /**
