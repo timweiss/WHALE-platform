@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.WorkInfo
@@ -160,8 +161,10 @@ class StudyHomeViewModel @Inject constructor(
         .map { workInfos -> workInfos.firstOrNull() }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
+    // Room re-runs this count on every LogData write, including writes from the :remote process.
+    // Only keep it subscribed while the home screen is visible, not for the ViewModel's lifetime.
     val staleUnsyncedItems: StateFlow<Long> = database.logDataDao().getUnsyncedCountBeforeFlow(
-        System.currentTimeMillis() - StaleUnsyncedSensorReadingsCheckWorker.STALE_DURATION).stateIn(viewModelScope, SharingStarted.Lazily, 0)
+        System.currentTimeMillis() - StaleUnsyncedSensorReadingsCheckWorker.STALE_DURATION).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     init {
         load()
@@ -322,7 +325,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val unsyncedBeforeEnd = viewModel.unsyncedCountBeforeStudyEnd.collectAsState()
     val uploadWorkInfo = viewModel.uploadWorkInfo.collectAsState()
     val duringStudyUploadWorkInfo = viewModel.duringStudyUploadWorkInfo.collectAsState()
-    val staleUnsyncedItems = viewModel.staleUnsyncedItems.collectAsState()
+    val staleUnsyncedItems = viewModel.staleUnsyncedItems.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
