@@ -64,6 +64,7 @@ public class SEApplicationController extends Application implements Configuratio
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
 
+        ProcessDiagnostics.installCrashFlush();
         ProcessDiagnostics.logUnreportedExitReasons(this);
     }
 

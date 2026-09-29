@@ -7,6 +7,7 @@ import android.view.accessibility.AccessibilityEvent
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.sensor.BufferedLogWriter
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -55,6 +56,8 @@ class AccessibilityLogService : AccessibilityService() {
     override fun onDestroy() {
         WHALELog.i(TAG, "service stopped")
         consumers.forEach { it.shutdown() }
+        // write the batches delivered during shutdown now instead of after the flush interval
+        BufferedLogWriter.flushAll()
         stopForeground(true)
         super.onDestroy()
     }

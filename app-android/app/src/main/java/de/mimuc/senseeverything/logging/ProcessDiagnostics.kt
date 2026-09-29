@@ -15,6 +15,7 @@ object ProcessDiagnostics {
     private const val TAG = "ProcessDiagnostics"
     private const val PREFS = "process_diagnostics"
     private const val MAX_EXIT_REASONS = 20
+    private const val CRASH_FLUSH_TIMEOUT_MS = 2_000L
 
     /**
      * Logs every exit of the current process that has not been reported yet. Each process reports
@@ -46,6 +47,23 @@ object ProcessDiagnostics {
                 WHALELog.e(TAG, "Failed to read process exit reasons: ${e.message}", e)
             }
         }, "ProcessExitLogger").start()
+    }
+
+    /**
+     * Writes rows still buffered by [BufferedLogWriter] before an uncaught exception ends the
+     * process, then hands the exception to the previous handler (which kills the process).
+     */
+    @JvmStatic
+    fun installCrashFlush() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                BufferedLogWriter.flushAllBlocking(CRASH_FLUSH_TIMEOUT_MS)
+            } catch (_: Throwable) {
+                // never keep the crash from being handled
+            }
+            previous?.uncaughtException(thread, throwable)
+        }
     }
 
     @JvmStatic

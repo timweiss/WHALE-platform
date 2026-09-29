@@ -32,6 +32,20 @@ class BufferedLogWriter @JvmOverloads constructor(
         fun flushAll() {
             synchronized(instances) { instances.toList() }.forEach { it.flush() }
         }
+
+        /**
+         * Writes everything buffered in this process and waits for it, e.g. before the process dies
+         * from an uncaught exception. Gives up after [timeoutMs] in total.
+         */
+        @JvmStatic
+        fun flushAllBlocking(timeoutMs: Long) {
+            val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs)
+            synchronized(instances) { instances.toList() }.forEach {
+                val remainingMs = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime())
+                if (remainingMs <= 0) return
+                it.flushBlocking(remainingMs)
+            }
+        }
     }
 
     private val lock = Any()
@@ -60,6 +74,15 @@ class BufferedLogWriter @JvmOverloads constructor(
     fun flush() {
         if (executor.isShutdown) return
         executor.execute { writePending() }
+    }
+
+    /** Writes everything buffered so far and waits up to [timeoutMs] for it. Never throws. */
+    fun flushBlocking(timeoutMs: Long) {
+        try {
+            executor.submit { writePending() }.get(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (e: Exception) {
+            System.err.println("BufferedLogWriter: blocking flush failed: $e")
+        }
     }
 
     private fun writePending() {

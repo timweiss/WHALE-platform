@@ -77,6 +77,33 @@ class BufferedLogWriterTest {
     }
 
     @Test
+    fun blockingFlushHasWrittenRowsWhenItReturns() {
+        val writer = BufferedLogWriter(dao, maxBatchSize = 50, flushIntervalMs = 60_000L, executor = executor)
+        repeat(3) { writer.add(row(it)) }
+        writer.flushBlocking(5_000L)
+
+        assertEquals(3, dao.inserts.flatten().size)
+    }
+
+    @Test
+    fun flushAllBlockingFlushesLiveWriters() {
+        val otherDao = FakeDao()
+        val otherExecutor = Executors.newSingleThreadScheduledExecutor()
+        try {
+            val writer = BufferedLogWriter(dao, maxBatchSize = 50, flushIntervalMs = 60_000L, executor = executor)
+            val other = BufferedLogWriter(otherDao, maxBatchSize = 50, flushIntervalMs = 60_000L, executor = otherExecutor)
+            writer.add(row(1))
+            other.add(row(2))
+            BufferedLogWriter.flushAllBlocking(5_000L)
+
+            assertEquals(1, dao.inserts.flatten().size)
+            assertEquals(1, otherDao.inserts.flatten().size)
+        } finally {
+            otherExecutor.shutdownNow()
+        }
+    }
+
+    @Test
     fun flushAllFlushesLiveWriters() {
         val writer = BufferedLogWriter(dao, maxBatchSize = 50, flushIntervalMs = 60_000L, executor = executor)
         writer.add(row(1))

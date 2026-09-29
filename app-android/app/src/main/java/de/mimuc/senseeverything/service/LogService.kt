@@ -15,6 +15,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.permissions.PermissionNotificationHelper
 import de.mimuc.senseeverything.sensor.AbstractSensor
+import de.mimuc.senseeverything.sensor.BufferedLogWriter
 import de.mimuc.senseeverything.sensor.SingletonSensorList
 import de.mimuc.senseeverything.service.floatingWidget.NotificationTriggerFloatingWidgetService
 import de.mimuc.senseeverything.service.healthcheck.HealthcheckResult
@@ -89,6 +90,9 @@ class LogService : AbstractService() {
                 WHALELog.w(TAG, "lockUnlockReceiver was not registered")
             }
         }
+
+        // write what the stopped sensors buffered now instead of after the flush interval
+        BufferedLogWriter.flushAll()
 
         super.onDestroy()
     }
