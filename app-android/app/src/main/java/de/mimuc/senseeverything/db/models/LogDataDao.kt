@@ -15,7 +15,8 @@ interface LogDataDao {
     @Insert
     fun insertAll(vararg logDatas: LogData?)
 
-    @Query("SELECT * FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC LIMIT :n")
+    // id breaks ties between rows with the same timestamp, so batches have a defined order
+    @Query("SELECT * FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC, id ASC LIMIT :n")
     fun getNextNUnsyncedBefore(n: Int, cutoffTimestamp: Long): List<LogData>
 
     @get:Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE")

@@ -1,11 +1,14 @@
 package de.mimuc.senseeverything.db.models;
 
 import androidx.room.Entity;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 import java.util.UUID;
 
-@Entity
+// The upload reads the backlog in timestamp order in batches (deleting each uploaded batch), and the
+// unsynced counts filter by sync state and time; both are served by this index.
+@Entity(indices = {@Index(value = {"synced", "timestamp"})})
 public class LogData {
 
     @PrimaryKey(autoGenerate = true)
