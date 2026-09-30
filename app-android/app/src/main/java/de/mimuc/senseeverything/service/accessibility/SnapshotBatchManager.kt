@@ -31,7 +31,6 @@ class SnapshotBatchManager(
     private var flushJob: Job? = null
 
     init {
-        purgeStagingTable()
         startPeriodicFlush()
     }
 
@@ -82,23 +81,6 @@ class SnapshotBatchManager(
                 if (batchQueue.isNotEmpty()) {
                     flushBatch()
                 }
-            }
-        }
-    }
-
-    /**
-     * Batches used to be staged in the snapshot_batches table for a broadcast hop.
-     * The table is no longer written to; remove rows left over from older app versions.
-     */
-    private fun purgeStagingTable() {
-        scope.launch {
-            try {
-                val deleted = database.snapshotBatchDao().deleteOlderThan(System.currentTimeMillis())
-                if (deleted > 0) {
-                    WHALELog.i(TAG, "Purged $deleted leftover snapshot batches")
-                }
-            } catch (e: Exception) {
-                WHALELog.e(TAG, "Failed to purge snapshot batches: ${e.message}", e)
             }
         }
     }

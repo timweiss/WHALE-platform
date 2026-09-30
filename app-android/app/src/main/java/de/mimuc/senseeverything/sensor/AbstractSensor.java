@@ -77,14 +77,6 @@ public abstract class AbstractSensor implements Serializable  {
 		getWriter().add(new LogData(timestamp, SENSOR_NAME + "+" + subsensor, data));
     }
 
-	public void tryLogStringData(String data) throws SensorNotRunningException {
-		if (m_IsRunning) {
-			onLogDataItem(System.currentTimeMillis(), data);
-		} else {
-			throw new SensorNotRunningException();
-		}
-	}
-
 	protected void onLogDataItemWithFile(Long timestamp, String data, String fileName) {
 		getWriter().add(new LogData(timestamp, SENSOR_NAME, data, true, fileName));
 	}
