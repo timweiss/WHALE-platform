@@ -84,8 +84,8 @@ export function createReadingController(
       );
       res.json({});
     } catch (e) {
-      observability.logger.error(`Error creating readings ${e}`, {
-        error: JSON.stringify(e),
+      observability.logger.error('Error creating readings', {
+        error: e instanceof Error ? e.message : String(e),
       });
       res.status(500).send({ error: 'Error creating readings' });
     }

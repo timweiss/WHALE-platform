@@ -46,14 +46,11 @@ export function createSensorReadingWorker(
     async (job: Job<SensorReadingJobData>) => {
       const { enrolmentId, readings } = job.data;
 
-      observability.logger.info(
-        `Processing sensor reading batch for enrolment ${enrolmentId}`,
-        {
-          jobId: job.id,
-          enrolmentId,
-          readingCount: readings.length,
-        },
-      );
+      observability.logger.info('Processing sensor reading batch', {
+        jobId: job.id,
+        enrolmentId,
+        readingCount: readings.length,
+      });
 
       try {
         const startTime = Date.now();
@@ -66,7 +63,7 @@ export function createSensorReadingWorker(
         const duration = Date.now() - startTime;
 
         observability.logger.info(
-          `Successfully processed sensor reading batch for enrolment ${enrolmentId}`,
+          'Successfully processed sensor reading batch',
           {
             jobId: job.id,
             enrolmentId,
@@ -81,14 +78,11 @@ export function createSensorReadingWorker(
           durationMs: duration,
         };
       } catch (error) {
-        observability.logger.error(
-          `Error processing sensor reading batch for enrolment ${enrolmentId}`,
-          {
-            jobId: job.id,
-            enrolmentId,
-            error: error instanceof Error ? error.message : String(error),
-          },
-        );
+        observability.logger.error('Error processing sensor reading batch', {
+          jobId: job.id,
+          enrolmentId,
+          error: error instanceof Error ? error.message : String(error),
+        });
 
         // Re-throw to let BullMQ handle retries
         throw error;

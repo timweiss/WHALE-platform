@@ -1,3 +1,4 @@
+import './instrumentation';
 import { usePool } from './config/database';
 import { setupO11y } from './o11y';
 import { initializeRepositories } from './data/repositoryHelper';

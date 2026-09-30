@@ -48,8 +48,6 @@ export function createEnrolmentController(
             .send({ error: 'Missing required fields', fields: body.error });
         }
 
-        span.setAttribute('enrolmentKey', body.data.enrolmentKey);
-
         const study = await studyRepository.getStudyByEnrolmentKey(
           req.body.enrolmentKey,
         );

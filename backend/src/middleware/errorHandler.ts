@@ -26,9 +26,11 @@ export function createErrorHandler(
         .send({ error: err.expose ? err.message : 'Invalid request' });
     }
 
+    // the route template, not the path: paths can carry study keys
+    // (/v1/study/:idOrKey)
     observability.logger.error('Unhandled error while processing request', {
       method: req.method,
-      path: req.path,
+      route: req.route ? `${req.baseUrl}${req.route.path}` : undefined,
       error: err instanceof Error ? err.message : String(err),
     });
 
