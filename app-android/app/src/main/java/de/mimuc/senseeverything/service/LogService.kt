@@ -313,7 +313,7 @@ class LogService : AbstractService() {
 
     /* Section: Healthcheck */
     private fun runHealthcheck(context: Context): HealthcheckResult {
-        val result = checkServices(context)
+        val result = checkServices(context, "log_service")
         if (!result.allHealthy) {
             WHALELog.w(TAG, "Healthcheck failed - services may need attention")
 

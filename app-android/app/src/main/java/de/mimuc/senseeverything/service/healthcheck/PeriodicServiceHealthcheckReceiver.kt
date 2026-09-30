@@ -14,7 +14,7 @@ class PeriodicServiceHealthcheckReceiver : BroadcastReceiver() {
         if (context == null) return
 
         WHALELog.i(TAG, "Periodic healthcheck triggered")
-        val result = ServiceHealthcheck.checkServices(context)
+        val result = ServiceHealthcheck.checkServices(context, "periodic")
 
         if (!result.allHealthy) {
             WHALELog.w(

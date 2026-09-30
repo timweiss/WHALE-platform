@@ -94,5 +94,5 @@ private suspend fun rescheduleAlarms(context: Context, database: AppDatabase, da
     PeriodicServiceHealthcheckReceiver.schedule(context)
 
     // Run immediate healthcheck after boot
-    ServiceHealthcheck.checkServices(context)
+    ServiceHealthcheck.checkServices(context, "boot")
 }

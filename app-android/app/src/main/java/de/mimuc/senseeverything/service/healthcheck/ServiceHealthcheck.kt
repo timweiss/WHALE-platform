@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.service.healthcheck
 
 import android.app.ActivityManager
+import android.app.Application
 import android.content.Context
 import android.provider.Settings
 import android.text.TextUtils
@@ -13,30 +14,46 @@ import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
 
 object ServiceHealthcheck {
 
-    fun checkServices(context: Context): HealthcheckResult {
-        val notificationServiceHealthy = checkNotificationService(context)
-        val accessibilityServiceHealthy = checkAccessibilityService(context)
-        val logServiceHealthy = checkLogService(context)
+    /** [trigger] names what ran the check (periodic, log_service, boot) in the report. */
+    fun checkServices(context: Context, trigger: String): HealthcheckResult {
+        val notificationService = checkNotificationService(context)
+        val accessibilityService = checkAccessibilityService(context)
+        val logService = checkLogService(context)
         val permissionsGranted = checkPermissions(context)
 
-        WHALELog.i(
-            TAG,
-            "NotificationService: $notificationServiceHealthy"
-        )
-        WHALELog.i(
-            TAG,
-            "AccessibilityService: $accessibilityServiceHealthy"
-        )
-        WHALELog.i(TAG, "LogService: $logServiceHealthy")
-        WHALELog.i(TAG, "Permissions: $permissionsGranted")
+        writeReport(trigger, notificationService, accessibilityService, logService, permissionsGranted)
 
         return HealthcheckResult(
-            notificationServiceHealthy = notificationServiceHealthy,
-            accessibilityServiceHealthy = accessibilityServiceHealthy,
-            logServiceHealthy = logServiceHealthy,
+            notificationServiceHealthy = notificationService.healthy,
+            accessibilityServiceHealthy = accessibilityService.healthy,
+            logServiceHealthy = logService.healthy,
             permissionsGranted = permissionsGranted,
             timestamp = System.currentTimeMillis()
         )
+    }
+
+    /** One structured "Healthcheck" row per check, replacing the former text lines per component. */
+    private fun writeReport(
+        trigger: String,
+        notificationService: ComponentStatus,
+        accessibilityService: ComponentStatus,
+        logService: ComponentStatus,
+        permissionsGranted: Map<String, Boolean>
+    ) {
+        try {
+            val json = HealthcheckReport.of(
+                trigger = trigger,
+                process = Application.getProcessName(),
+                notificationService = notificationService,
+                accessibilityService = accessibilityService,
+                logService = logService,
+                permissions = permissionsGranted
+            ).toJson()
+            WHALELog.d(TAG, "healthcheck $json")
+            WHALELog.saveDataRow(HealthcheckReport.SENSOR_NAME, json)
+        } catch (e: Exception) {
+            WHALELog.e(TAG, "Failed to write healthcheck report: ${e.message}", e)
+        }
     }
 
     private fun checkPermissions(context: Context): Map<String, Boolean> {
@@ -50,14 +67,14 @@ object ServiceHealthcheck {
         return perms
     }
 
-    private fun checkNotificationService(context: Context): Boolean {
+    private fun checkNotificationService(context: Context): ComponentStatus {
         // Check 1: Permission enabled
         val hasPermission = NotificationManagerCompat.getEnabledListenerPackages(context)
             .contains(context.packageName)
 
         if (!hasPermission) {
             WHALELog.w(TAG, "NotificationListener permission not enabled")
-            return false
+            return ComponentStatus.failing("permission_missing")
         }
 
         // Check 2: Verify service is actually running
@@ -65,22 +82,24 @@ object ServiceHealthcheck {
 
         if (!serviceRunning) {
             WHALELog.w(TAG, "NotificationListener permission enabled but service not running")
+            return ComponentStatus.failing("not_running")
         }
 
-        return serviceRunning
+        return ComponentStatus.OK
     }
 
-    private fun checkLogService(context: Context): Boolean {
+    private fun checkLogService(context: Context): ComponentStatus {
         val serviceRunning = isServiceRunning(context, LogService::class.java)
 
         if (!serviceRunning) {
             WHALELog.w(TAG, "LogService not running")
+            return ComponentStatus.failing("not_running")
         }
 
-        return serviceRunning
+        return ComponentStatus.OK
     }
 
-    private fun checkAccessibilityService(context: Context): Boolean {
+    private fun checkAccessibilityService(context: Context): ComponentStatus {
         // Check 1: Permission enabled
         var accessibilityEnabled = 0
         try {
@@ -90,12 +109,12 @@ object ServiceHealthcheck {
             )
         } catch (e: Settings.SettingNotFoundException) {
             WHALELog.w(TAG, "Accessibility settings not found")
-            return false
+            return ComponentStatus.failing("settings_unavailable")
         }
 
         if (accessibilityEnabled != 1) {
             WHALELog.w(TAG, "Accessibility not enabled")
-            return false
+            return ComponentStatus.failing("accessibility_off")
         }
 
         val settingValue = Settings.Secure.getString(
@@ -105,7 +124,7 @@ object ServiceHealthcheck {
 
         if (settingValue == null) {
             WHALELog.w(TAG, "Accessibility enabled services setting is null")
-            return false
+            return ComponentStatus.failing("service_not_enabled")
         }
 
         val mStringColonSplitter = TextUtils.SimpleStringSplitter(':')
@@ -122,7 +141,7 @@ object ServiceHealthcheck {
 
         if (!hasPermission) {
             WHALELog.w(TAG, "AccessibilityService not in enabled services list")
-            return false
+            return ComponentStatus.failing("service_not_enabled")
         }
 
         // Check 2: Verify service is actually running
@@ -130,9 +149,10 @@ object ServiceHealthcheck {
 
         if (!serviceRunning) {
             WHALELog.w(TAG, "AccessibilityService permission enabled but service not running")
+            return ComponentStatus.failing("not_running")
         }
 
-        return serviceRunning
+        return ComponentStatus.OK
     }
 
     private fun isServiceRunning(context: Context, serviceClass: Class<*>): Boolean {
