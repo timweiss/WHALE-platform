@@ -5,8 +5,11 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.SystemClock
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.google.android.gms.location.ActivityRecognition
 import com.google.android.gms.location.ActivityTransition
 import com.google.android.gms.location.ActivityTransitionRequest
@@ -18,8 +21,13 @@ import de.mimuc.senseeverything.sensor.AbstractSensor
 
 class ActivityRecognitionSensor(val context: Context, database: AppDatabase) :
     AbstractSensor(context, database) {
-    var receiverIntent: PendingIntent? = null
-    val TAG = "ActivityRecognitionSensor"
+    private var receiverIntent: PendingIntent? = null
+    private var receiverRegistered = false
+
+    init {
+        TAG = "ActivityRecognitionSensor"
+        SENSOR_NAME = "Activity Recognition"
+    }
 
     override fun isAvailable(context: Context?): Boolean {
         return true
@@ -33,78 +41,100 @@ class ActivityRecognitionSensor(val context: Context, database: AppDatabase) :
         return true
     }
 
-    override fun getSensorName(): String? {
-        return "Activity Recognition"
-    }
-
-    private val myBroadcastReceiver = object : BroadcastReceiver() {
+    private val transitionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (ActivityTransitionResult.hasResult(intent)) {
-                val result = ActivityTransitionResult.extractResult(intent)!!
-                for (event in result.transitionEvents) {
-                    onLogDataItem(
-                        event.elapsedRealTimeNanos,
-                        "Activity: ${getActivityTypeName(event.activityType)}, Transition: ${getActivityTransitionName(event.transitionType)}"
-                    )
-                }
+            if (!ActivityTransitionResult.hasResult(intent)) return
+
+            val result = ActivityTransitionResult.extractResult(intent) ?: return
+            for (event in result.transitionEvents) {
+                onLogDataItem(
+                    wallClockMillis(event.elapsedRealTimeNanos),
+                    "Activity: ${getActivityTypeName(event.activityType)}, Transition: ${getActivityTransitionName(event.transitionType)}"
+                )
             }
         }
     }
 
     override fun start(context: Context) {
-        val request = ActivityTransitionRequest(getTransitions())
+        super.start(context)
 
-        receiverIntent = PendingIntent.getBroadcast(
-            context,
-            0,
-            Intent(context, myBroadcastReceiver::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        // LogService starts continuous sensors again on every sampling cycle
+        if (receiverRegistered) return
 
         if (ActivityCompat.checkSelfPermission(
                 context, Manifest.permission.ACTIVITY_RECOGNITION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
+            WHALELog.w(TAG, "ACTIVITY_RECOGNITION not granted")
             return
         }
 
-        val task = ActivityRecognition.getClient(context)
-            .requestActivityTransitionUpdates(request, receiverIntent!!)
+        ContextCompat.registerReceiver(
+            context,
+            transitionReceiver,
+            IntentFilter(ACTION_ACTIVITY_TRANSITION),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        receiverRegistered = true
 
-        task.addOnSuccessListener {
-            m_IsRunning = true
-            WHALELog.i(TAG, "Activity transition updates requested successfully")
-        }
+        // Play services adds the transition result to the intent, so it has to be mutable, and
+        // a mutable PendingIntent needs an explicit package
+        val intent = Intent(ACTION_ACTIVITY_TRANSITION).setPackage(context.packageName)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+        )
+        receiverIntent = pendingIntent
 
-        task.addOnFailureListener { e: Exception ->
-            m_IsRunning = false
-            WHALELog.e(TAG, "Failed to request activity transition updates", e)
-        }
+        ActivityRecognition.getClient(context)
+            .requestActivityTransitionUpdates(ActivityTransitionRequest(getTransitions()), pendingIntent)
+            .addOnSuccessListener {
+                m_IsRunning = true
+                WHALELog.i(TAG, "Activity transition updates requested successfully")
+            }
+            .addOnFailureListener { e: Exception ->
+                m_IsRunning = false
+                WHALELog.e(TAG, "Failed to request activity transition updates", e)
+            }
     }
 
     override fun stop() {
-        if (receiverIntent != null && m_IsRunning) {
+        receiverIntent?.let { pendingIntent ->
             if (ActivityCompat.checkSelfPermission(
                     context, Manifest.permission.ACTIVITY_RECOGNITION
-                ) != PackageManager.PERMISSION_GRANTED
+                ) == PackageManager.PERMISSION_GRANTED
             ) {
-                return
+                ActivityRecognition.getClient(context)
+                    .removeActivityTransitionUpdates(pendingIntent)
+                    .addOnSuccessListener {
+                        WHALELog.i(TAG, "Activity transition updates removed successfully")
+                    }
+                    .addOnFailureListener { e: Exception ->
+                        WHALELog.e(TAG, "Failed to remove activity transition updates", e)
+                    }
             }
-
-            val task = ActivityRecognition.getClient(context)
-                .removeActivityTransitionUpdates(receiverIntent!!)
-
-            task.addOnSuccessListener {
-                m_IsRunning = false
-                receiverIntent = null
-                WHALELog.i(TAG, "Activity transition updates removed successfully")
-            }
-
-            task.addOnFailureListener { e: Exception ->
-                // Handle error
-                WHALELog.e(TAG, "Failed to remove activity transition updates", e)
-            }
+            pendingIntent.cancel()
+            receiverIntent = null
         }
+
+        if (receiverRegistered) {
+            try {
+                context.unregisterReceiver(transitionReceiver)
+            } catch (e: IllegalArgumentException) {
+                WHALELog.w(TAG, "transition receiver was not registered")
+            }
+            receiverRegistered = false
+        }
+
+        m_IsRunning = false
+    }
+
+    /** Transition events carry elapsed realtime, the other sensors log wall clock time. */
+    private fun wallClockMillis(elapsedRealtimeNanos: Long): Long {
+        val ageMillis = SystemClock.elapsedRealtime() - elapsedRealtimeNanos / 1_000_000
+        return System.currentTimeMillis() - ageMillis
     }
 
     private fun getActivityTypeName(activityType: Int): String {
@@ -147,5 +177,10 @@ class ActivityRecognitionSensor(val context: Context, database: AppDatabase) :
                 .build()
         }
         return transitions
+    }
+
+    companion object {
+        private const val ACTION_ACTIVITY_TRANSITION = "de.mimuc.senseeverything.action.ACTIVITY_TRANSITION"
+        private const val REQUEST_CODE = 7001
     }
 }

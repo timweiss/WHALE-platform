@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.GET_TASKS" /> <!-- Used to check if service is running -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -20,7 +22,9 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- granted by default on API 31-32; USE_EXACT_ALARM takes over from API 33 (sideload only, not allowed on Play) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
@@ -188,13 +192,22 @@
         <service
             android:name=".service.LogService"
             android:exported="false"
-            android:foregroundServiceType="microphone"
+            android:foregroundServiceType="microphone|specialUse"
             android:process=":remote"
             android:stopWithTask="false">
             <intent-filter>
                 <action android:name="android.intent.action.CONFIGURATION_CHANGED" />
             </intent-filter>
+
+            <!-- specialUse keeps sensing alive when started from the background, where microphone is not allowed -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Research study sensing that runs for the whole study period" />
         </service>
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
         <service
             android:name=".service.ActivityRecognitionIntentService"
             android:exported="false"

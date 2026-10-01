@@ -74,6 +74,8 @@ class MyNotificationListenerService : NotificationListenerService() {
 
     private fun broadcastToSensor(data: String) {
         val message = Intent(NOTIFICATION_SENSOR_BROADCAST_ACTION)
+        // explicit package so the not-exported receiver in the :remote process gets it
+        message.setPackage(packageName)
         message.putExtra(Intent.EXTRA_TEXT, data)
         sendBroadcast(message)
     }

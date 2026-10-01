@@ -108,8 +108,11 @@ public class BluetoothSensor extends AbstractSensor {
 		if(m_IsRunning) {
 			m_IsRunning = false;
 			executor.shutdown();
-			BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-			mBluetoothAdapter.cancelDiscovery();
+			// cancelDiscovery throws if the permission was revoked in the meantime
+			if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+				BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+				mBluetoothAdapter.cancelDiscovery();
+			}
 			if (isRegistered) {
 				// unregister would fail if Bluetooth is off or permission is not granted
 				context.unregisterReceiver(mReceiver);

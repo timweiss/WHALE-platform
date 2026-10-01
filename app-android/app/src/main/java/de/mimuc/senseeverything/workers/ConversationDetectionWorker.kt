@@ -2,6 +2,8 @@ package de.mimuc.senseeverything.workers
 
 import android.app.NotificationManager
 import android.content.Context
+import android.os.Process
+import android.os.SystemClock
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.OneTimeWorkRequestBuilder
@@ -14,6 +16,7 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
+import de.mimuc.senseeverything.helpers.setForegroundIfAllowed
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.workers.conversation.VadReader
 import de.mimuc.senseeverything.workers.conversation.VadReader.Companion.calculateLength
@@ -45,7 +48,7 @@ class ConversationDetectionWorker @AssistedInject constructor(
         val filename = inputData.getString("filename") ?: return Result.failure()
         val timestamp = inputData.getLong("timestamp", 0)
 
-        setForeground(
+        setForegroundIfAllowed(
             backgroundWorkForegroundInfo(
                 notificationId, applicationContext, notificationManager
             )
@@ -56,9 +59,21 @@ class ConversationDetectionWorker @AssistedInject constructor(
     }
 
     private suspend fun run(filename: String, timestamp: Long) {
+        val start = SystemClock.elapsedRealtime()
+        val cpuStart = Process.getElapsedCpuTime()
+        val audioBytes = File(filename).length()
+
         runDetection(filename, timestamp, WebRTCReader())
         runDetection(filename, timestamp, YAMNetReader())
         deleteFile(filename)
+
+        // processCpuMs covers the whole main process, so it also counts work running at the same
+        // time (e.g. a second detection); processCpuMsTotal lets runs be lined up over a day
+        val cpuEnd = Process.getElapsedCpuTime()
+        WHALELog.i(TAG, "detection finished: audioBytes=$audioBytes" +
+                " wallMs=${SystemClock.elapsedRealtime() - start}" +
+                " processCpuMs=${cpuEnd - cpuStart}" +
+                " processCpuMsTotal=$cpuEnd")
     }
 
     private suspend fun runDetection(filename: String, timestamp: Long, reader: VadReader) {

@@ -55,4 +55,21 @@ class HealthcheckReportTest {
         assertEquals("periodic", json["trigger"]!!.jsonPrimitive.content)
         assertFalse(json["permissions"]!!.jsonObject["PACKAGE_USAGE_STATS"]!!.jsonPrimitive.boolean)
     }
+
+    @Test
+    fun writesMicrophoneStateOnlyWhenKnown() {
+        val unknown = Json.parseToJsonElement(report().toJson()).jsonObject
+        assertNull(unknown["microphoneActive"])
+
+        val known = HealthcheckReport.of(
+            trigger = "log_service",
+            process = "de.mimuc.whale:remote",
+            notificationService = ComponentStatus.OK,
+            accessibilityService = ComponentStatus.OK,
+            logService = ComponentStatus.OK,
+            permissions = emptyMap(),
+            microphoneActive = false
+        ).toJson()
+        assertFalse(Json.parseToJsonElement(known).jsonObject["microphoneActive"]!!.jsonPrimitive.boolean)
+    }
 }

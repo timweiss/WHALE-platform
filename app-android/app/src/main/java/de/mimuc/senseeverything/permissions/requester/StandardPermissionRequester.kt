@@ -6,15 +6,16 @@ import de.mimuc.senseeverything.activity.getActivity
 import de.mimuc.senseeverything.logging.WHALELog
 
 /**
- * Requests standard Android runtime permissions
+ * Requests standard Android runtime permissions. Permissions that Android only grants together
+ * (e.g. fine and coarse location) are passed in one request.
  */
-class StandardPermissionRequester(private val permission: String) : PermissionRequester {
+class StandardPermissionRequester(private vararg val permissions: String) : PermissionRequester {
     override fun request(context: Context) {
         val activity = context.getActivity()
         if (activity != null) {
-            ActivityCompat.requestPermissions(activity, arrayOf(permission), REQUEST_CODE)
+            ActivityCompat.requestPermissions(activity, arrayOf(*permissions), REQUEST_CODE)
         } else {
-            WHALELog.e(TAG, "Could not get activity to request permission: $permission")
+            WHALELog.e(TAG, "Could not get activity to request permission: ${permissions.joinToString()}")
         }
     }
 

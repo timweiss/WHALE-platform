@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 
+import androidx.core.content.ContextCompat;
+
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
 import de.mimuc.senseeverything.service.MyNotificationListenerService;
@@ -49,11 +51,7 @@ public class NotificationSensor extends AbstractSensor {
             m_Receiver = new DataUpdateReceiver();
 
         IntentFilter intentFilter = new IntentFilter(MyNotificationListenerService.NOTIFICATION_SENSOR_BROADCAST_ACTION);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            m_Context.registerReceiver(m_Receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            m_Context.registerReceiver(m_Receiver, intentFilter);
-        }
+        ContextCompat.registerReceiver(m_Context, m_Receiver, intentFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         m_IsRunning = true;
     }

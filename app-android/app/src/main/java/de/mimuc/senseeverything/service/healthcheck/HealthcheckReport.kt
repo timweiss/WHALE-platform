@@ -17,7 +17,9 @@ data class HealthcheckReport(
     /** NotificationService, AccessibilityService, LogService */
     val components: Map<String, ComponentStatus>,
     /** permission id without the "android.permission." prefix -> granted */
-    val permissions: Map<String, Boolean>
+    val permissions: Map<String, Boolean>,
+    /** whether LogService holds the microphone type, only known in its own (:remote) process */
+    val microphoneActive: Boolean? = null
 ) {
     /** a healthy component's problem (null, the default) is left out */
     fun toJson(): String = Json.encodeToString(this)
@@ -32,7 +34,8 @@ data class HealthcheckReport(
             notificationService: ComponentStatus,
             accessibilityService: ComponentStatus,
             logService: ComponentStatus,
-            permissions: Map<String, Boolean>
+            permissions: Map<String, Boolean>,
+            microphoneActive: Boolean? = null
         ) = HealthcheckReport(
             trigger = trigger,
             process = process,
@@ -41,7 +44,8 @@ data class HealthcheckReport(
                 "AccessibilityService" to accessibilityService,
                 "LogService" to logService
             ),
-            permissions = permissions.mapKeys { it.key.removePrefix(PERMISSION_PREFIX) }
+            permissions = permissions.mapKeys { it.key.removePrefix(PERMISSION_PREFIX) },
+            microphoneActive = microphoneActive
         )
     }
 }

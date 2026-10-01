@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.work.WorkManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
 import de.mimuc.senseeverything.service.esm.NotificationTriggerReceiver
 import de.mimuc.senseeverything.service.esm.OneTimeNotificationReceiver
 import de.mimuc.senseeverything.service.esm.PeriodicNotificationReceiver
@@ -20,6 +21,8 @@ import kotlinx.coroutines.withContext
 
 
 suspend fun runStudyLifecycleCleanup(context: Context, database: AppDatabase, clearAlarms: Boolean = false) {
+    // before stopping LogService: its foreground service is what allows starting a service here
+    AccessibilityLogService.disable(context)
     stopLogService(context)
     clearJobs(context)
 

@@ -24,6 +24,7 @@ import de.mimuc.senseeverything.api.ChunkedUploadHelper
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
+import de.mimuc.senseeverything.helpers.setForegroundIfAllowed
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -72,7 +73,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        setForeground(
+        setForegroundIfAllowed(
             backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
         )
 

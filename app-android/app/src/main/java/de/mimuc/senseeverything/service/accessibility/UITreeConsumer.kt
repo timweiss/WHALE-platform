@@ -74,6 +74,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     private lateinit var sourceWorker: Handler
 
     // Main-thread state
+    // false while no UITreeSensor stores snapshots (study paused or ended, LogService not running)
+    private var consuming = true
     // Debouncing for WINDOW_CONTENT_CHANGED events
     private var lastContentChangeTime = 0L
     private val contentChangeDebounceMs = 500L
@@ -119,6 +121,11 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     }
 
     override fun consumeEvent(event: AccessibilityEvent) {
+        if (!isConsuming()) {
+            stats.eventsSkipped.incrementAndGet()
+            return
+        }
+
         when (event.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 stats.stateEvents.incrementAndGet()
@@ -175,6 +182,30 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                 scheduleInteraction(event, InteractionType.TAP)
             }
         }
+    }
+
+    /**
+     * Captures are only worth their cost while a UITreeSensor stores the snapshots; without one,
+     * [SnapshotBatchManager] drops every batch. Skipping them changes no stored data.
+     *
+     * When storing resumes, the worker forgets the last screen, so logging continues as after a
+     * fresh service start: the first screen is recorded, and interactions wait for a capture.
+     */
+    private fun isConsuming(): Boolean {
+        val listening = AccessibilityDataBus.snapshotBatchListener != null
+        if (listening != consuming) {
+            consuming = listening
+            WHALELog.i(TAG, if (listening) "UITreeSensor listening, resuming captures" else "no UITreeSensor listening, pausing captures")
+            if (listening) {
+                lastContentChangeTime = 0L
+                scrollCoalescer.reset()
+                worker.post {
+                    lastSignature = null
+                    currentSkeleton = null
+                }
+            }
+        }
+        return listening
     }
 
     /**
@@ -244,6 +275,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
     private fun captureTreeSkeleton(eventTime: Long) {
         val start = SystemClock.elapsedRealtime()
+        val cpuStart = SystemClock.currentThreadTimeMillis()
         val rootNode = rootInActiveWindow() ?: return
 
         try {
@@ -286,6 +318,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         } finally {
             rootNode.recycle()
             stats.recordCaptureTime(SystemClock.elapsedRealtime() - start)
+            stats.captureCpuMsTotal.addAndGet(SystemClock.currentThreadTimeMillis() - cpuStart)
         }
     }
 
@@ -584,16 +617,39 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         batchManager.addSnapshot(snapshot)
     }
 
-    /** Logs pipeline load for the last interval so outages can be related to capture work. */
+    // Worker-thread state for the stats interval
+    private var lastStatsProcessCpuMs = Process.getElapsedCpuTime()
+    private var lastStatsUptimeMs = SystemClock.uptimeMillis()
+    private var lastStatsElapsedMs = SystemClock.elapsedRealtime()
+
+    /**
+     * Logs pipeline load for the last interval so outages can be related to capture work.
+     *
+     * captureMsTotal is wall time (including deep sleep during a capture), captureCpuMsTotal the
+     * worker thread's CPU time; work the foreground app does to answer is not included in either.
+     * processCpuMs is the CPU time of the whole `:remote` process (LogService, sensors and the
+     * accessibility service), awakeMs the time the device was awake in the interval.
+     */
     private fun logStats() {
         val runtime = Runtime.getRuntime()
         val heapUsedMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
         val heapMaxMb = runtime.maxMemory() / (1024 * 1024)
         val nativeHeapMb = Debug.getNativeHeapAllocatedSize() / (1024 * 1024)
 
+        val processCpuMs = Process.getElapsedCpuTime()
+        val uptimeMs = SystemClock.uptimeMillis()
+        val elapsedMs = SystemClock.elapsedRealtime()
+
         WHALELog.i(TAG, "stats: " + stats.drain() +
                 " pendingInteractions=${pendingInteractions.get()}" +
-                " heapUsedMb=$heapUsedMb heapMaxMb=$heapMaxMb nativeHeapMb=$nativeHeapMb")
+                " heapUsedMb=$heapUsedMb heapMaxMb=$heapMaxMb nativeHeapMb=$nativeHeapMb" +
+                " processCpuMs=${processCpuMs - lastStatsProcessCpuMs}" +
+                " awakeMs=${uptimeMs - lastStatsUptimeMs}" +
+                " intervalMs=${elapsedMs - lastStatsElapsedMs}")
+
+        lastStatsProcessCpuMs = processCpuMs
+        lastStatsUptimeMs = uptimeMs
+        lastStatsElapsedMs = elapsedMs
     }
 
     override fun shutdown() {
@@ -614,7 +670,9 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         val capturesRun = AtomicLong()
         val screensRecorded = AtomicLong()
         val nodesVisited = AtomicLong()
+        val eventsSkipped = AtomicLong()
         val captureMsTotal = AtomicLong()
+        val captureCpuMsTotal = AtomicLong()
         val captureMsMax = AtomicLong()
         val captureDelayMsMax = AtomicLong()
         val interactionsRecorded = AtomicLong()
@@ -642,11 +700,13 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                 " screensRecorded=${screensRecorded.getAndSet(0)}" +
                 " nodesVisited=${nodesVisited.getAndSet(0)}" +
                 " captureMsTotal=${captureMsTotal.getAndSet(0)}" +
+                " captureCpuMsTotal=${captureCpuMsTotal.getAndSet(0)}" +
                 " captureMsMax=${captureMsMax.getAndSet(0)}" +
                 " captureDelayMsMax=${captureDelayMsMax.getAndSet(0)}" +
                 " interactionsRecorded=${interactionsRecorded.getAndSet(0)}" +
                 " scrollsCoalesced=${scrollsCoalesced.getAndSet(0)}" +
                 " interactionsDropped=${interactionsDropped.getAndSet(0)}" +
-                " interactionSourceTimeouts=${interactionSourceTimeouts.getAndSet(0)}"
+                " interactionSourceTimeouts=${interactionSourceTimeouts.getAndSet(0)}" +
+                " eventsSkipped=${eventsSkipped.getAndSet(0)}"
     }
 }

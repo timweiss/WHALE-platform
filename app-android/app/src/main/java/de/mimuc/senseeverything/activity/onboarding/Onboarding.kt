@@ -266,7 +266,9 @@ fun OnboardingView(viewModel: OnboardingViewModel = viewModel()) {
     ) { innerPadding ->
         if (loading.value) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

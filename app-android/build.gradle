@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.7.3'
+        classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.23'
     }
 }
@@ -25,13 +25,13 @@ allprojects {
         appName = 'SenseEverything'
 
         //compileSdkVersion
-        android_compile_version = 33
+        android_compile_version = 36
 
         //buildToolsVersion
-        android_version = '30.0.3'
+        android_version = '36.1.0'
 
-        android_minSdkVersion = 30
-        android_targetSdkVersion = 30
+        android_minSdkVersion = 31
+        android_targetSdkVersion = 36
 
         // https://mvnrepository.com/artifact/com.google.code.gson/gson
         gson_library_version = '2.11.0'

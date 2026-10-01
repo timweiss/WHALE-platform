@@ -16,6 +16,8 @@ class AccessibilityNameConsumer: AccessibilityLoggingConsumer {
 
     override fun consumeEvent(event: AccessibilityEvent) {
         if (AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED == event.eventType) return
+        // AccessibilitySensor runs in the same process, hand the line over directly
+        val listener = AccessibilityDataBus.nameListener ?: return
 
         val s = String.format(
             "%s,%s,%s,%s,%s\n",
@@ -26,8 +28,7 @@ class AccessibilityNameConsumer: AccessibilityLoggingConsumer {
             event.packageName
         )
 
-        // AccessibilitySensor runs in the same process, hand the line over directly
-        AccessibilityDataBus.nameListener?.onNameEvent(s)
+        listener.onNameEvent(s)
     }
 
     private fun getEventType(event: AccessibilityEvent): String {

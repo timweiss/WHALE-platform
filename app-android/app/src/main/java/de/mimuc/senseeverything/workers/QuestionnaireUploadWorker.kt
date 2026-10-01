@@ -21,6 +21,7 @@ import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.NotificationTrigger
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
+import de.mimuc.senseeverything.helpers.setForegroundIfAllowed
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -47,7 +48,7 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
         val pendingQuestionnaireId =
             inputData.getString("pendingQuestionnaireId")?.let { UUID.fromString(it) }
 
-        setForeground(
+        setForegroundIfAllowed(
             backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
         )
 

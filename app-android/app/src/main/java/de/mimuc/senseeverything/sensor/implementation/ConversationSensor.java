@@ -2,7 +2,10 @@ package de.mimuc.senseeverything.sensor.implementation;
 
 import static de.mimuc.senseeverything.workers.ConversationDetectionWorkerKt.enqueueConversationDetectionWorker;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -10,6 +13,8 @@ import android.os.AsyncTask;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
+
+import androidx.core.content.ContextCompat;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,6 +28,7 @@ import java.util.UUID;
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.logging.WHALELog;
 import de.mimuc.senseeverything.sensor.AbstractSensor;
+import de.mimuc.senseeverything.service.ForegroundService;
 
 public class ConversationSensor extends AbstractSensor {
     private static final long serialVersionUID = 1L;
@@ -60,6 +66,17 @@ public class ConversationSensor extends AbstractSensor {
         // already running, keep sampling at our own pace
         if (m_IsRunning)
             return;
+
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            WHALELog.INSTANCE.e(TAG, "conversationSensor: RECORD_AUDIO not granted, skipping recording");
+            return;
+        }
+
+        // recording without the microphone foreground type only yields silence
+        if (!ForegroundService.isMicrophoneActive()) {
+            WHALELog.INSTANCE.w(TAG, "conversationSensor: microphone not available, skipping recording");
+            return;
+        }
 
         WHALELog.INSTANCE.d(TAG, "conversationSensor: start called, guid" + guid);
 
@@ -130,6 +147,7 @@ public class ConversationSensor extends AbstractSensor {
          * @param files Index 0 should be the file to write to
          * @return Either an Exception (error) or two longs, the filesize, elapsed time in ms (success)
          */
+        @SuppressLint("MissingPermission") // checked in start()
         @Override
         protected Object[] doInBackground(File... files) {
             AudioRecord audioRecord = null;

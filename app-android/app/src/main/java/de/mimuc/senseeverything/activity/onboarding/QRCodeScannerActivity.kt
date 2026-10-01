@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -14,6 +15,9 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.core.net.toUri
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -54,6 +58,15 @@ class QRCodeScannerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_qr_scanner)
+
+        // the window is drawn edge-to-edge, keep the cancel button above the navigation bar
+        val bottomBar = findViewById<View>(R.id.bottom_bar)
+        val bottomBarPadding = bottomBar.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(bottomBar) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(bottom = bottomBarPadding + systemBars.bottom)
+            insets
+        }
 
         // Setup cancel button
         findViewById<Button>(R.id.cancel_button).setOnClickListener {

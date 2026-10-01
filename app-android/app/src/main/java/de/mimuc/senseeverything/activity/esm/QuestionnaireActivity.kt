@@ -41,6 +41,7 @@ import de.mimuc.senseeverything.data.QuestionnaireDataRepository
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.db.models.PendingQuestionnaireStatus
+import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.esm.clearReminderNotification
@@ -67,6 +68,12 @@ class QuestionnaireActivity : ComponentActivity() {
                 QuestionnaireView()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // a visible screen is when Android lets the sensing service (re)gain the microphone
+        LogServiceHelper.ensureMicrophone(applicationContext)
     }
 
     companion object {

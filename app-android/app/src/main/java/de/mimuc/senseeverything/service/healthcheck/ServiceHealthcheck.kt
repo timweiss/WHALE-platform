@@ -8,6 +8,7 @@ import android.text.TextUtils
 import androidx.core.app.NotificationManagerCompat
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.permissions.PermissionManager
+import de.mimuc.senseeverything.service.ForegroundService
 import de.mimuc.senseeverything.service.LogService
 import de.mimuc.senseeverything.service.MyNotificationListenerService
 import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
@@ -41,13 +42,15 @@ object ServiceHealthcheck {
         permissionsGranted: Map<String, Boolean>
     ) {
         try {
+            val process = Application.getProcessName()
             val json = HealthcheckReport.of(
                 trigger = trigger,
-                process = Application.getProcessName(),
+                process = process,
                 notificationService = notificationService,
                 accessibilityService = accessibilityService,
                 logService = logService,
-                permissions = permissionsGranted
+                permissions = permissionsGranted,
+                microphoneActive = if (process.endsWith(":remote")) ForegroundService.isMicrophoneActive() else null
             ).toJson()
             WHALELog.d(TAG, "healthcheck $json")
             WHALELog.saveDataRow(HealthcheckReport.SENSOR_NAME, json)

@@ -7,6 +7,7 @@ import de.mimuc.senseeverything.permissions.checker.AccessibilityServiceChecker
 import de.mimuc.senseeverything.permissions.checker.BatteryOptimizationChecker
 import de.mimuc.senseeverything.permissions.checker.ExactAlarmChecker
 import de.mimuc.senseeverything.permissions.checker.NotificationListenerChecker
+import de.mimuc.senseeverything.permissions.checker.NotificationPermissionChecker
 import de.mimuc.senseeverything.permissions.checker.StandardPermissionChecker
 import de.mimuc.senseeverything.permissions.checker.SystemAlertWindowChecker
 import de.mimuc.senseeverything.permissions.checker.UsageStatsChecker
@@ -17,6 +18,7 @@ import de.mimuc.senseeverything.permissions.requester.AccessibilityServiceReques
 import de.mimuc.senseeverything.permissions.requester.BatteryOptimizationRequester
 import de.mimuc.senseeverything.permissions.requester.ExactAlarmRequester
 import de.mimuc.senseeverything.permissions.requester.NotificationListenerRequester
+import de.mimuc.senseeverything.permissions.requester.NotificationPermissionRequester
 import de.mimuc.senseeverything.permissions.requester.StandardPermissionRequester
 import de.mimuc.senseeverything.permissions.requester.SystemAlertWindowRequester
 import de.mimuc.senseeverything.permissions.requester.UsageStatsRequester
@@ -78,8 +80,8 @@ object PermissionManager {
                 nameResId = R.string.permission_notifications_name,
                 descriptionResId = R.string.permission_notifications_desc,
                 type = PermissionType.STANDARD,
-                checker = StandardPermissionChecker(Manifest.permission.POST_NOTIFICATIONS),
-                requester = StandardPermissionRequester(Manifest.permission.POST_NOTIFICATIONS),
+                checker = NotificationPermissionChecker(),
+                requester = NotificationPermissionRequester(),
                 category = PermissionCategory.Questionnaires,
                 isCritical = true
             ),
@@ -173,7 +175,11 @@ object PermissionManager {
                 descriptionResId = R.string.permission_fine_location_desc,
                 type = PermissionType.STANDARD,
                 checker = StandardPermissionChecker(Manifest.permission.ACCESS_FINE_LOCATION),
-                requester = StandardPermissionRequester(Manifest.permission.ACCESS_FINE_LOCATION),
+                // from API 31 a fine location request without coarse location is ignored
+                requester = StandardPermissionRequester(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
                 category = PermissionCategory.SensorB
             ),
             PermissionDefinition(

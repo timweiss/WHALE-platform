@@ -16,6 +16,7 @@ import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
+import de.mimuc.senseeverything.helpers.setForegroundIfAllowed
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
@@ -34,7 +35,7 @@ class UpdateQuestionnaireWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val studyId = dataStoreManager.studyIdFlow.first()
 
-        setForeground(
+        setForegroundIfAllowed(
             backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
         )
 

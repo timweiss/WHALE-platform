@@ -110,6 +110,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // a visible screen is when Android lets the sensing service (re)gain the microphone
+        LogServiceHelper.ensureMicrophone(applicationContext)
+    }
 }
 
 @HiltViewModel

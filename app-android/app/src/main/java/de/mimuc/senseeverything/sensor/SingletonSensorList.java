@@ -10,6 +10,7 @@ import javax.inject.Singleton;
 
 import de.mimuc.senseeverything.db.AppDatabase;
 import de.mimuc.senseeverything.sensor.implementation.AccessibilitySensor;
+import de.mimuc.senseeverything.sensor.implementation.BatterySensor;
 import de.mimuc.senseeverything.sensor.implementation.ActivityRecognitionSensor;
 import de.mimuc.senseeverything.sensor.implementation.BluetoothSensor;
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor;
@@ -53,6 +54,7 @@ public class SingletonSensorList {
 		this.list.add(new ActivityRecognitionSensor(aContext, database));
 		this.list.add(new DeviceInfoSensor(aContext, database));
 		this.list.add(new MemorySensor(aContext, database));
+		this.list.add(new BatterySensor(aContext, database));
 	}
 
 	public List<AbstractSensor> getOrInitializeList(Context pContext, AppDatabase database, String sensitiveDataSalt) {

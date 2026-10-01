@@ -22,6 +22,8 @@
     <string name="title_activity_onboarding">Onboarding</string>
     <string name="title_activity_main">WHALE</string>
     <string name="notif_channel_name">WHALE Notifications</string>
+    <string name="resume_microphone_title">Tap to resume WHALE</string>
+    <string name="resume_microphone_text">WHALE was restarted. Please tap here once so the study can use the microphone again.</string>
     <string name="welcome_to_whale">Welcome to</string>
     <string name="day_of">Day %1$s of %2$s in %3$s</string>
     <string name="study_settings">Study Settings</string>

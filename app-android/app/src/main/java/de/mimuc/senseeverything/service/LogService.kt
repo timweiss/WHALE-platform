@@ -40,6 +40,7 @@ class LogService : AbstractService() {
 
     private var state = LogServiceState.IDLE
     private var isPeriodicSamplingEnabled = false
+    private var isSamplingSetUp = false
 
     @Inject
     lateinit var singletonSensorList: SingletonSensorList
@@ -62,10 +63,16 @@ class LogService : AbstractService() {
         val ret = super.onStartCommand(intent, flags, startId)
         WHALELog.i(TAG, "onStartCommand called")
 
+        if (intent?.action == ForegroundService.ACTION_ENABLE_MICROPHONE && isSamplingSetUp) {
+            // only asked for the microphone type, which the superclass handled
+            return ret
+        }
+
         if (runHealthcheck(this).allCriticalPermissionsGranted) {
             listenForLockUnlock()
             setupPeriodicSampling()
             setupContiunousSampling()
+            isSamplingSetUp = true
         } else {
             WHALELog.e(TAG, "Not all critical permissions granted, not starting sampling/stopping service")
             stopSelf()

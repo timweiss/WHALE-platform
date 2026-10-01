@@ -11,15 +11,15 @@ plugins {
 
 android {
 
-    compileSdk 35
+    compileSdk android_compile_version
     buildToolsVersion android_version
 
     defaultConfig {
         applicationId "de.mimuc.whale"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
-        versionCode 40
-        versionName "1.0.40"
+        versionCode 42
+        versionName "1.0.42"
 
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -49,6 +49,12 @@ android {
             versionNameSuffix "-staging"
             buildConfigField 'String', 'API_BASE', '"https://whale-staging.timweiss.dev/"'
             buildConfigField 'String', 'AUTO_ENROLMENT', '"test-nov6"'
+        }
+        stagingNoAutoEnrolment {
+            dimension "environment"
+            versionNameSuffix "-staging"
+            buildConfigField 'String', 'API_BASE', '"https://whale-staging.timweiss.dev/"'
+            buildConfigField 'String', 'AUTO_ENROLMENT', 'null'
         }
         prod {
             dimension "environment"

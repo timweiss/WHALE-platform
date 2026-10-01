@@ -21,6 +21,8 @@
     <string name="title_activity_onboarding">Onboarding</string>
     <string name="title_activity_main">WHALE</string>
     <string name="notif_channel_name">WHALE-Benachrichtigungen</string>
+    <string name="resume_microphone_title">Tippen, um WHALE fortzusetzen</string>
+    <string name="resume_microphone_text">WHALE wurde neu gestartet. Bitte tippen Sie einmal hier, damit die Studie das Mikrofon wieder nutzen kann.</string>
     <string name="welcome_to_whale">Willkommen bei</string>
     <string name="day_of">Tag %1$s von %2$s in %3$s</string>
     <string name="study_settings">Einstellungen</string>

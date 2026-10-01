@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.app.Application
 import android.content.Context
 import android.os.Debug
+import android.os.Process
 import android.os.SystemClock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -32,7 +33,13 @@ data class MemorySnapshot(
     val lastTrimLevel: Int,
     /** resident set size of the process; null when /proc/self/status could not be read */
     val rssKb: Long?,
-    val nativeHeapKb: Long
+    val nativeHeapKb: Long,
+    /**
+     * CPU time this process used since it started, and the device's awake time since boot. The
+     * difference between two snapshots of the same process gives its CPU use per awake time.
+     */
+    val processCpuMs: Long? = null,
+    val uptimeMs: Long? = null
 ) {
     fun toJson(): String = Json.encodeToString(this)
 
@@ -75,7 +82,9 @@ data class MemorySnapshot(
                 importance = processState.importance,
                 lastTrimLevel = processState.lastTrimLevel,
                 rssKb = readVmRssKb(),
-                nativeHeapBytes = Debug.getNativeHeapAllocatedSize()
+                nativeHeapBytes = Debug.getNativeHeapAllocatedSize(),
+                processCpuMs = Process.getElapsedCpuTime(),
+                uptimeMs = SystemClock.uptimeMillis()
             )
         }
 
@@ -89,7 +98,9 @@ data class MemorySnapshot(
             importance: Int,
             lastTrimLevel: Int,
             rssKb: Long?,
-            nativeHeapBytes: Long
+            nativeHeapBytes: Long,
+            processCpuMs: Long? = null,
+            uptimeMs: Long? = null
         ) = MemorySnapshot(
             process = process,
             reason = reason,
@@ -101,7 +112,9 @@ data class MemorySnapshot(
             importance = importance,
             lastTrimLevel = lastTrimLevel,
             rssKb = rssKb,
-            nativeHeapKb = nativeHeapBytes / 1024
+            nativeHeapKb = nativeHeapBytes / 1024,
+            processCpuMs = processCpuMs,
+            uptimeMs = uptimeMs
         )
 
         private fun readVmRssKb(): Long? = try {

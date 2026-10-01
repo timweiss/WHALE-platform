@@ -1,4 +1,4 @@
-import { Queue, Worker, Job } from 'bullmq';
+import { Queue, Worker, Job, MetricsTime } from 'bullmq';
 import { Config } from '../config';
 import { Observability } from '../o11y.js';
 import { ISensorReadingRepository } from '../data/sensorReadingRepository.js';
@@ -99,6 +99,9 @@ export function createSensorReadingWorker(
       limiter: {
         max: Config.queue.maxJobsPerSecond, // Rate limiting
         duration: 1000,
+      },
+      metrics: {
+        maxDataPoints: MetricsTime.ONE_WEEK,
       },
     },
   );

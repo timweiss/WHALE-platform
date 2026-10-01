@@ -4,10 +4,13 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.graphics.Color
 import androidx.core.app.NotificationCompat
+import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import de.mimuc.senseeverything.R
+import de.mimuc.senseeverything.logging.WHALELog
 
 fun backgroundWorkForegroundInfo(
     notificationId: Int,
@@ -44,7 +47,20 @@ fun makeForegroundInfo(
         .setOngoing(true)
         .build()
 
-    return ForegroundInfo(notificationId, notification)
+    return ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+}
+
+/**
+ * Promotes the worker to a foreground service if Android allows it right now. Starting a foreground
+ * service from the background can be denied, in which case the work still runs as a regular job.
+ */
+suspend fun CoroutineWorker.setForegroundIfAllowed(foregroundInfo: ForegroundInfo) {
+    try {
+        setForeground(foregroundInfo)
+    } catch (e: IllegalStateException) {
+        // ForegroundServiceStartNotAllowedException is an IllegalStateException
+        WHALELog.w(javaClass.simpleName, "Could not run as foreground service, continuing in background: ${e.message}")
+    }
 }
 
 private fun createChannel(

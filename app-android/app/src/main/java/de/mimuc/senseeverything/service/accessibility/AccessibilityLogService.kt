@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import dagger.hilt.android.AndroidEntryPoint
@@ -50,6 +51,14 @@ class AccessibilityLogService : AccessibilityService() {
         super.onStartCommand(intent, flags, startId)
         WHALELog.i(TAG, "onStartCommand() was called")
 
+        if (intent?.action == ACTION_DISABLE) {
+            // turns the service off in the accessibility settings, so Android stops sending events
+            WHALELog.i(TAG, "study is over, disabling accessibility service")
+            disableSelf()
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         return START_STICKY
     }
 
@@ -73,5 +82,19 @@ class AccessibilityLogService : AccessibilityService() {
 
         const val SERVICE: String =
             "de.mimuc.whale/de.mimuc.senseeverything.service.accessibility.AccessibilityLogService"
+
+        private const val ACTION_DISABLE = "de.mimuc.senseeverything.action.DISABLE_ACCESSIBILITY"
+
+        /** Turns the accessibility service off for good, e.g. when the study ends. */
+        fun disable(context: Context) {
+            try {
+                context.startService(
+                    Intent(context, AccessibilityLogService::class.java).setAction(ACTION_DISABLE)
+                )
+            } catch (e: IllegalStateException) {
+                // not allowed from the background; LogService is stopped next, so captures pause anyway
+                WHALELog.w(TAG, "Could not disable accessibility service: ${e.message}")
+            }
+        }
     }
 }
