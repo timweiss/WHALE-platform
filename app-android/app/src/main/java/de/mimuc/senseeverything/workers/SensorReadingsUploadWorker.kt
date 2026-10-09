@@ -21,6 +21,7 @@ import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.api.ChunkedUploadHelper
+import de.mimuc.senseeverything.api.UploadResult
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
@@ -49,6 +50,8 @@ data class SensorReading(
     val localId: String
 )
 
+private const val BATCH_SIZE = 200
+
 @HiltWorker
 class SensorReadingsUploadWorker @AssistedInject constructor(
     @Assisted appContext: Context,
@@ -64,9 +67,9 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
 
     private val notificationId = 1012
 
-    override suspend fun doWork(): Result {
-        val db = database
+    private val client = ApiClient.getInstance(appContext)
 
+    override suspend fun doWork(): Result {
         val token = inputData.getString("token") ?: ""
 
         if (token.isEmpty()) {
@@ -79,9 +82,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
 
         return withContext(Dispatchers.IO) {
             try {
-                val cutoffTimestamp = System.currentTimeMillis()
-                val total = db.logDataDao().getUnsyncedCountBefore(cutoffTimestamp)
-                syncNextNActivities(db, applicationContext, token, total, cutoffTimestamp, 0, 200)
+                syncLogData(token)
             } catch (e: Exception) {
                 WHALELog.e(TAG, "Unexpected error during sensor readings upload: $e")
                 return@withContext Result.retry()
@@ -89,96 +90,115 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun syncNextNActivities(
-        db: AppDatabase,
-        context: Context,
+    private suspend fun syncLogData(
         token: String,
-        initialTotal: Long,
-        cutoffTimestamp: Long,
-        totalSynced: Long,
-        n: Int
     ): Result {
-        var currentTotalSynced = totalSynced
-        val client = ApiClient.getInstance(context)
-        val headers = mapOf("Authorization" to "Bearer $token")
+        val cutoffTimestamp = System.currentTimeMillis()
+        val initialTotal = database.logDataDao().getUnsyncedCountBefore(cutoffTimestamp)
+
+        var totalSynced = 0L
 
         while (!isStopped) {
-            val data = db.logDataDao().getNextNUnsyncedBefore(n, cutoffTimestamp)
-            if (data.isEmpty()) {
+            val batch = database.logDataDao().getNextNUnsyncedBefore(BATCH_SIZE, cutoffTimestamp)
+            if (batch.isEmpty()) {
                 WHALELog.i(TAG, "Completed Sensor Reading Sync")
                 return Result.success()
             }
 
-            val sensorReadings = data.map { logData ->
-                SensorReading(
-                    sensorType = logData.sensorName,
-                    timestamp = logData.timestamp,
-                    data = logData.data,
-                    localId = logData.localId
-                )
+            val uploadResult = try { upload(batch, token) } catch (e: Exception) {
+                return resultForUploadError(e, totalSynced)
             }
 
-            try {
-                val uploadResult = ChunkedUploadHelper.uploadWithSizeBasedChunking(
-                    data = sensorReadings,
-                    maxBatchSize = n,
-                    client = client,
-                    url = ApiResources.sensorReadingsBatched(),
-                    headers = headers
-                )
+            WHALELog.i(TAG, "Uploaded ${uploadResult.totalItems} items in ${uploadResult.chunksUploaded} chunk(s), " +
+                    "total size: ${uploadResult.totalBytesUploaded} bytes, fast path: ${uploadResult.usedFastPath}")
 
-                WHALELog.i(TAG, "Uploaded ${uploadResult.totalItems} items in ${uploadResult.chunksUploaded} chunk(s), " +
-                        "total size: ${uploadResult.totalBytesUploaded} bytes, fast path: ${uploadResult.usedFastPath}")
+            logDroppedItems(uploadResult, batch)
 
-                // Log if any items were dropped as unuploadable
-                if (uploadResult.errors.isNotEmpty()) {
-                    val droppedCount = uploadResult.errors.size
-                    val successfulCount = data.size - droppedCount
+            database.logDataDao().deleteLogData(*batch.toTypedArray<LogData>())
+            WHALELog.i(TAG, "batch synced successful, removed ${batch.size} entries")
 
-                    WHALELog.w(TAG, "Upload completed with $droppedCount dropped item(s) out of ${data.size} total ($successfulCount successful)")
+            totalSynced += batch.size
 
-                    uploadResult.errors.forEach { error ->
-                        WHALELog.e(TAG, "Dropped item: $error")
-                    }
-                }
-
-                db.logDataDao().deleteLogData(*data.toTypedArray<LogData>())
-                WHALELog.i(TAG, "batch synced successful, removed ${data.size} entries")
-
-                currentTotalSynced += data.size
-
-                val progressPercentage = if (initialTotal > 0) {
-                    ((currentTotalSynced.toDouble() / initialTotal) * 100).toInt()
-                } else {
-                    100
-                }
-                setProgress(workDataOf("progress" to progressPercentage))
-
-            } catch (e: Exception) {
-                if (e is NetworkError || e is TimeoutError) {
-                    return Result.retry()
-                }
-
-                if (e is ClientError) {
-                    val message = e.networkResponse.data.decodeToString()
-                    WHALELog.e(
-                        TAG,
-                        "Client error uploading sensor readings: $message with total $currentTotalSynced"
-                    )
-                    return Result.failure()
-                }
-
-                WHALELog.e(
-                    TAG,
-                    "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $currentTotalSynced"
-                )
-
-                return Result.failure()
+            val progressPercentage = if (initialTotal > 0) {
+                ((totalSynced.toDouble() / initialTotal) * 100).toInt()
+            } else {
+                100
             }
+            setProgress(workDataOf("progress" to progressPercentage))
         }
 
         WHALELog.w(TAG, "Work cancelled, stopping further sync")
         return Result.success()
+    }
+
+    private suspend fun upload(batch: List<LogData>, token: String): UploadResult {
+        val headers = mapOf("Authorization" to "Bearer $token")
+
+        val sensorReadings = batch.map { logData ->
+            SensorReading(
+                sensorType = logData.sensorName,
+                timestamp = logData.timestamp,
+                data = logData.data,
+                localId = logData.localId
+            )
+        }
+
+        return ChunkedUploadHelper.uploadWithSizeBasedChunking(
+            data = sensorReadings,
+            maxBatchSize = BATCH_SIZE,
+            client = client,
+            url = ApiResources.sensorReadingsBatched(),
+            headers = headers
+        )
+    }
+
+    private fun logDroppedItems(
+        uploadResult: UploadResult,
+        data: List<LogData>
+    ) {
+        if (uploadResult.errors.isNotEmpty()) {
+            val droppedCount = uploadResult.errors.size
+            val successfulCount = data.size - droppedCount
+
+            WHALELog.w(
+                TAG,
+                "Upload completed with $droppedCount dropped item(s) out of ${data.size} total ($successfulCount successful)"
+            )
+
+            uploadResult.errors.forEach { error ->
+                WHALELog.e(TAG, "Dropped item: $error")
+            }
+        }
+    }
+
+    private fun resultForUploadError(
+        e: Exception,
+        currentTotalSynced: Long
+    ): Result {
+        return when {
+            e is NetworkError || e is TimeoutError -> {
+                Result.retry()
+            }
+            e is ClientError && e.networkResponse.statusCode == 429 -> {
+                WHALELog.w(TAG, "Rate limited, rescheduling upload with total $currentTotalSynced")
+                Result.retry()
+            }
+            e is ClientError -> {
+                val message = e.networkResponse.data.decodeToString()
+                WHALELog.e(
+                    TAG,
+                    "Client error uploading sensor readings: $message with total $currentTotalSynced"
+                )
+                Result.failure()
+            }
+            else -> {
+                WHALELog.e(
+                    TAG,
+                    "Error uploading sensor readings: $e, ${e.stackTraceToString()} with total $currentTotalSynced"
+                )
+                Result.failure()
+            }
+        }
     }
 }
 
