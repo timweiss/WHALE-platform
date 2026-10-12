@@ -155,7 +155,7 @@ object WHALELog {
                 put("message", message)
                 if (throwable != null) {
                     put("exception", throwable.toString())
-                    put("stackTrace", Log.getStackTraceString(throwable))
+                    put("stackTrace", throwable.stackTraceToString())
                 }
             }
 

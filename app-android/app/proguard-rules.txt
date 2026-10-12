@@ -46,3 +46,7 @@
 -keepclassmembers public class **$$serializer {
     private ** descriptor;
 }
+
+# disable obfuscation: allows for readable stack traces when crashes and exceptions are logged
+-dontobfuscate
+-keepattributes SourceFile,LineNumberTable

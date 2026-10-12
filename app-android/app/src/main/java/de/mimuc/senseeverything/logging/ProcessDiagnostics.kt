@@ -7,6 +7,8 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.os.SystemClock
 import de.mimuc.senseeverything.sensor.BufferedLogWriter
+import org.json.JSONObject
+import java.io.InputStream
 
 /**
  * Records why app processes ended and when they were under memory pressure, so that sampling
@@ -18,6 +20,9 @@ object ProcessDiagnostics {
     private const val MAX_EXIT_REASONS = 20
     private const val CRASH_FLUSH_TIMEOUT_MS = 2_000L
     private const val BACKGROUND_TRIM_MIN_INTERVAL_MS = 15 * 60 * 1000L
+    private const val ANR_TRACE_SENSOR_NAME = "AnrTrace"
+    // well below the upload's 900 KB threshold and the ~2 MB a single SQLite row may have
+    internal const val MAX_ANR_TRACE_BYTES = 256 * 1024
 
     // per process, as every process has its own copy of this object
     @Volatile
@@ -44,7 +49,10 @@ object ProcessDiagnostics {
                     .filter { it.processName == processName && it.timestamp > lastReported }
                     .sortedBy { it.timestamp }
 
-                exits.forEach { WHALELog.i(TAG, describe(it)) }
+                exits.forEach {
+                    WHALELog.i(TAG, describe(it))
+                    if (it.reason == ApplicationExitInfo.REASON_ANR) logAnrTrace(it)
+                }
 
                 exits.maxOfOrNull { it.timestamp }?.let {
                     prefs.edit().putLong(key, it).apply()
@@ -64,6 +72,7 @@ object ProcessDiagnostics {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
+                WHALELog.e(TAG, "Uncaught Exception in thread ${thread.name}", throwable)
                 BufferedLogWriter.flushAllBlocking(CRASH_FLUSH_TIMEOUT_MS)
             } catch (_: Throwable) {
                 // never keep the crash from being handled
@@ -116,6 +125,48 @@ object ProcessDiagnostics {
         } catch (e: Exception) {
             WHALELog.e(TAG, "Failed to write memory snapshot: ${e.message}", e)
         }
+    }
+
+    /**
+     * Writes the thread dump the system kept for an ANR as its own row, cut at
+     * [MAX_ANR_TRACE_BYTES]. The main thread comes first in the dump, so it survives the cut.
+     */
+    private fun logAnrTrace(exit: ApplicationExitInfo) {
+        try {
+            val stream = exit.traceInputStream ?: return
+            val (truncated: Boolean, traceString: String) = readAnrTraceStream(stream)
+
+            val traceJson = JSONObject()
+            traceJson.put("exitTimestamp", exit.timestamp)
+            traceJson.put("truncated", truncated)
+            traceJson.put("trace", traceString)
+            traceJson.put("pid", exit.pid)
+            traceJson.put("description", exit.description)
+
+            WHALELog.saveDataRow(ANR_TRACE_SENSOR_NAME, traceJson.toString())
+        } catch (error: Exception) {
+            WHALELog.e(TAG, "Could not read ANR trace", error)
+        }
+    }
+
+    internal fun readAnrTraceStream(stream: InputStream): Pair<Boolean, String> {
+        val readBytes = ByteArray(MAX_ANR_TRACE_BYTES)
+        val truncated: Boolean
+        val traceString: String
+
+        stream.use {
+            var offset = 0
+            while (offset < MAX_ANR_TRACE_BYTES) {
+                val more = stream.read(readBytes, offset, minOf(1024, MAX_ANR_TRACE_BYTES - offset))
+                if (more == -1) break
+                offset += more
+            }
+
+            truncated = offset == MAX_ANR_TRACE_BYTES && stream.read() != -1
+
+            traceString = String(readBytes, 0, offset, Charsets.UTF_8)
+        }
+        return Pair(truncated, traceString)
     }
 
     private fun describe(exit: ApplicationExitInfo): String =
