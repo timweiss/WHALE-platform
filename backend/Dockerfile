@@ -1,4 +1,4 @@
-FROM node:24-slim AS build
+FROM node:26.12.1-slim AS build
 
 WORKDIR /home/node/app
 
@@ -13,7 +13,7 @@ RUN npm run build
 
 # runtime image: production dependencies and compiled code only, run as the
 # unprivileged node user
-FROM node:24-slim
+FROM node:26.12.1-slim
 
 ENV NODE_ENV=production
 
