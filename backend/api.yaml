@@ -612,6 +612,9 @@ components:
         position:
           type: number
           description: The position of the element in the step.
+        required:
+          type: boolean
+          description: Whether the element must be answered before the step can be completed.
         configuration:
           type: object
           description: The type-dependent configuration for the element.

@@ -46,6 +46,7 @@ sealed class QuestionnaireElement {
     open val step: Int = 0
     open val position: Int = 0
     open val displayGroup: Int = 0
+    open val required: Boolean = true
 
     // Computed property that derives type from the actual class
     val type: QuestionnaireElementType

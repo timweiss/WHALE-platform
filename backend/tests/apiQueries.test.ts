@@ -465,6 +465,7 @@ test('should add elements to a questionnaire', async () => {
       displayGroup: 0,
       position: 1,
       name: 'text',
+      required: true,
     });
 
   const res = await request(app).get(
@@ -479,6 +480,7 @@ test('should add elements to a questionnaire', async () => {
     name: 'text',
     type: 'text_view',
     configuration: { content: 'Please enter your name' },
+    required: true,
   });
 });
 
@@ -544,6 +546,7 @@ test('should update a questionnaire element', async () => {
       displayGroup: 0,
       position: 1,
       name: 'text',
+      required: true,
     });
 
   const res = await request(app)
@@ -558,12 +561,14 @@ test('should update a questionnaire element', async () => {
       displayGroup: 0,
       position: 1,
       name: 'text',
+      required: false,
     });
 
   expect(res.statusCode).toBe(200);
   expect(res.body).toMatchObject({
     type: 'text_view',
     configuration: { content: 'Please enter your age' },
+    required: false,
   });
 });
 
@@ -591,6 +596,7 @@ test('should delete a questionnaire element', async () => {
       displayGroup: 0,
       position: 1,
       name: 'text',
+      required: true,
     });
 
   const res = await request(app)

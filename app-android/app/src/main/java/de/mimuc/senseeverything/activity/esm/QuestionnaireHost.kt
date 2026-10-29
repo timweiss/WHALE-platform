@@ -111,7 +111,7 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
 
     fun stepElementsAnswered(): Boolean {
         val currentStep = _activeStep.value
-        return questionnaire.elements.filter { it.step == currentStep }
+        return questionnaire.elements.filter { it.step == currentStep && it.required }
             .all { element ->
                 _elementValues.value[element.id]?.isAnswered() ?: false
             }
@@ -235,7 +235,7 @@ private fun QuestionnaireHostContent(
 
                 // Navigation is displayed after content
                 if (maxStep == 1) {
-                    TextButton(onClick = { viewModel.save() }, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = { viewModel.proceedWhenAnswered(viewModel::save, context) }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.questionnaire_save))
                     }
                 } else {

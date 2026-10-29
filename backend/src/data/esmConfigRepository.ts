@@ -23,6 +23,7 @@ export interface ExperienceSamplingElement {
   step: number;
   position: number;
   displayGroup: number;
+  required: boolean;
   configuration: ElementConfiguration;
 }
 
@@ -87,6 +88,7 @@ export interface IESMConfigRepository {
       | 'step'
       | 'position'
       | 'displayGroup'
+      | 'required'
       | 'configuration'
     >,
   ): Promise<ExperienceSamplingElement>;
@@ -311,6 +313,7 @@ export class ESMConfigRepository
         step: row.step,
         position: row.position,
         displayGroup: row.display_group,
+        required: row.required,
         configuration: row.configuration,
       }));
     } catch (e) {
@@ -327,12 +330,13 @@ export class ESMConfigRepository
       | 'step'
       | 'position'
       | 'displayGroup'
+      | 'required'
       | 'configuration'
     >,
   ): Promise<ExperienceSamplingElement> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO esm_elements (questionnaire_id, name, type, step, position, display_group, configuration) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        'INSERT INTO esm_elements (questionnaire_id, name, type, step, position, display_group, configuration, required) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
         [
           element.questionnaireId,
           element.name,
@@ -341,6 +345,7 @@ export class ESMConfigRepository
           element.position,
           element.displayGroup,
           element.configuration,
+          element.required,
         ],
       );
 
@@ -352,6 +357,7 @@ export class ESMConfigRepository
         step: res.rows[0].step,
         position: res.rows[0].position,
         displayGroup: res.rows[0].display_group,
+        required: res.rows[0].required,
         configuration: res.rows[0].configuration,
       };
     } catch (e) {
@@ -364,7 +370,7 @@ export class ESMConfigRepository
   ): Promise<ExperienceSamplingElement> {
     try {
       const updated = await this.pool.query(
-        'UPDATE esm_elements SET type = $1, step = $2, position = $3, display_group=$4, configuration = $5, name = $6 WHERE id = $7 RETURNING *',
+        'UPDATE esm_elements SET type = $1, step = $2, position = $3, display_group=$4, configuration = $5, name = $6, required = $7 WHERE id = $8 RETURNING *',
         [
           element.type,
           element.step,
@@ -372,6 +378,7 @@ export class ESMConfigRepository
           element.displayGroup,
           element.configuration,
           element.name,
+          element.required,
           element.id,
         ],
       );
@@ -384,6 +391,7 @@ export class ESMConfigRepository
         step: updated.rows[0].step,
         position: updated.rows[0].position,
         displayGroup: updated.rows[0].display_group,
+        required: updated.rows[0].required,
         configuration: updated.rows[0].configuration,
       };
     } catch (e) {
