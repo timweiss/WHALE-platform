@@ -5,5 +5,6 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="1"
     android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
     android:settingsActivity="KeyboardLoggingSettingsActivity"
     />

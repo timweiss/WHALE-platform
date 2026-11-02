@@ -21,11 +21,15 @@ import de.mimuc.senseeverything.service.accessibility.model.SizeClass
 import de.mimuc.senseeverything.service.accessibility.model.SkeletonNode
 import de.mimuc.senseeverything.service.accessibility.model.TextCategory
 import de.mimuc.senseeverything.service.accessibility.model.TreeSkeleton
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.random.Random
 
 /**
  * Captures privacy-preserving UI tree skeletons and interactions.
@@ -48,6 +52,13 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         // the framework itself gives up on an interaction request after 5 s
         private const val SOURCE_TIMEOUT_MS = 5_000L
         private val STATS_INTERVAL_MS = TimeUnit.MINUTES.toMillis(5)
+
+        // TODO: hard-coded for testing until the study config delivers screenshot settings
+        private val SCREENSHOT_SAMPLE_SIZES = mapOf(
+            "com.instagram.android" to 10,
+            "com.google.android.youtube" to 10
+        )
+        private val SCREENSHOT_RATING_TIME: LocalTime = LocalTime.of(20, 0)
 
         /**
          * Android 13+: fetch up to 50 descendants depth-first (the order [buildSkeleton] walks) in the
@@ -73,6 +84,9 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     private lateinit var sourceThread: HandlerThread
     private lateinit var sourceWorker: Handler
 
+    // reports on the worker thread
+    private lateinit var screenshotCapturer: ScreenshotCapturer
+
     // Main-thread state
     // false while no UITreeSensor stores snapshots (study paused or ended, LogService not running)
     private var consuming = true
@@ -85,6 +99,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     private var lastSignature: String? = null
     private var currentSkeleton: TreeSkeleton? = null
     private val nodeBounds = Rect()
+    // the sampling period's reservoirs, see currentScreenshotStore()
+    private var screenshotStore: ScreenshotStore? = null
 
     // Shared between main thread and worker
     private val pendingInteractions = AtomicInteger(0)
@@ -116,6 +132,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
         sourceThread = HandlerThread("UITreeSource").apply { start() }
         sourceWorker = Handler(sourceThread.looper)
+
+        screenshotCapturer = ScreenshotCapturer(service, worker)
 
         WHALELog.i(TAG, "Initialized with screen size: ${screenSize.x}x${screenSize.y}")
     }
@@ -311,6 +329,53 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                 lastSignature = signature
 
                 processSnapshot(snapshot)
+
+                // Make screenshot if package is in Screenshot capture mask (Reservoir Sampling without replacement)
+                val packageName = snapshot.appPackage
+                val screenshotSettings = getPackageScreenshotSettings(packageName)
+                if (screenshotSettings != null) {
+                    val store = currentScreenshotStore()
+                    val reservoir = store.reservoir(packageName)
+                    val appCounterT = reservoir.itemsSeen
+                    store.setItemsSeen(packageName, appCounterT + 1) // we have seen a new item now
+
+                    // slot -> appCounterT if reservoir is not full
+                    // slot -> randomJ if current item should be sampled into the store
+                    // slot -> null if current item should not be sampled
+                    val slot =
+                        if (appCounterT < screenshotSettings.appSampleSize) appCounterT else {
+                            val randomJ = Random.nextInt(0, appCounterT + 1)
+                            if (randomJ < screenshotSettings.appSampleSize) randomJ
+                            else null
+                        }
+
+                    if (slot != null) {
+                        val screenshotFile = store.newImageFile(packageName)
+                        screenshotCapturer.capture(rootNode.windowId, screenshotFile) { result ->
+                            when (result) {
+                                is ScreenshotCapturer.Outcome.Failed -> {
+                                    store.recordDropped(packageName)
+                                    store.discard(screenshotFile)
+                                }
+
+                                is ScreenshotCapturer.Outcome.Saved -> {
+                                    if (store.hasEnded()) { // skip capture, capture period is over
+                                        store.discard(screenshotFile)
+                                    } else {
+                                        store.commit(
+                                            packageName,
+                                            slot,
+                                            screenshotFile,
+                                            eventTime,
+                                            skeleton.signature
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 stats.screensRecorded.incrementAndGet()
 
                 WHALELog.d(TAG, "New screen captured: ${snapshot.appPackage}, signature: ${signature.take(8)}..., nodes: ${nodes.size}")
@@ -320,6 +385,34 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             stats.recordCaptureTime(SystemClock.elapsedRealtime() - start)
             stats.captureCpuMsTotal.addAndGet(SystemClock.currentThreadTimeMillis() - cpuStart)
         }
+    }
+
+    private class ScreenshotSettings(val appSampleSize: Int)
+
+    /** @return null if screenshots of [packageName] are not sampled */
+    private fun getPackageScreenshotSettings(packageName: String): ScreenshotSettings? =
+        SCREENSHOT_SAMPLE_SIZES[packageName]?.let { ScreenshotSettings(it) }
+
+    /** The next scheduled rating time after [now]; it ends the current sampling period. */
+    private fun getScreenshotPeriodEnd(now: Long = System.currentTimeMillis()): Long {
+        val current = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
+        val today = current.with(SCREENSHOT_RATING_TIME)
+        val end = if (today.isAfter(current)) today else today.plusDays(1)
+        return end.toInstant().toEpochMilli()
+    }
+
+    /**
+     * The store of the current sampling period. Created on first use rather than in [init], which
+     * runs on the main thread and would go stale after the first rating time; after a restart, the
+     * new store loads the period's persisted state, so sampling continues where it stopped. Replaced
+     * by the first item after the rating time, so no alarm is needed.
+     */
+    private fun currentScreenshotStore(): ScreenshotStore {
+        val periodEnd = getScreenshotPeriodEnd()
+        screenshotStore?.let { if (it.periodEnd == periodEnd) return it }
+        val root = ScreenshotStore.root(service)
+        ScreenshotStore.reportEndedPeriods(root)
+        return ScreenshotStore(root, periodEnd).also { screenshotStore = it }
     }
 
     private fun buildSkeleton(
@@ -642,6 +735,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
 
         WHALELog.i(TAG, "stats: " + stats.drain() +
                 " pendingInteractions=${pendingInteractions.get()}" +
+                " " + screenshotCapturer.drainStats() +
                 " heapUsedMb=$heapUsedMb heapMaxMb=$heapMaxMb nativeHeapMb=$nativeHeapMb" +
                 " processCpuMs=${processCpuMs - lastStatsProcessCpuMs}" +
                 " awakeMs=${uptimeMs - lastStatsUptimeMs}" +
@@ -657,6 +751,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         workerThread.quitSafely()
         sourceWorker.removeCallbacksAndMessages(null)
         sourceThread.quitSafely()
+        screenshotCapturer.shutdown()
         batchManager.shutdown()
     }
 

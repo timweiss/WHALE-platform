@@ -3,12 +3,17 @@ package de.mimuc.senseeverything.activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +30,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,6 +63,7 @@ import de.mimuc.senseeverything.helpers.DatabaseExporter
 import de.mimuc.senseeverything.helpers.ExportStatus
 import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
+import de.mimuc.senseeverything.service.accessibility.ScreenshotStore
 import de.mimuc.senseeverything.study.setStudyEndAlarm
 import de.mimuc.senseeverything.workers.UploadWorkTag
 import de.mimuc.senseeverything.workers.enqueueSinglePendingQuestionnaireUploadWorker
@@ -135,6 +143,9 @@ class StudyDebugInfoViewModel @Inject constructor(
     private val _sensorRunning = MutableStateFlow(false)
     val sensorRunning: StateFlow<Boolean> get() = _sensorRunning
 
+    private val _screenshots = MutableStateFlow<List<ScreenshotPreview>>(emptyList())
+    val screenshots: StateFlow<List<ScreenshotPreview>> get() = _screenshots
+
     val exportStatus: StateFlow<ExportStatus> = databaseExporter.exportStatus
 
     private var conversationSensor: ConversationSensor? = null
@@ -149,8 +160,22 @@ class StudyDebugInfoViewModel @Inject constructor(
                 _studyEnded.value = dataStoreManager.studyStateFlow.first() == StudyState.ENDED
                 _unsyncedLogDataCount.value = database.logDataDao().unsyncedCount
                 _lastLogDataItem.value = database.logDataDao().lastItem
+                _screenshots.value = loadScreenshots()
             }
             // _lastLogServiceExitTime.value = dataStoreManager.getLastLogServiceExitTime()
+        }
+    }
+
+    /** Decodes every sampled screenshot at a quarter of its size, enough for a thumbnail. */
+    private fun loadScreenshots(): List<ScreenshotPreview> {
+        val options = BitmapFactory.Options().apply { inSampleSize = 4 }
+        return ScreenshotStore.readAll(ScreenshotStore.root(application)).map { stored ->
+            ScreenshotPreview(
+                group = "${stored.packageName}, period until ${dateFromTimestamp(stored.periodEnd)}",
+                caption = "#${stored.slot} ${dateFromTimestamp(stored.sample.timestamp)}",
+                // null if the image was replaced since listing
+                image = BitmapFactory.decodeFile(stored.image.path, options)?.asImageBitmap()
+            )
         }
     }
 
@@ -259,6 +284,8 @@ class StudyDebugInfoViewModel @Inject constructor(
     }
 }
 
+class ScreenshotPreview(val group: String, val caption: String, val image: ImageBitmap?)
+
 @Composable
 fun StudyDebugInfoView(
     modifier: Modifier = Modifier,
@@ -273,6 +300,7 @@ fun StudyDebugInfoView(
     val studyEnded = viewModel.studyEnded.collectAsState()
     val sensorRunning = viewModel.sensorRunning.collectAsState()
     val exportStatus = viewModel.exportStatus.collectAsState()
+    val screenshots = viewModel.screenshots.collectAsState()
     val context = LocalContext.current
 
     Column(
@@ -382,6 +410,32 @@ fun StudyDebugInfoView(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Enrolment Settings")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text("Screenshot samples: ${screenshots.value.size}")
+        screenshots.value.groupBy { it.group }.forEach { (group, previews) ->
+            Text(group, modifier = Modifier.padding(top = 8.dp))
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                previews.forEach { preview ->
+                    Column {
+                        if (preview.image != null) {
+                            Image(
+                                bitmap = preview.image,
+                                contentDescription = preview.caption,
+                                modifier = Modifier.height(240.dp)
+                            )
+                        } else {
+                            Text("(replaced)")
+                        }
+                        Text(preview.caption, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
         }
     }
 }
