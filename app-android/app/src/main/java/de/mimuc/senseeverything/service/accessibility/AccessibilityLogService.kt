@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import dagger.hilt.android.AndroidEntryPoint
+import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.sensor.BufferedLogWriter
@@ -15,6 +16,9 @@ import javax.inject.Inject
 class AccessibilityLogService : AccessibilityService() {
     @Inject
     lateinit var database: AppDatabase;
+
+    @Inject
+    lateinit var dataStoreManager: DataStoreManager
 
     private val info = AccessibilityServiceInfo()
 

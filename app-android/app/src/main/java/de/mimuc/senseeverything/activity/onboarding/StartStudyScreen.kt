@@ -38,6 +38,8 @@ import de.mimuc.senseeverything.helpers.generateSensitiveDataSalt
 import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.LogService
+import de.mimuc.senseeverything.service.accessibility.logScreenshotSchedule
+import de.mimuc.senseeverything.service.accessibility.planScreenshotPeriods
 import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
@@ -118,6 +120,13 @@ class StartStudyViewModel @Inject constructor(
 
                 val phaseSchedules = reschedulePhaseChanges(context, database, dataStoreManager)
                 dataStoreManager.savePhaseSchedules(phaseSchedules)
+
+                val screenshotSchedule = planScreenshotPeriods(
+                    startedTimestamp,
+                    dataStoreManager.studyPhasesFlow.first() ?: emptyList()
+                )
+                logScreenshotSchedule(screenshotSchedule)
+                dataStoreManager.saveScreenshotSchedule(screenshotSchedule)
 
                 val studyEndTimestamp = phaseSchedules.lastOrNull()?.endTimestamp
                     ?: (startedTimestamp + study.durationDays.days.inWholeMilliseconds)

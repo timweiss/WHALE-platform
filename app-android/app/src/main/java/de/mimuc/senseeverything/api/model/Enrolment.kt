@@ -34,12 +34,25 @@ enum class InteractionWidgetDisplayStrategy {
 }
 
 @Serializable
+data class PackageScreenshotSettings(
+    val packageName: String,
+    val sample: Int
+)
+
+@Serializable
+data class ScreenshotSettings(
+    val periodEnd: String,
+    val packageSettings: List<PackageScreenshotSettings>
+)
+
+@Serializable
 data class ExperimentalGroupPhase(
     val experimentalGroupId: Int,
     val name: String,
     val fromDay: Int,
     val durationDays: Int,
-    val interactionWidgetStrategy: InteractionWidgetDisplayStrategy
+    val interactionWidgetStrategy: InteractionWidgetDisplayStrategy,
+    val screenshotSettings: ScreenshotSettings?
 )
 
 suspend fun getEnrolmentInfo(

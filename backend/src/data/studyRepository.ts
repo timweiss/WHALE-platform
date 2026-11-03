@@ -29,9 +29,11 @@ interface StudyRow {
   embedded_info_url: string | null;
 }
 
-enum InteractionWidgetStrategy {
+export enum InteractionWidgetStrategy {
   Default = 'Default',
   Bucketed = 'Bucketed',
+  Hidden = 'Hidden',
+  Disabled = 'Disabled',
 }
 
 enum StudyExperimentalGroupAllocationStrategy {
@@ -47,6 +49,16 @@ export interface StudyExperimentalGroup {
   internalName: string;
 }
 
+export interface ScreenshotSettings {
+  periodEnd: string;
+  packageSettings: PackageScreenshotSettings[];
+}
+
+export interface PackageScreenshotSettings {
+  packageName: string;
+  sample: number;
+}
+
 export interface StudyExperimentalGroupPhase {
   experimentalGroupId: number;
   name: string;
@@ -56,6 +68,7 @@ export interface StudyExperimentalGroupPhase {
 
   // configuration parameters
   interactionWidgetStrategy: InteractionWidgetStrategy;
+  screenshotSettings: ScreenshotSettings | null;
 }
 
 type CompletionTracking = {
@@ -112,6 +125,7 @@ export interface IStudyRepository {
       | 'fromDay'
       | 'durationDays'
       | 'interactionWidgetStrategy'
+      | 'screenshotSettings'
     >,
   ): Promise<StudyExperimentalGroupPhase>;
 
@@ -297,17 +311,19 @@ export class StudyRepository extends Repository implements IStudyRepository {
       | 'fromDay'
       | 'durationDays'
       | 'interactionWidgetStrategy'
+      | 'screenshotSettings'
     >,
   ): Promise<StudyExperimentalGroupPhase> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO study_experimental_group_phases (experimental_group_id, internal_name, from_day, duration_days, interaction_widget_strategy) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        'INSERT INTO study_experimental_group_phases (experimental_group_id, internal_name, from_day, duration_days, interaction_widget_strategy, screenshot_settings) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [
           phase.experimentalGroupId,
           phase.name,
           phase.fromDay,
           phase.durationDays,
           phase.interactionWidgetStrategy,
+          phase.screenshotSettings,
         ],
       );
 
@@ -317,6 +333,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
         fromDay: res.rows[0].from_day,
         durationDays: res.rows[0].duration_days,
         interactionWidgetStrategy: res.rows[0].interaction_widget_strategy,
+        screenshotSettings: res.rows[0].screenshot_settings,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -338,6 +355,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
         fromDay: row.from_day,
         durationDays: row.duration_days,
         interactionWidgetStrategy: row.interaction_widget_strategy,
+        screenshotSettings: row.screenshot_settings,
       }));
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());

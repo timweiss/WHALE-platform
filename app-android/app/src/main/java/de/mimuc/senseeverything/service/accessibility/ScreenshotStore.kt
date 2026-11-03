@@ -54,16 +54,26 @@ class ScreenshotStore(
 
         // TODO: call from the rating lifecycle once a period has been rated (or never will be)
         /** Reports the period first (see [reportEndedPeriods]), its counts are deleted with it. */
-        fun deletePeriod(root: File, periodEnd: Long, log: (String) -> Unit = { WHALELog.i(TAG, it) }) {
-            reportPeriod(root, periodEnd, System.currentTimeMillis(), log)
+        fun deletePeriod(
+            root: File,
+            periodEnd: Long,
+            schedule: List<ScreenshotPeriod>?,
+            log: (String) -> Unit = { WHALELog.i(TAG, it) }
+        ) {
+            reportPeriod(root, periodEnd, System.currentTimeMillis(), schedule, log)
             periodDir(root, periodEnd).deleteRecursively()
         }
 
-        // TODO: call from the rating lifecycle at study end and when the participant's data is erased
+        // TODO: call from the rating lifecycle at study end and when the participant's data is erased,
+        //  before the DataStore (and with it the schedule) is erased
         /** Reports all periods first, including the running one (`complete=false`), e.g. at study end. */
-        fun deleteAll(root: File, log: (String) -> Unit = { WHALELog.i(TAG, it) }) {
+        fun deleteAll(
+            root: File,
+            schedule: List<ScreenshotPeriod>?,
+            log: (String) -> Unit = { WHALELog.i(TAG, it) }
+        ) {
             val now = System.currentTimeMillis()
-            periodEnds(root).forEach { reportPeriod(root, it, now, log) }
+            periodEnds(root).forEach { reportPeriod(root, it, now, schedule, log) }
             root.deleteRecursively()
         }
 
@@ -75,22 +85,33 @@ class ScreenshotStore(
          */
         fun reportEndedPeriods(
             root: File,
+            /** for the phase of each period */
+            schedule: List<ScreenshotPeriod>?,
             now: Long = System.currentTimeMillis(),
             log: (String) -> Unit = { WHALELog.i(TAG, it) }
         ) {
-            periodEnds(root).filter { it <= now }.forEach { reportPeriod(root, it, now, log) }
+            periodEnds(root).filter { it <= now }.forEach { reportPeriod(root, it, now, schedule, log) }
         }
 
         /** Once per period: a marker file records that it was reported. */
-        private fun reportPeriod(root: File, periodEnd: Long, now: Long, log: (String) -> Unit) {
+        private fun reportPeriod(
+            root: File,
+            periodEnd: Long,
+            now: Long,
+            schedule: List<ScreenshotPeriod>?,
+            log: (String) -> Unit
+        ) {
             val dir = periodDir(root, periodEnd)
             val marker = File(dir, REPORTED_FILE)
             if (!dir.isDirectory || marker.exists()) return
 
+            val phaseName = schedule?.firstOrNull { it.end == periodEnd }?.phaseName ?: "?"
             readReservoirs(dir).forEach { (packageName, reservoir) ->
+                // phase last: the name may contain spaces, so it runs to the end of the line
                 log("sampling summary: periodEnd=$periodEnd package=$packageName" +
                         " itemsSeen=${reservoir.itemsSeen} itemsDropped=${reservoir.itemsDropped}" +
-                        " samples=${reservoir.slots.count { it != null }} complete=${periodEnd <= now}")
+                        " samples=${reservoir.slots.count { it != null }} complete=${periodEnd <= now}" +
+                        " phase=$phaseName")
             }
             marker.createNewFile()
         }

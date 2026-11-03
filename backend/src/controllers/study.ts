@@ -1,6 +1,7 @@
 import { Express } from 'express';
 import { authenticate, requireAdmin } from '../middleware/authenticate';
 import {
+  InteractionWidgetStrategy,
   IStudyRepository,
   StudyExperimentalGroupPhase,
 } from '../data/studyRepository';
@@ -11,6 +12,30 @@ import { createHourlyRateLimit } from '../middleware/rateLimit';
 import { Config } from '../config';
 
 const StudyPath = z.object({ id: EntityId });
+
+const CreateExperimentalGroupBody = z.object({
+  internalName: z.string(),
+  allocationOrder: z.int(),
+  phases: z.array(
+    z.object({
+      internalName: z.string(),
+      fromDay: z.int(),
+      durationDays: z.int().positive(),
+      interactionWidgetStrategy: z.enum(InteractionWidgetStrategy),
+      screenshotSettings: z
+        .object({
+          periodEnd: z.iso.time(),
+          packageSettings: z.array(
+            z.object({
+              packageName: z.string(),
+              sample: z.int().positive(),
+            }),
+          ),
+        })
+        .nullable(),
+    }),
+  ),
+});
 
 export function createStudyController(
   studyRepository: IStudyRepository,
@@ -108,15 +133,22 @@ export function createStudyController(
         return res.status(404).send({ error: 'Study not found' });
       }
 
+      const body = CreateExperimentalGroupBody.safeParse(req.body);
+      if (!body.success) {
+        return res
+          .status(400)
+          .send({ error: 'Invalid experimental group configuration ' });
+      }
+
       const experimentalGroup = await studyRepository.createExperimentalGroup({
         studyId: id,
-        internalName: req.body.internalName,
-        allocationOrder: req.body.allocationOrder,
+        internalName: body.data.internalName,
+        allocationOrder: body.data.allocationOrder,
       });
 
       const phases: StudyExperimentalGroupPhase[] = [];
 
-      for (const phase of req.body.phases) {
+      for (const phase of body.data.phases) {
         if (
           !phase.internalName ||
           phase.fromDay == null ||
@@ -131,9 +163,10 @@ export function createStudyController(
           {
             experimentalGroupId: experimentalGroup.id,
             name: phase.internalName,
-            fromDay: parseInt(phase.fromDay),
-            durationDays: parseInt(phase.durationDays),
+            fromDay: phase.fromDay,
+            durationDays: phase.durationDays,
             interactionWidgetStrategy: phase.interactionWidgetStrategy,
+            screenshotSettings: phase.screenshotSettings,
           },
         );
 

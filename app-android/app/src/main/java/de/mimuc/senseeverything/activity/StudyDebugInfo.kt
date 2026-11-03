@@ -116,7 +116,7 @@ class StudyDebugInfoViewModel @Inject constructor(
     private val database: AppDatabase,
     private val databaseExporter: DatabaseExporter
 ) : AndroidViewModel(application) {
-    private val _currentStudyPhase = MutableStateFlow<ExperimentalGroupPhase?>(ExperimentalGroupPhase(0, "", 0,0,InteractionWidgetDisplayStrategy.DEFAULT))
+    private val _currentStudyPhase = MutableStateFlow<ExperimentalGroupPhase?>(ExperimentalGroupPhase(0, "", 0,0,InteractionWidgetDisplayStrategy.DEFAULT, null))
     val currentStudyPhase: StateFlow<ExperimentalGroupPhase?> get() = _currentStudyPhase
 
     private val _unsyncedLogDataCount = MutableStateFlow(0L)

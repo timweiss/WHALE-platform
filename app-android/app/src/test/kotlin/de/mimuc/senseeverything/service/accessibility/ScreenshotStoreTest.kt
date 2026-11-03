@@ -73,7 +73,7 @@ class ScreenshotStoreTest {
         ScreenshotStore(root, 500L, log = {}).setItemsSeen(app, 1)
 
         assertEquals(listOf(500L, 1_000L), ScreenshotStore.periodEnds(root))
-        ScreenshotStore.deletePeriod(root, 500L, log = {})
+        ScreenshotStore.deletePeriod(root, 500L, schedule = null, log = {})
         assertEquals(listOf(1_000L), ScreenshotStore.periodEnds(root))
     }
 
@@ -94,16 +94,29 @@ class ScreenshotStoreTest {
         store.setItemsSeen(app, 5)
         store.recordDropped(app)
         store.commit(app, 0, capture(store), 1L, "a")
+        val schedule = listOf(ScreenshotPeriod(0L, periodEnd, "baseline", mapOf(app to 10)))
         val lines = mutableListOf<String>()
 
-        ScreenshotStore.reportEndedPeriods(root, now = periodEnd - 1, log = { lines.add(it) })
+        ScreenshotStore.reportEndedPeriods(root, schedule, now = periodEnd - 1, log = { lines.add(it) })
         assertTrue(lines.isEmpty())
 
-        ScreenshotStore.reportEndedPeriods(root, now = periodEnd, log = { lines.add(it) })
-        ScreenshotStore.reportEndedPeriods(root, now = periodEnd, log = { lines.add(it) })
-        ScreenshotStore.deletePeriod(root, periodEnd, log = { lines.add(it) })
+        ScreenshotStore.reportEndedPeriods(root, schedule, now = periodEnd, log = { lines.add(it) })
+        ScreenshotStore.reportEndedPeriods(root, schedule, now = periodEnd, log = { lines.add(it) })
+        ScreenshotStore.deletePeriod(root, periodEnd, schedule, log = { lines.add(it) })
         assertEquals(
-            listOf("sampling summary: periodEnd=1000 package=$app itemsSeen=4 itemsDropped=1 samples=1 complete=true"),
+            listOf("sampling summary: periodEnd=1000 package=$app itemsSeen=4 itemsDropped=1 samples=1 complete=true phase=baseline"),
+            lines
+        )
+    }
+
+    @Test
+    fun periodMissingFromTheScheduleIsReportedWithoutPhase() {
+        open().setItemsSeen(app, 1)
+        val lines = mutableListOf<String>()
+
+        ScreenshotStore.reportEndedPeriods(root, schedule = null, now = periodEnd, log = { lines.add(it) })
+        assertEquals(
+            listOf("sampling summary: periodEnd=1000 package=$app itemsSeen=1 itemsDropped=0 samples=0 complete=true phase=?"),
             lines
         )
     }

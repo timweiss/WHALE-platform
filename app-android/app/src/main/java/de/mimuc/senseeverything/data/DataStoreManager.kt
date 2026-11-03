@@ -13,6 +13,7 @@ import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.accessibility.ScreenshotPeriod
 import de.mimuc.senseeverything.study.PhaseScheduleInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -65,7 +66,8 @@ data class AppSettings(
     val sensitiveDataSalt: String? = null,
     val lastPermissionNotificationTime: Long = 0L,
     val lastRevokedPermissions: Set<String> = emptySet(),
-    val phaseSchedules: List<PhaseScheduleInfo>? = null
+    val phaseSchedules: List<PhaseScheduleInfo>? = null,
+    val screenshotSchedule: List<ScreenshotPeriod>? = null
 )
 
 @Serializable
@@ -90,7 +92,8 @@ data class OptionalAppSettings(
     val sensitiveDataSalt: String? = null,
     val lastPermissionNotificationTime: Long? = null,
     val lastRevokedPermissions: Set<String>? = null,
-    val phaseSchedules: List<PhaseScheduleInfo>? = null
+    val phaseSchedules: List<PhaseScheduleInfo>? = null,
+    val screenshotSchedule: List<ScreenshotPeriod>? = null
 )
 
 val DEFAULT_APP_SETTINGS = AppSettings(
@@ -143,7 +146,8 @@ fun recoverFromOptionalOrUseDefault(optionalAppSettings: OptionalAppSettings): A
             ?: defaultAppSettings.lastPermissionNotificationTime,
         lastRevokedPermissions = optionalAppSettings.lastRevokedPermissions
             ?: defaultAppSettings.lastRevokedPermissions,
-        phaseSchedules = optionalAppSettings.phaseSchedules ?: defaultAppSettings.phaseSchedules
+        phaseSchedules = optionalAppSettings.phaseSchedules ?: defaultAppSettings.phaseSchedules,
+        screenshotSchedule = optionalAppSettings.screenshotSchedule ?: defaultAppSettings.screenshotSchedule
     )
 }
 
@@ -430,6 +434,19 @@ class DataStoreManager @Inject constructor(@ApplicationContext context: Context)
             )
         }
     }
+
+    val screenshotScheduleFlow = dataStore.data.map { preferences ->
+        preferences.screenshotSchedule
+    }
+
+    suspend fun saveScreenshotSchedule(schedule: List<ScreenshotPeriod>) {
+        dataStore.updateData {
+            it.copy(
+                lastUpdate = System.currentTimeMillis(),
+                screenshotSchedule = schedule
+            )
+        }
+    }
 }
 
 suspend fun DataStoreManager.currentStudyDay(): Long {
@@ -444,10 +461,12 @@ suspend fun DataStoreManager.getCurrentStudyPhase(): ExperimentalGroupPhase? {
     val phases = studyPhasesFlow.first()
     val currentDay = currentStudyDay() - 1
 
-    return phases?.firstOrNull { phase ->
-        phase.fromDay <= currentDay && phase.fromDay + phase.durationDays > currentDay
-    }
+    return phases?.phaseOnStudyDay(currentDay)
 }
+
+/** The phase of the 0-based study [day] (0 = the day the study started), null outside of all phases. */
+fun List<ExperimentalGroupPhase>.phaseOnStudyDay(day: Long): ExperimentalGroupPhase? =
+    firstOrNull { phase -> phase.fromDay <= day && phase.fromDay + phase.durationDays > day }
 
 suspend fun DataStoreManager.getQuestionnaireById(id: Int): FullQuestionnaire? {
     val questionnaires = questionnairesFlow.first()

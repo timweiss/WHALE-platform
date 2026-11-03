@@ -1,0 +1,1 @@
+alter table study_experimental_group_phases add column screenshot_settings jsonb default null;
