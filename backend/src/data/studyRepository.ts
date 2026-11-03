@@ -50,7 +50,7 @@ export interface StudyExperimentalGroup {
 }
 
 export interface ScreenshotSettings {
-  periodEnd: string;
+  periodEnds: string[];
   packageSettings: PackageScreenshotSettings[];
 }
 

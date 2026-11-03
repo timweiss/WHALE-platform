@@ -17,10 +17,10 @@ class ScreenshotScheduleTest {
     private fun at(text: String): Long =
         LocalDateTime.parse(text).atZone(zone).toInstant().toEpochMilli()
 
-    private fun phase(name: String, fromDay: Int, durationDays: Int, ratingTime: String?, sampleSize: Int = 10) =
+    private fun phase(name: String, fromDay: Int, durationDays: Int, ratingTimes: List<String>?, sampleSize: Int = 10) =
         ExperimentalGroupPhase(
             1, name, fromDay, durationDays, InteractionWidgetDisplayStrategy.DEFAULT,
-            ratingTime?.let { ScreenshotSettings(it, listOf(PackageScreenshotSettings(app, sampleSize))) }
+            ratingTimes?.let { ScreenshotSettings(it, listOf(PackageScreenshotSettings(app, sampleSize))) }
         )
 
     private fun plan(studyStart: String, vararg phases: ExperimentalGroupPhase) =
@@ -31,7 +31,7 @@ class ScreenshotScheduleTest {
 
     @Test
     fun periodsRunFromRatingTimeToRatingTime() {
-        val periods = plan("2026-11-03T14:00", phase("baseline", 0, 2, "20:00"))
+        val periods = plan("2026-11-03T14:00", phase("baseline", 0, 2, listOf("20:00")))
 
         assertEquals(
             listOf(
@@ -47,7 +47,7 @@ class ScreenshotScheduleTest {
 
     @Test
     fun studyStartAfterTheRatingTimeOpensAPeriodUntilTheNextDay() {
-        val periods = plan("2026-11-03T21:00", phase("baseline", 0, 1, "20:00"))
+        val periods = plan("2026-11-03T21:00", phase("baseline", 0, 1, listOf("20:00")))
 
         assertEquals(listOf(Triple(at("2026-11-03T21:00"), at("2026-11-04T20:00"), "baseline")), periods.summary())
     }
@@ -56,8 +56,8 @@ class ScreenshotScheduleTest {
     fun periodKeepsTheSettingsOfThePhaseItStartedIn() {
         val periods = plan(
             "2026-11-03T14:00",
-            phase("baseline", 0, 2, "20:00", sampleSize = 10),
-            phase("treatment", 2, 1, "18:00", sampleSize = 3)
+            phase("baseline", 0, 2, listOf("20:00"), sampleSize = 10),
+            phase("treatment", 2, 1, listOf("18:00"), sampleSize = 3)
         )
 
         assertEquals(
@@ -78,10 +78,10 @@ class ScreenshotScheduleTest {
     fun daysWithoutSettingsAndGapsGetNoPeriod() {
         val periods = plan(
             "2026-11-03T14:00",
-            phase("baseline", 0, 1, "20:00"),
+            phase("baseline", 0, 1, listOf("20:00")),
             phase("washout", 1, 1, null),
             // day 2 belongs to no phase
-            phase("treatment", 3, 1, "20:00")
+            phase("treatment", 3, 1, listOf("20:00"))
         )
 
         assertEquals(
@@ -96,10 +96,31 @@ class ScreenshotScheduleTest {
     }
 
     @Test
+    fun severalRatingTimesSplitTheDay() {
+        // unsorted on purpose
+        val periods = plan("2026-11-03T14:00", phase("baseline", 0, 2, listOf("20:00", "13:00")))
+
+        assertEquals(
+            listOf(
+                Triple(at("2026-11-03T14:00"), at("2026-11-03T20:00"), "baseline"),
+                Triple(at("2026-11-03T20:00"), at("2026-11-04T13:00"), "baseline"),
+                Triple(at("2026-11-04T13:00"), at("2026-11-04T20:00"), "baseline"),
+                Triple(at("2026-11-04T20:00"), at("2026-11-05T13:00"), "baseline")
+            ),
+            periods.summary()
+        )
+    }
+
+    @Test
+    fun emptyRatingTimesAreTreatedLikeNoSettings() {
+        assertTrue(plan("2026-11-03T14:00", phase("baseline", 0, 2, emptyList())).isEmpty())
+    }
+
+    @Test
     fun invalidRatingTimeIsTreatedLikeNoSettings() {
         val warnings = mutableListOf<String>()
         val periods = planScreenshotPeriods(
-            at("2026-11-03T14:00"), listOf(phase("baseline", 0, 2, "8 pm")), zone, warn = { warnings.add(it) }
+            at("2026-11-03T14:00"), listOf(phase("baseline", 0, 2, listOf("8 pm"))), zone, warn = { warnings.add(it) }
         )
 
         assertTrue(periods.isEmpty())
@@ -114,7 +135,7 @@ class ScreenshotScheduleTest {
     @Test
     fun ratingTimeFollowsDaylightSavingTime() {
         // clocks go back on 2026-10-25 in Berlin, so the second period is 25 hours long
-        val periods = plan("2026-10-24T14:00", phase("baseline", 0, 2, "20:00"))
+        val periods = plan("2026-10-24T14:00", phase("baseline", 0, 2, listOf("20:00")))
 
         assertEquals(at("2026-10-25T20:00"), periods[1].end)
         assertEquals(25 * 3_600_000L, periods[1].end - periods[1].start)

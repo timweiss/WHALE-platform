@@ -34,7 +34,7 @@ data class ScreenshotPeriod(
 /**
  * Plans all sampling periods of the study. Each period takes the settings of the phase of the study
  * day it starts on (by calendar date, like [de.mimuc.senseeverything.data.getCurrentStudyPhase]) and
- * keeps them until its rating time, even if a phase change falls inside it. Days of a phase without
+ * keeps them until the phase's next rating time, even if a phase change falls inside it. Days of a phase without
  * screenshot settings, gaps between phases and the time after the last phase get no period.
  *
  * Timestamps are absolute, computed in [zone]: if the participant changes time zones, the rating
@@ -48,12 +48,13 @@ fun planScreenshotPeriods(
 ): List<ScreenshotPeriod> {
     // exclusive, 0-based like ExperimentalGroupPhase.fromDay
     val endDay = phases.maxOfOrNull { it.fromDay + it.durationDays } ?: return emptyList()
+    // sorted, null if the phase has no (valid) rating times
     val ratingTimes = phases.associateWith { phase ->
-        phase.screenshotSettings?.let {
+        phase.screenshotSettings?.let { settings ->
             try {
-                LocalTime.parse(it.periodEnd)
+                settings.periodEnds.map { LocalTime.parse(it) }.sorted().ifEmpty { null }
             } catch (e: DateTimeParseException) {
-                warn("Invalid rating time '${it.periodEnd}' in phase ${phase.name}, not sampling in it")
+                warn("Invalid rating time in ${settings.periodEnds} of phase ${phase.name}, not sampling in it")
                 null
             }
         }
@@ -68,14 +69,15 @@ fun planScreenshotPeriods(
 
         val phase = phases.phaseOnStudyDay(day)
         val settings = phase?.screenshotSettings
-        val ratingTime = phase?.let { ratingTimes[it] }
-        if (settings == null || ratingTime == null) {
+        val times = phase?.let { ratingTimes[it] }
+        if (settings == null || times == null) {
             cursor = cursor.toLocalDate().plusDays(1).atStartOfDay(zone)
             continue
         }
 
-        val today = cursor.with(ratingTime)
-        val end = if (today.isAfter(cursor)) today else today.plusDays(1)
+        // the next rating time today, or the first one tomorrow
+        val end = times.map { cursor.with(it) }.firstOrNull { it.isAfter(cursor) }
+            ?: cursor.toLocalDate().plusDays(1).atTime(times.first()).atZone(zone)
         periods.add(
             ScreenshotPeriod(
                 start = cursor.toInstant().toEpochMilli(),

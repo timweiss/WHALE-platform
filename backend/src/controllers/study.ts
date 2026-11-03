@@ -24,7 +24,7 @@ const CreateExperimentalGroupBody = z.object({
       interactionWidgetStrategy: z.enum(InteractionWidgetStrategy),
       screenshotSettings: z
         .object({
-          periodEnd: z.iso.time(),
+          periodEnds: z.array(z.iso.time()).min(1),
           packageSettings: z.array(
             z.object({
               packageName: z.string(),

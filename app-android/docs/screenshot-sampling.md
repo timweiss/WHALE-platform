@@ -115,25 +115,27 @@ no sampling in this phase):
 
 ```json
 {
-  "periodEnd": "20:00",
+  "periodEnds": ["13:00", "20:00"],
   "packageSettings": [{ "packageName": "com.instagram.android", "sample": 10 }]
 }
 ```
 
-- **`periodEnd`:** the rating time, in the device's time zone at study start.
+- **`periodEnds`:** the rating times of a day, in the device's time zone at study start. Each one
+  ends a period, so `["13:00", "20:00"]` gives two periods per day. Their order doesn't matter.
 - **`sample`:** N, the reservoir size for the app. Apps not listed are not sampled.
 
 **Schedule:** when the study starts (`StartStudyScreen`), `planScreenshotPeriods` plans every
 period of the study as absolute timestamps and saves them to the DataStore (`screenshotSchedule`):
 - The first period starts at the study start and ends at the next rating time. Each further period
-  starts at the previous one's end.
+  starts at the previous one's end and ends at the phase's next rating time, today or tomorrow.
 - A period takes the settings of the phase of the study day it starts on, by calendar date like
   `getCurrentStudyPhase()`, not through the `ChangePhaseReceiver` alarms. It keeps them until its
   rating time, so a phase change never changes N in the middle of a reservoir, which would make
   the sample non-uniform. Only the next period uses the new phase's settings and rating time.
 - Days of a phase without screenshot settings (or with an invalid rating time), gaps between
   phases and the time after the last phase get no period. Planning continues at the next midnight.
-- The period that starts on the last study day ends at its rating time on the day after.
+- The period that starts after the last rating time of the last study day ends at the first rating
+  time on the day after.
 
 The schedule is the only place that holds a period's settings: it is planned once and never
 changes. After a process restart, the period's store continues with its state on disk. Reporting

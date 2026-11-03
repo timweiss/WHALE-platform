@@ -41,7 +41,8 @@ data class PackageScreenshotSettings(
 
 @Serializable
 data class ScreenshotSettings(
-    val periodEnd: String,
+    /** the rating times ("HH:mm") that end the sampling periods of a day */
+    val periodEnds: List<String>,
     val packageSettings: List<PackageScreenshotSettings>
 )
 
