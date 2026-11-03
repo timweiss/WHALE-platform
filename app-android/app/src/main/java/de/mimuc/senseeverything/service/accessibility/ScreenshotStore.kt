@@ -24,7 +24,8 @@ import java.util.UUID
  * package's state is first loaded.
  *
  * Not thread-safe; use it from the capture worker only. Other processes (the rating UI) may read a
- * period once it has ended, since nothing writes to it then.
+ * period once it has ended, since the store doesn't write to it then. The main process marks ended
+ * periods as prompted and deletes them (see [ScreenshotPeriodEndReceiver]).
  */
 class ScreenshotStore(
     root: File,
@@ -38,6 +39,7 @@ class ScreenshotStore(
         private const val STATE_FILE = "state.json"
         private const val IMAGE_EXTENSION = ".jpg"
         private const val REPORTED_FILE = "reported"
+        private const val RATING_REQUESTED_FILE = "rating_requested"
         private val json = Json { ignoreUnknownKeys = true }
 
         /**
@@ -52,7 +54,6 @@ class ScreenshotStore(
         fun periodEnds(root: File): List<Long> =
             root.list()?.mapNotNull { it.toLongOrNull() }?.sorted() ?: emptyList()
 
-        // TODO: call from the rating lifecycle once a period has been rated (or never will be)
         /** Reports the period first (see [reportEndedPeriods]), its counts are deleted with it. */
         fun deletePeriod(
             root: File,
@@ -64,9 +65,10 @@ class ScreenshotStore(
             periodDir(root, periodEnd).deleteRecursively()
         }
 
-        // TODO: call from the rating lifecycle at study end and when the participant's data is erased,
-        //  before the DataStore (and with it the schedule) is erased
-        /** Reports all periods first, including the running one (`complete=false`), e.g. at study end. */
+        /**
+         * Reports all periods first, including the running one (`complete=false`). Call it before the
+         * DataStore (and with it the schedule) is erased.
+         */
         fun deleteAll(
             root: File,
             schedule: List<ScreenshotPeriod>?,
@@ -113,8 +115,24 @@ class ScreenshotStore(
                         " samples=${reservoir.slots.count { it != null }} complete=${periodEnd <= now}" +
                         " phase=$phaseName")
             }
-            marker.createNewFile()
+            try {
+                marker.createNewFile()
+            } catch (e: IOException) {
+                // the main process deleted the period meanwhile, after reporting it itself
+            }
         }
+
+        /** Whether the rating of the ended period was requested, i.e. its event was handled. */
+        fun isRatingRequested(root: File, periodEnd: Long) =
+            File(periodDir(root, periodEnd), RATING_REQUESTED_FILE).exists()
+
+        fun markRatingRequested(root: File, periodEnd: Long) {
+            File(periodDir(root, periodEnd), RATING_REQUESTED_FILE).createNewFile()
+        }
+
+        /** Filled slots of all apps in the period, read-only like [readAll]. */
+        fun sampleCount(root: File, periodEnd: Long): Int =
+            readReservoirs(periodDir(root, periodEnd)).sumOf { (_, reservoir) -> reservoir.slots.count { it != null } }
 
         /**
          * Lists the samples of all periods without opening a store, so it is safe to call from another

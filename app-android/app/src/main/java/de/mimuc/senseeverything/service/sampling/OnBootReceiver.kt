@@ -13,6 +13,7 @@ import de.mimuc.senseeverything.helpers.isServiceRunning
 import de.mimuc.senseeverything.helpers.scheduleResumeSamplingAlarm
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.LogService
+import de.mimuc.senseeverything.service.accessibility.ScreenshotPeriodEndReceiver
 import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
 import de.mimuc.senseeverything.service.healthcheck.ServiceHealthcheck
@@ -68,6 +69,8 @@ class OnBootReceiver: BroadcastReceiver() {
                 } else if (studyState == StudyState.ENDED) {
                     WHALELog.i("BootUpReceiver", "Study has ended, scheduling leftover questionnaires")
                     EsmHandler.rescheduleQuestionnaires(context, dataStoreManager, database)
+                    // the last period ends after the study, and its rating may still be open
+                    ScreenshotPeriodEndReceiver.handle(context, database, dataStoreManager)
                 } else {
                     WHALELog.i("BootUpReceiver", "Study was cancelled/did not start yet, not starting sampling")
                     // todo: disable BootUpReceiver
@@ -89,6 +92,8 @@ private suspend fun rescheduleAlarms(context: Context, database: AppDatabase, da
     rescheduleStudyEndAlarm(context, database)
     reschedulePhaseChanges(context, database, dataStoreManager)
     EsmHandler.rescheduleQuestionnaires(context, dataStoreManager, database)
+    // catches up on period ends missed while the device was off
+    ScreenshotPeriodEndReceiver.handle(context, database, dataStoreManager)
 
     // Schedule periodic healthcheck
     PeriodicServiceHealthcheckReceiver.schedule(context)

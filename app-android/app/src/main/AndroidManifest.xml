@@ -173,6 +173,10 @@
             android:enabled="true"
             android:exported="false" />
         <receiver android:name=".study.EndStudyReceiver" android:enabled="true" android:exported="false" />
+        <receiver
+            android:name=".service.accessibility.ScreenshotPeriodEndReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <service
             android:name=".service.accessibility.AccessibilityLogService"

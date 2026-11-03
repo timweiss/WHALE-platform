@@ -86,9 +86,10 @@ sampling summary: periodEnd=<epoch ms> package=<app> itemsSeen=<t> itemsDropped=
 - **Never uploaded:** no upload or FileProvider path covers this directory.
 - **Replaced images** are deleted immediately. Files the state doesn't reference (left over after
   a crash) are deleted when the state is loaded.
-- **Deletion:** `ScreenshotStore.deletePeriod` deletes a period after rating, and
-  `ScreenshotStore.deleteAll` deletes everything at study end. *TODO:* both are wired up together
-  with the rating lifecycle. Until then, screenshots stay on the device.
+- **Deletion:** a period is deleted once its rating is no longer open (see [Rating](#rating)).
+  Screenshots never carry over to the next rating. `ScreenshotStore.deleteAll` deletes everything
+  when the participant cancels or the enrolment is removed. The natural study end deletes nothing
+  by itself: the last period ends after it and may still be rated.
 
 ## Performance (first test, low-spec device)
 
@@ -158,6 +159,38 @@ the rating time stays at the time of the original zone. Daylight saving time is 
 
 The debug view (`StudyDebugInfo`) shows all stored screenshots, grouped by app and period.
 
+## Rating
+
+The sampling module owns the period boundaries; a rating questionnaire hangs off them through an
+event trigger, so the notification and the period end share one clock and can't drift apart.
+
+```json
+{ "type": "event", "validDuration": 120,
+  "configuration": { "eventName": "screenshot_period_ended", "modality": "push", "notificationText": "…" } }
+```
+
+`ScreenshotPeriodEndReceiver` (main process) runs at every period end, from one alarm that it
+schedules again each time:
+1. **Prompt:** for every ended period on disk that wasn't prompted yet, it emits
+   `screenshot_period_ended` if the period has samples. Periods without samples get no
+   questionnaire. The questionnaire is bound to exactly that period: its pending questionnaire has
+   the context `{"screenshotPeriodEnd": <periodEnd>}` and is valid from the period end for the
+   trigger's `validDuration`. A marker file `rating_requested` records that the period was handled.
+2. **Sweep:** it deletes every prompted period whose rating is no longer open (completed, expired,
+   removed after upload, or never created because no questionnaire listens for the event), at the
+   earliest 5 minutes after its end so a capture still in flight can't write into a deleted period.
+3. **Next run:** at the next period end, the next expiry of an open rating, or the end of a grace
+   time, whichever comes first.
+
+- **Reboot:** `OnBootReceiver` runs it once, which catches up on period ends missed while the device
+  was off. A late event creates no questionnaire if its validity has already passed.
+- **Rated screenshots** stay on the device until the receiver's next run, at the latest the next
+  period end.
+- **`validDuration: -1`** (no expiry): the period is kept until it's rated. After the last period,
+  nothing deletes a rated period then; only cancelling deletes it.
+- **Rating UI:** reads the period's samples with `ScreenshotStore.readAll`, filtered by the
+  context's `screenshotPeriodEnd`. *TODO:* a questionnaire element for it.
+
 ## Code
 
 | File | Role |
@@ -167,4 +200,5 @@ The debug view (`StudyDebugInfo`) shows all stored screenshots, grouped by app a
 | `service/accessibility/ScreenshotPeriods.kt` | finds and opens the running planned period |
 | `service/accessibility/ScreenshotStore.kt` | reservoir state on disk, period summaries, read-only listing |
 | `service/accessibility/ScreenshotCapturer.kt` | screenshot, downscaling, JPEG, stats |
+| `service/accessibility/ScreenshotPeriodEndReceiver.kt` | rating event, deletion, period end alarm |
 | `res/xml/accessibility_service_config*.xml` | `canTakeScreenshot="true"` |

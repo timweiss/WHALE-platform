@@ -9,6 +9,7 @@ import androidx.work.WorkManager
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.accessibility.AccessibilityLogService
+import de.mimuc.senseeverything.service.accessibility.ScreenshotPeriodEndReceiver
 import de.mimuc.senseeverything.service.esm.NotificationTriggerReceiver
 import de.mimuc.senseeverything.service.esm.OneTimeNotificationReceiver
 import de.mimuc.senseeverything.service.esm.PeriodicNotificationReceiver
@@ -98,6 +99,9 @@ suspend fun clearAllAlarms(context: Context, database: AppDatabase) {
                 }
             }
         }
+
+        // one fixed alarm without a database reference
+        clearAlarm(context, ScreenshotPeriodEndReceiver::class.java, ScreenshotPeriodEndReceiver.REQUEST_CODE)
 
         WHALELog.i("EndStudy", "API <34, cancelled all alarms via database references")
     }
