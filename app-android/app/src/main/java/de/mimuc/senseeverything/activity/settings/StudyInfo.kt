@@ -76,6 +76,7 @@ import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.currentStudyDay
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.accessibility.ScreenshotStore
 import de.mimuc.senseeverything.study.runStudyLifecycleCleanup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -180,6 +181,9 @@ class StudyInfoViewModel @Inject constructor(
             // 2. save data still required to datastore
             val enrolmentId = dataStoreManager.participantIdFlow.first()
             val study = dataStoreManager.studyFlow.first()
+            // before erasing: reporting the periods needs the schedule
+            val screenshotSchedule = dataStoreManager.screenshotScheduleFlow.first()
+            withContext(Dispatchers.IO) { ScreenshotStore.deleteAll(ScreenshotStore.root(context), screenshotSchedule) }
             dataStoreManager.eraseAllData()
             dataStoreManager.saveParticipantId(enrolmentId)
             dataStoreManager.saveStudyState(StudyState.CANCELLED)

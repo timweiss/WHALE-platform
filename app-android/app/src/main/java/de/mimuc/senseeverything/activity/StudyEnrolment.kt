@@ -54,6 +54,7 @@ import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.accessibility.ScreenshotStore
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -163,6 +164,9 @@ class EnrolmentViewModel @Inject constructor(
 
     fun removeEnrolment(context: Context) {
         viewModelScope.launch {
+            // before erasing: reporting the periods needs the schedule
+            val screenshotSchedule = dataStoreManager.screenshotScheduleFlow.first()
+            withContext(IO) { ScreenshotStore.deleteAll(ScreenshotStore.root(context), screenshotSchedule) }
             dataStoreManager.eraseAllData()
 
             withContext(IO) {
