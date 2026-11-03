@@ -61,7 +61,9 @@ data class PendingQuestionnaire(
     @ColumnInfo(name = "finished_at") var finishedAt: Long? = null,
     @ColumnInfo(name = "notification_trigger_uid") var notificationTriggerUid: UUID? = null,
     @ColumnInfo(name = "source_pending_notification_id") val sourcePendingNotificationId: UUID? = null,
-    @ColumnInfo(name = "display_type") val displayType: PendingQuestionnaireDisplayType = PendingQuestionnaireDisplayType.INBOX
+    @ColumnInfo(name = "display_type") val displayType: PendingQuestionnaireDisplayType = PendingQuestionnaireDisplayType.INBOX,
+    /** what the questionnaire refers to, set by the module that emitted its event; opaque to the ESM module */
+    @ColumnInfo(name = "context_json") val contextJson: String? = null
 ) {
 
     companion object {
@@ -72,14 +74,15 @@ data class PendingQuestionnaire(
             notificationTriggerUid: UUID? = null,
             sourcePendingNotificationId: UUID? = null,
             validFrom: Long? = null,
-            status: PendingQuestionnaireStatus? = null
+            status: PendingQuestionnaireStatus? = null,
+            contextJson: String? = null
         ): PendingQuestionnaire? {
             val questionnaire = dataStoreManager.questionnairesFlow.first()
                 .find { q -> q.questionnaire.id == trigger.questionnaireId }
             if (questionnaire == null) return null
 
             val validUntil =
-                if (trigger.validDuration != -1L) System.currentTimeMillis() + trigger.validDuration * 1000L * 60L else -1L
+                if (trigger.validDuration != -1L) (validFrom ?: System.currentTimeMillis()) + trigger.validDuration * 1000L * 60L else -1L
 
             val displayType =
                 if (notificationTriggerUid != null) PendingQuestionnaireDisplayType.NOTIFICATION_TRIGGER else PendingQuestionnaireDisplayType.INBOX
@@ -98,7 +101,8 @@ data class PendingQuestionnaire(
                 null,
                 notificationTriggerUid,
                 sourcePendingNotificationId,
-                displayType
+                displayType,
+                contextJson
             )
 
             database.pendingQuestionnaireDao().insert(pendingQuestionnaire)

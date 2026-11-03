@@ -230,7 +230,10 @@ class EsmHandler {
             triggerId: Int?,
             context: Context,
             dataStoreManager: DataStoreManager,
-            database: AppDatabase
+            database: AppDatabase,
+            /** start of the questionnaire's validity, e.g. when the event actually happened; now if null */
+            validFrom: Long? = null,
+            contextJson: String? = null
         ) {
             val triggers = dataStoreManager.questionnairesFlow.first().flatMap { it.triggers }
             // Handle event triggers
@@ -257,7 +260,9 @@ class EsmHandler {
                             sourceId,
                             context,
                             dataStoreManager,
-                            database
+                            database,
+                            validFrom,
+                            contextJson
                         )
                     }
                 }
@@ -286,8 +291,17 @@ class EsmHandler {
             sourceId: UUID?,
             context: Context,
             dataStoreManager: DataStoreManager,
-            database: AppDatabase
+            database: AppDatabase,
+            validFrom: Long? = null,
+            contextJson: String? = null
         ) {
+            // a late event (e.g. after the device was off) must not create a questionnaire that has already expired
+            if (validFrom != null && trigger.validDuration != -1L &&
+                validFrom + trigger.validDuration * 1000L * 60L <= System.currentTimeMillis()) {
+                WHALELog.i("EsmHandler", "Not creating questionnaire for trigger ${trigger.id}, its validity has already passed")
+                return
+            }
+
             val pendingQuestionnaire = coroutineScope {
                 withContext(Dispatchers.IO) {
                     PendingQuestionnaire.createEntry(
@@ -295,7 +309,9 @@ class EsmHandler {
                         dataStoreManager,
                         trigger,
                         notificationTriggerUid = null,
-                        sourcePendingNotificationId = sourceId
+                        sourcePendingNotificationId = sourceId,
+                        validFrom = validFrom,
+                        contextJson = contextJson
                     )
                 }
             }
