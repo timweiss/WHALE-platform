@@ -116,6 +116,9 @@ class OnboardingViewModel @Inject constructor(
 
             if (!BuildConfig.AUTO_ENROLMENT.isNullOrEmpty()) {
                 viewModelScope.launch {
+                    if (!BuildConfig.AUTO_ENROLMENT_SOURCE.isNullOrEmpty()) {
+                        dataStoreManager.saveOnboardingSource(BuildConfig.AUTO_ENROLMENT_SOURCE)
+                    }
                     handleEnrolmentWithKey(activity, BuildConfig.AUTO_ENROLMENT)
                 }
             } else {

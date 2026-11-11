@@ -18,8 +18,8 @@ android {
         applicationId "de.mimuc.whale"
         minSdkVersion android_minSdkVersion
         targetSdkVersion android_targetSdkVersion
-        versionCode 43
-        versionName "1.0.43"
+        versionCode 45
+        versionName "1.0.45"
 
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -33,6 +33,9 @@ android {
             }
         }
         buildConfigField 'boolean', 'IS_DEBUG', 'false'
+        // set per build via -PenrolmentSource=<source>, see scripts/build-source-apks.sh
+        buildConfigField 'String', 'AUTO_ENROLMENT_SOURCE',
+                project.hasProperty('enrolmentSource') ? "\"${project.property('enrolmentSource')}\"" : 'null'
     }
 
     flavorDimensions = ["environment"]

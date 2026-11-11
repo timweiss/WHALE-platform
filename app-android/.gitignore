@@ -1,3 +1,6 @@
+# Per-source APKs from scripts/build-source-apks.sh
+/dist
+
 # Remove Build BUT Keep the Proguard translation file
 /build
 !*/build
