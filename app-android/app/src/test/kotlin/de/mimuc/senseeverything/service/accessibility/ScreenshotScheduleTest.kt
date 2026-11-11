@@ -4,6 +4,7 @@ import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.PackageScreenshotSettings
 import de.mimuc.senseeverything.api.model.ScreenshotSettings
+import de.mimuc.senseeverything.api.model.SensorSettings
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -17,10 +18,21 @@ class ScreenshotScheduleTest {
     private fun at(text: String): Long =
         LocalDateTime.parse(text).atZone(zone).toInstant().toEpochMilli()
 
-    private fun phase(name: String, fromDay: Int, durationDays: Int, ratingTimes: List<String>?, sampleSize: Int = 10) =
+    private fun phase(
+        name: String,
+        fromDay: Int,
+        durationDays: Int,
+        ratingTimes: List<String>?,
+        sampleSize: Int = 10
+    ) =
         ExperimentalGroupPhase(
             1, name, fromDay, durationDays, InteractionWidgetDisplayStrategy.DEFAULT,
-            ratingTimes?.let { ScreenshotSettings(it, listOf(PackageScreenshotSettings(app, sampleSize))) }
+            SensorSettings(ratingTimes?.let {
+                ScreenshotSettings(
+                    it,
+                    listOf(PackageScreenshotSettings(app, sampleSize))
+                )
+            }, null)
         )
 
     private fun plan(studyStart: String, vararg phases: ExperimentalGroupPhase) =

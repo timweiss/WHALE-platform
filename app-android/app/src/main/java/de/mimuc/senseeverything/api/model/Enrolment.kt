@@ -47,13 +47,24 @@ data class ScreenshotSettings(
 )
 
 @Serializable
+data class UiTreeTextSettings(
+    val packages: List<String>
+)
+
+@Serializable
+data class SensorSettings(
+    val screenshotSettings: ScreenshotSettings?,
+    val uiTreeTextSettings: UiTreeTextSettings?
+)
+
+@Serializable
 data class ExperimentalGroupPhase(
     val experimentalGroupId: Int,
     val name: String,
     val fromDay: Int,
     val durationDays: Int,
     val interactionWidgetStrategy: InteractionWidgetDisplayStrategy,
-    val screenshotSettings: ScreenshotSettings?
+    val sensorSettings: SensorSettings?
 )
 
 suspend fun getEnrolmentInfo(

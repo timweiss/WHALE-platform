@@ -59,6 +59,15 @@ export interface PackageScreenshotSettings {
   sample: number;
 }
 
+export interface UiTreeTextSettings {
+  packages: string[];
+}
+
+export interface SensorSettings {
+  screenshotSettings: ScreenshotSettings | null;
+  uiTreeTextSettings: UiTreeTextSettings | null;
+}
+
 export interface StudyExperimentalGroupPhase {
   experimentalGroupId: number;
   name: string;
@@ -68,7 +77,7 @@ export interface StudyExperimentalGroupPhase {
 
   // configuration parameters
   interactionWidgetStrategy: InteractionWidgetStrategy;
-  screenshotSettings: ScreenshotSettings | null;
+  sensorSettings: SensorSettings | null;
 }
 
 type CompletionTracking = {
@@ -125,7 +134,7 @@ export interface IStudyRepository {
       | 'fromDay'
       | 'durationDays'
       | 'interactionWidgetStrategy'
-      | 'screenshotSettings'
+      | 'sensorSettings'
     >,
   ): Promise<StudyExperimentalGroupPhase>;
 
@@ -311,19 +320,19 @@ export class StudyRepository extends Repository implements IStudyRepository {
       | 'fromDay'
       | 'durationDays'
       | 'interactionWidgetStrategy'
-      | 'screenshotSettings'
+      | 'sensorSettings'
     >,
   ): Promise<StudyExperimentalGroupPhase> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO study_experimental_group_phases (experimental_group_id, internal_name, from_day, duration_days, interaction_widget_strategy, screenshot_settings) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        'INSERT INTO study_experimental_group_phases (experimental_group_id, internal_name, from_day, duration_days, interaction_widget_strategy, sensor_settings) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [
           phase.experimentalGroupId,
           phase.name,
           phase.fromDay,
           phase.durationDays,
           phase.interactionWidgetStrategy,
-          phase.screenshotSettings,
+          phase.sensorSettings,
         ],
       );
 
@@ -333,7 +342,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
         fromDay: res.rows[0].from_day,
         durationDays: res.rows[0].duration_days,
         interactionWidgetStrategy: res.rows[0].interaction_widget_strategy,
-        screenshotSettings: res.rows[0].screenshot_settings,
+        sensorSettings: res.rows[0].sensor_settings,
       };
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());
@@ -355,7 +364,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
         fromDay: row.from_day,
         durationDays: row.duration_days,
         interactionWidgetStrategy: row.interaction_widget_strategy,
-        screenshotSettings: row.screenshot_settings,
+        sensorSettings: row.sensor_settings,
       }));
     } catch (e) {
       throw new DatabaseError((e as Error).message.toString());

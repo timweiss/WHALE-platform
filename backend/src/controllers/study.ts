@@ -22,17 +22,24 @@ const CreateExperimentalGroupBody = z.object({
       fromDay: z.int(),
       durationDays: z.int().positive(),
       interactionWidgetStrategy: z.enum(InteractionWidgetStrategy),
-      screenshotSettings: z
-        .object({
-          periodEnds: z.array(z.iso.time()).min(1),
-          packageSettings: z.array(
-            z.object({
-              packageName: z.string(),
-              sample: z.int().positive(),
-            }),
-          ),
-        })
-        .nullable(),
+      sensorSettings: z.object({
+        uiTreeTextSettings: z
+          .object({
+            packages: z.array(z.string()),
+          })
+          .nullable(),
+        screenshotSettings: z
+          .object({
+            periodEnds: z.array(z.iso.time()).min(1),
+            packageSettings: z.array(
+              z.object({
+                packageName: z.string(),
+                sample: z.int().positive(),
+              }),
+            ),
+          })
+          .nullable(),
+      }),
     }),
   ),
 });
@@ -166,7 +173,7 @@ export function createStudyController(
             fromDay: phase.fromDay,
             durationDays: phase.durationDays,
             interactionWidgetStrategy: phase.interactionWidgetStrategy,
-            screenshotSettings: phase.screenshotSettings,
+            sensorSettings: phase.sensorSettings,
           },
         );
 

@@ -1,0 +1,2 @@
+alter table study_experimental_group_phases add column sensor_settings jsonb default null;
+alter table study_experimental_group_phases drop column screenshot_settings;

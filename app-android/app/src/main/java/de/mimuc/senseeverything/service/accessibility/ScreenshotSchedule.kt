@@ -50,7 +50,7 @@ fun planScreenshotPeriods(
     val endDay = phases.maxOfOrNull { it.fromDay + it.durationDays } ?: return emptyList()
     // sorted, null if the phase has no (valid) rating times
     val ratingTimes = phases.associateWith { phase ->
-        phase.screenshotSettings?.let { settings ->
+        phase.sensorSettings?.screenshotSettings?.let { settings ->
             try {
                 settings.periodEnds.map { LocalTime.parse(it) }.sorted().ifEmpty { null }
             } catch (e: DateTimeParseException) {
@@ -68,7 +68,7 @@ fun planScreenshotPeriods(
         if (day >= endDay) break
 
         val phase = phases.phaseOnStudyDay(day)
-        val settings = phase?.screenshotSettings
+        val settings = phase?.sensorSettings?.screenshotSettings
         val times = phase?.let { ratingTimes[it] }
         if (settings == null || times == null) {
             cursor = cursor.toLocalDate().plusDays(1).atStartOfDay(zone)

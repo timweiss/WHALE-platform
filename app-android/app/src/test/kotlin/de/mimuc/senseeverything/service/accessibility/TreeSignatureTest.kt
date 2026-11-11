@@ -37,7 +37,10 @@ class TreeSignatureTest {
         hasText = random.nextBoolean(),
         textCategory = null,
         hasImage = random.nextBoolean(),
-        role = null
+        role = null,
+        text = null,
+        contentDescription = null,
+        className = null
     )
 
     @Test

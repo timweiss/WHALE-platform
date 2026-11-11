@@ -11,6 +11,7 @@ import android.os.SystemClock
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.accessibility.model.InteractionEvent
 import de.mimuc.senseeverything.service.accessibility.model.InteractionType
@@ -21,16 +22,19 @@ import de.mimuc.senseeverything.service.accessibility.model.SizeClass
 import de.mimuc.senseeverything.service.accessibility.model.SkeletonNode
 import de.mimuc.senseeverything.service.accessibility.model.TextCategory
 import de.mimuc.senseeverything.service.accessibility.model.TreeSkeleton
+import de.mimuc.senseeverything.study.PhaseScheduleInfo
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -105,6 +109,14 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
     @Volatile private var screenshotSchedule: List<ScreenshotPeriod>? = null
     private val scheduleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    // the inputs are replaced by the phase flow, the period is cached by the worker
+    private data class TextCaptureState(
+        val schedules: List<PhaseScheduleInfo>,
+        val phases: List<ExperimentalGroupPhase>,
+        val period: TextCapturePeriod? = null
+    )
+    private val textCapture = AtomicReference<TextCaptureState?>(null)
+
     // Shared between main thread and worker
     private val pendingInteractions = AtomicInteger(0)
     private val stats = CaptureStats()
@@ -143,7 +155,29 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             .catch { WHALELog.e(TAG, "Failed to load the screenshot schedule: ${it.message}", it) }
             .launchIn(scheduleScope)
 
+        combine(service.dataStoreManager.phaseSchedulesFlow,
+            service.dataStoreManager.studyPhasesFlow) { schedules, phases -> schedules to phases }
+            .distinctUntilChanged()
+            .onEach { (schedules, phases) ->
+                // null clears the state, so no text is captured once the study is left
+                textCapture.set(if (schedules != null && phases != null) TextCaptureState(schedules, phases) else null)
+            }
+            .catch { WHALELog.e(TAG, "Failed to load phases or process text collection schedule: ${it.message}", it) }
+            .launchIn(scheduleScope)
+
+
         WHALELog.i(TAG, "Initialized with screen size: ${screenSize.x}x${screenSize.y}")
+    }
+
+    /** The packages whose text is captured at [time]; resolved on the worker and cached until the period ends. */
+    private fun textPackagesAt(time: Long): Set<String> {
+        val state = textCapture.get() ?: return emptySet()
+        state.period?.takeIf { time in it.start..<it.end }?.let { return it.packages }
+
+        val period = resolveTextCapture(state.schedules, state.phases, time)
+        // fails if the flow published new inputs meanwhile, so a stale period never overwrites them
+        textCapture.compareAndSet(state, state.copy(period = period))
+        return period.packages
     }
 
     override fun consumeEvent(event: AccessibilityEvent) {
@@ -308,8 +342,11 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             val framework = detectFramework(rootNode)
             val nodes = mutableListOf<SkeletonNode>()
 
+            val packageName = rootNode.packageName?.toString()
+            val captureNodeText = packageName in textPackagesAt(eventTime)
+
             // Build flattened skeleton tree
-            buildSkeleton(rootNode, null, 0, nodes)
+            buildSkeleton(rootNode, null, 0, nodes, captureNodeText)
             stats.capturesRun.incrementAndGet()
             stats.nodesVisited.addAndGet(nodes.size.toLong())
 
@@ -327,7 +364,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             if (signature != lastSignature) {
                 val snapshot = ScreenSnapshot(
                     timestamp = eventTime,
-                    appPackage = rootNode.packageName?.toString() ?: "unknown",
+                    appPackage = packageName ?: "unknown",
                     framework = framework,
                     skeleton = skeleton,
                     interaction = null
@@ -400,7 +437,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         node: AccessibilityNodeInfo,
         parentId: Int?,
         depth: Int,
-        nodes: MutableList<SkeletonNode>
+        nodes: MutableList<SkeletonNode>,
+        includeText: Boolean,
     ) {
         val nodeId = nodes.size
 
@@ -419,6 +457,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             id = nodeId,
             parentId = parentId,
             type = classifyNodeType(node, className),
+            className = node.className?.toString(),
             depth = depth,
             region = calculateRegion(bounds),
             sizeClass = calculateSizeClass(bounds),
@@ -433,7 +472,10 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
             hasText = node.text != null || node.contentDescription != null,
             textCategory = categorizeText(node),
             hasImage = isImageNode(className),
-            role = extractRole(node)
+            role = extractRole(node),
+            // only capture text when not editable and not password
+            text = if (includeText && !node.isPassword && !node.isEditable) node.text?.toString() else null,
+            contentDescription = if (includeText && !node.isPassword && !node.isEditable) node.contentDescription?.toString() else null
         )
 
         nodes.add(skeletonNode)
@@ -441,7 +483,7 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
         // Recurse to children
         for (i in 0 until node.childCount) {
             childAt(node, i)?.let { child ->
-                buildSkeleton(child, nodeId, depth + 1, nodes)
+                buildSkeleton(child, nodeId, depth + 1, nodes, includeText)
                 child.recycle()
             }
         }

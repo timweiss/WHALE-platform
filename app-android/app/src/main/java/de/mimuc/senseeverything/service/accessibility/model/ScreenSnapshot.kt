@@ -79,6 +79,7 @@ data class SkeletonNode(
     val id: Int,
     val parentId: Int?,
     val type: NodeType,
+    val className: String?,
     val depth: Int,
     val region: ScreenRegion,
     val sizeClass: SizeClass,
@@ -93,13 +94,16 @@ data class SkeletonNode(
     val hasText: Boolean,
     val textCategory: TextCategory?,
     val hasImage: Boolean,
-    val role: String?
+    val role: String?,
+    val text: String?,
+    val contentDescription: String?
 ) {
     fun toJson(): JSONObject {
         return JSONObject().apply {
             put("id", id)
             put("parentId", parentId ?: -1)
             put("type", type.name)
+            put("className", className)
             put("depth", depth)
             put("region", region.name)
             put("sizeClass", sizeClass.name)
@@ -115,6 +119,8 @@ data class SkeletonNode(
             textCategory?.let { put("textCategory", it.name) }
             put("hasImage", hasImage)
             role?.let { put("role", it) }
+            text?.let { put("text", it) }
+            contentDescription?.let { put("contentDescription", it) }
         }
     }
 
@@ -124,6 +130,7 @@ data class SkeletonNode(
                 id = json.getInt("id"),
                 parentId = json.getInt("parentId").let { if (it == -1) null else it },
                 type = NodeType.valueOf(json.getString("type")),
+                className = if (json.has("className")) json.getString("className") else null,
                 depth = json.getInt("depth"),
                 region = ScreenRegion.valueOf(json.getString("region")),
                 sizeClass = SizeClass.valueOf(json.getString("sizeClass")),
@@ -140,7 +147,9 @@ data class SkeletonNode(
                     TextCategory.valueOf(json.getString("textCategory"))
                 } else null,
                 hasImage = json.getBoolean("hasImage"),
-                role = if (json.has("role")) json.getString("role") else null
+                role = if (json.has("role")) json.getString("role") else null,
+                text = if (json.has("text")) json.getString("text") else null,
+                contentDescription = if (json.has("contentDescription")) json.getString("contentDescription") else null
             )
         }
     }
