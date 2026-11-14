@@ -122,6 +122,8 @@ dependencies {
     implementation 'androidx.hilt:hilt-common:1.2.0'
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.1'
+    // the real org.json for JVM tests, android.jar only has stubs; test-only, not in the APK
+    testImplementation 'org.json:json:20231013'
 
     def composeBom = platform('androidx.compose:compose-bom:2025.06.01')
     implementation(composeBom)

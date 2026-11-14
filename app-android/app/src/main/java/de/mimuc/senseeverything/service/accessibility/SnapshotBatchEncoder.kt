@@ -58,6 +58,7 @@ object SnapshotBatchEncoder {
         json.key("id").number(node.id)
         json.key("parentId").number(node.parentId ?: -1)
         json.key("type").string(node.type.name)
+        node.className?.let { json.key("className").string(it) }
         json.key("depth").number(node.depth)
         json.key("region").string(node.region.name)
         json.key("sizeClass").string(node.sizeClass.name)
@@ -73,6 +74,8 @@ object SnapshotBatchEncoder {
         node.textCategory?.let { json.key("textCategory").string(it.name) }
         json.key("hasImage").bool(node.hasImage)
         node.role?.let { json.key("role").string(it) }
+        node.text?.let { json.key("text").string(it) }
+        node.contentDescription?.let { json.key("contentDescription").string(it) }
         json.endObject()
     }
 
