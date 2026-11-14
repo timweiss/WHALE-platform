@@ -45,7 +45,9 @@ mkdir -p "$OUT_DIR"
 
 for source in "${SOURCES[@]}"; do
   echo "==> $source"
-  ./gradlew --quiet assembleProdRelease -PenrolmentSource="$source"
+  # clean: Kotlin inlines the BuildConfig constant and incremental compilation
+  # does not recompile its users when only -PenrolmentSource changes
+  ./gradlew --quiet clean assembleProdRelease -PenrolmentSource="$source"
 
   unsigned=app/build/outputs/apk/prod/release/app-prod-release-unsigned.apk
   target="$OUT_DIR/whale-$VERSION_NAME-$source.apk"
@@ -56,6 +58,12 @@ for source in "${SOURCES[@]}"; do
     --v4-signing-enabled false \
     --out "$target" "$target.aligned"
   rm "$target.aligned"
+
+  # grep -c reads all input (grep -q would SIGPIPE unzip and trip pipefail)
+  if ! unzip -p "$target" 'classes*.dex' | grep -a -c -- "$source" >/dev/null; then
+    echo "source '$source' missing in $target" >&2
+    exit 1
+  fi
 
   cp app/build/outputs/mapping/prodRelease/mapping.txt "$OUT_DIR/mapping-$source.txt"
 done
