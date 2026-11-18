@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.sensor
 
 import de.mimuc.senseeverything.db.models.LogData
 import de.mimuc.senseeverything.db.models.LogDataDao
+import de.mimuc.senseeverything.db.models.LogDataFlag
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import org.junit.jupiter.api.AfterEach
@@ -20,10 +21,12 @@ class BufferedLogWriterTest {
         }
 
         override val all: List<LogData> get() = inserts.flatten().filterNotNull()
-        override fun getNextNUnsyncedBefore(n: Int, cutoffTimestamp: Long): List<LogData> = emptyList()
+        override fun insertFlags(vararg flags: LogDataFlag) {}
+        override fun getNextNUnsyncedBeforeWithFlags(n: Int, cutoffTimestamp: Long): List<LogData> = emptyList()
         override val unsyncedCount: Long get() = 0
         override fun getUnsyncedCountBefore(cutoffTimestamp: Long): Long = 0
-        override fun getUnsyncedCountBeforeFlow(cutoffTimestamp: Long): Flow<Long> = emptyFlow()
+        override fun hasUnsyncedBefore(cutoffTimestamp: Long): Boolean = false
+        override fun hasUnsyncedBeforeFlow(cutoffTimestamp: Long): Flow<Boolean> = emptyFlow()
         override val lastItem: LogData? get() = null
         override fun updateLogData(vararg logData: LogData?) {}
         override fun deleteLogData(vararg logData: LogData?) {}

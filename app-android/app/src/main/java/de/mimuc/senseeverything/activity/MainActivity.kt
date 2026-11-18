@@ -92,6 +92,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -156,8 +157,8 @@ class StudyHomeViewModel @Inject constructor(
     private val _hasPermissionIssues = MutableStateFlow(false)
     val hasPermissionIssues: StateFlow<Boolean> get() = _hasPermissionIssues
 
-    private val _unsyncedCountBeforeStudyEnd = MutableStateFlow<Long>(0)
-    val unsyncedCountBeforeStudyEnd: StateFlow<Long> get() = _unsyncedCountBeforeStudyEnd
+    private val _hasUnsyncedBeforeStudyEnd = MutableStateFlow(false)
+    val hasUnsyncedBeforeStudyEnd: StateFlow<Boolean> get() = _hasUnsyncedBeforeStudyEnd
 
     val uploadWorkInfo: StateFlow<WorkInfo?> = WorkManager.getInstance(application)
         .getWorkInfosByTagFlow(UploadWorkTag.FINAL_UPLOAD_MANUAL.tag)
@@ -169,10 +170,13 @@ class StudyHomeViewModel @Inject constructor(
         .map { workInfos -> workInfos.firstOrNull() }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
-    // Room re-runs this count on every LogData write, including writes from the :remote process.
+    // Room re-runs this query on every LogData write, including writes from the :remote process.
     // Only keep it subscribed while the home screen is visible, not for the ViewModel's lifetime.
-    val staleUnsyncedItems: StateFlow<Long> = database.logDataDao().getUnsyncedCountBeforeFlow(
-        System.currentTimeMillis() - StaleUnsyncedSensorReadingsCheckWorker.STALE_DURATION).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    // distinctUntilChanged: the answer rarely flips, so repeated values shouldn't reach Compose.
+    val hasStaleUnsyncedItems: StateFlow<Boolean> = database.logDataDao().hasUnsyncedBeforeFlow(
+        System.currentTimeMillis() - StaleUnsyncedSensorReadingsCheckWorker.STALE_DURATION)
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     init {
         load()
@@ -202,7 +206,7 @@ class StudyHomeViewModel @Inject constructor(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val studyEndTimestamp = dataStoreManager.timestampStudyEndFlow.first()
-                _unsyncedCountBeforeStudyEnd.value = database.logDataDao().getUnsyncedCountBefore(studyEndTimestamp)
+                _hasUnsyncedBeforeStudyEnd.value = database.logDataDao().hasUnsyncedBefore(studyEndTimestamp)
             }
         }
     }
@@ -330,10 +334,10 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val pendingQuestionnaires = viewModel.pendingQuestionnairesFlow.collectAsState()
     val studyState by viewModel.studyStateFlow.collectAsState()
     val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
-    val unsyncedBeforeEnd = viewModel.unsyncedCountBeforeStudyEnd.collectAsState()
+    val hasUnsyncedBeforeEnd = viewModel.hasUnsyncedBeforeStudyEnd.collectAsState()
     val uploadWorkInfo = viewModel.uploadWorkInfo.collectAsState()
     val duringStudyUploadWorkInfo = viewModel.duringStudyUploadWorkInfo.collectAsState()
-    val staleUnsyncedItems = viewModel.staleUnsyncedItems.collectAsStateWithLifecycle()
+    val hasStaleUnsyncedItems = viewModel.hasStaleUnsyncedItems.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var visible by remember { mutableStateOf(false) }
@@ -405,7 +409,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                                 isStudyPaused = isStudyPaused.value,
                                 hasPermissionIssues = hasPermissionIssues.value,
                                 duringStudyUploadWorkInfo = duringStudyUploadWorkInfo,
-                                staleUnsyncedItems = staleUnsyncedItems,
+                                hasStaleUnsyncedItems = hasStaleUnsyncedItems,
                                 questionnaireInboxItems = activeStudyInboxItems,
                                 onResumeStudy = { viewModel.resumeStudy(context) },
                                 onPauseStudy = { viewModel.pauseStudy(context) },
@@ -431,7 +435,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
 
                         StudyEndedScreen(
                             uploadWorkInfo = uploadWorkInfo.value,
-                            unsyncedCount = unsyncedBeforeEnd.value,
+                            hasUnsyncedItems = hasUnsyncedBeforeEnd.value,
                             questionnaireInboxItems = endedStudyInboxItems,
                             onOpenQuestionnaire = { viewModel.openPendingQuestionnaire(context, it) },
                             onOpenSettings = { viewModel.openSettings(context) },

@@ -32,7 +32,7 @@ fun ActiveStudyScreen(
     isStudyPaused: Boolean,
     hasPermissionIssues: Boolean,
     duringStudyUploadWorkInfo: State<WorkInfo?>,
-    staleUnsyncedItems: State<Long>,
+    hasStaleUnsyncedItems: State<Boolean>,
     questionnaireInboxItems: List<QuestionnaireInboxItem>,
     onResumeStudy: () -> Unit,
     onPauseStudy: () -> Unit,
@@ -71,7 +71,7 @@ fun ActiveStudyScreen(
     // Shows banner in case there is stale data
     StaleDataUploadInfo(
         duringStudyUploadWorkInfo,
-        staleUnsyncedItems,
+        hasStaleUnsyncedItems,
         enqueueUpload = onEnqueueStaleUpload
     )
 

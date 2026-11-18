@@ -21,7 +21,7 @@ import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
 @Composable
 fun StudyEndedScreen(
     uploadWorkInfo: WorkInfo?,
-    unsyncedCount: Long,
+    hasUnsyncedItems: Boolean,
     questionnaireInboxItems: List<QuestionnaireInboxItem>,
     onOpenQuestionnaire: (QuestionnaireInboxItem) -> Unit,
     onOpenSettings: () -> Unit,
@@ -38,7 +38,7 @@ fun StudyEndedScreen(
             workInfo = uploadWorkInfo,
             onRetry = onEnqueueUpload
         )
-    } else if (unsyncedCount > 0) {
+    } else if (hasUnsyncedItems) {
         DataSyncWarningBanner(onSyncItems = onEnqueueUpload)
     }
 

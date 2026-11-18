@@ -144,7 +144,7 @@ private data class DataSyncProgress(
 @Composable
 fun StaleDataUploadInfo(
     duringStudyUploadWorkInfo: State<WorkInfo?>,
-    staleUnsyncedItems: State<Long>,
+    hasStaleUnsyncedItems: State<Boolean>,
     enqueueUpload: () -> Unit
 ) {
     val duringStudyWorkState = duringStudyUploadWorkInfo.value?.state
@@ -157,7 +157,7 @@ fun StaleDataUploadInfo(
             onRetry = enqueueUpload
         )
         Spacer(modifier = Modifier.height(8.dp))
-    } else if (staleUnsyncedItems.value > 0) {
+    } else if (hasStaleUnsyncedItems.value) {
         StaleDataSyncWarningBanner(onSyncItems = enqueueUpload)
         Spacer(modifier = Modifier.height(8.dp))
     }

@@ -39,11 +39,11 @@ class StaleUnsyncedSensorReadingsCheckWorker @AssistedInject constructor(
         return withContext(Dispatchers.IO) {
             try {
                 val twoDaysAgo = System.currentTimeMillis() - STALE_DURATION
-                val oldUnsyncedCount = database.logDataDao().getUnsyncedCountBefore(twoDaysAgo)
+                val hasOldUnsynced = database.logDataDao().hasUnsyncedBefore(twoDaysAgo)
 
-                WHALELog.d(TAG, "Old data check: found $oldUnsyncedCount unsynced items older than ${STALE_DURATION.milliseconds.inWholeHours} hours")
+                WHALELog.d(TAG, "Old data check: unsynced items older than ${STALE_DURATION.milliseconds.inWholeHours} hours: $hasOldUnsynced")
 
-                if (oldUnsyncedCount > 0) {
+                if (hasOldUnsynced) {
                     val notificationHelper = NotificationPushHelper(applicationContext)
                     notificationHelper.sendOldDataReminderNotification()
                     WHALELog.i(TAG, "Sent old data reminder notification")

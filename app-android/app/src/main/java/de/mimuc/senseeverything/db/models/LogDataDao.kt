@@ -27,11 +27,15 @@ interface LogDataDao {
     @get:Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE")
     val unsyncedCount: Long
 
+    // For upload progress
     @Query("SELECT COUNT(*) FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp")
     fun getUnsyncedCountBefore(cutoffTimestamp: Long): Long
 
-    @Query("SELECT COUNT(*) FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp")
-    fun getUnsyncedCountBeforeFlow(cutoffTimestamp: Long): Flow<Long>
+    @Query("SELECT EXISTS (SELECT 1 FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp)")
+    fun hasUnsyncedBefore(cutoffTimestamp: Long): Boolean
+
+    @Query("SELECT EXISTS (SELECT 1 FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp)")
+    fun hasUnsyncedBeforeFlow(cutoffTimestamp: Long): Flow<Boolean>
 
     @get:Query("SELECT * FROM logdata ORDER BY timestamp DESC LIMIT 1")
     val lastItem: LogData?
