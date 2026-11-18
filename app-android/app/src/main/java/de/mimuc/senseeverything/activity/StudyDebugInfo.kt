@@ -122,7 +122,7 @@ class StudyDebugInfoViewModel @Inject constructor(
     private val _unsyncedLogDataCount = MutableStateFlow(0L)
     val unsyncedLogDataCount: StateFlow<Long> get() = _unsyncedLogDataCount
 
-    private val _lastLogDataItem = MutableStateFlow<LogData?>(LogData())
+    private val _lastLogDataItem = MutableStateFlow<LogData?>(null)
     val lastLogDataItem: StateFlow<LogData?> get() = _lastLogDataItem
 
     private val _lastLogServiceExitTime = MutableStateFlow(0L)

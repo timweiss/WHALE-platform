@@ -136,10 +136,10 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
 
         val sensorReadings = batch.map { logData ->
             SensorReading(
-                sensorType = logData.sensorName,
+                sensorType = logData.sensorName!!,
                 timestamp = logData.timestamp,
-                data = logData.data,
-                localId = logData.localId
+                data = logData.data!!,
+                localId = logData.localId!!
             )
         }
 

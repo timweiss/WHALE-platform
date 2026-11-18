@@ -4,6 +4,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
+data class SensorUploadConfig(
+    val sensorType: String,
+    val clearAfterDays: Int,
+    val requiredFlags: List<String>
+)
+
+@Serializable
 data class Study(
     val name: String,
     val id: Int,
@@ -12,7 +19,8 @@ data class Study(
     val contactEmail: String,
     val durationDays: Int,
     val dataProtectionNotice: String?,
-    val embeddedInfoUrl: String?
+    val embeddedInfoUrl: String?,
+    val sensorUploadConfig: List<SensorUploadConfig>?
 ) {
     companion object {
         val empty = Study(
@@ -23,7 +31,8 @@ data class Study(
             contactEmail = "",
             durationDays = 0,
             dataProtectionNotice = null,
-            embeddedInfoUrl = null
+            embeddedInfoUrl = null,
+            sensorUploadConfig = null
         )
     }
 }
