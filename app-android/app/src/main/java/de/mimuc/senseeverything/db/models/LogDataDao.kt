@@ -48,4 +48,17 @@ interface LogDataDao {
 
     @Query("DELETE FROM logdata")
     fun deleteAll()
+
+    // Rows whose sensor has a policy, still miss a required flag, and are older than the policy's
+    // clearAfterDays. Sensors without a policy are never touched. LogDataFlag rows go via ON DELETE CASCADE.
+    @Query("""
+        DELETE FROM logdata WHERE id IN (
+            SELECT l.id FROM logdata l
+            JOIN sensor_upload_policy p ON p.sensorName = l.sensorName
+            JOIN log_data_flag_status fs ON fs.logDataId = l.id
+            WHERE fs.flagsSatisfied = FALSE
+              AND l.timestamp < :now - p.clearAfterDays * 86400000
+        )
+    """)
+    fun deleteExpiredUnsatisfied(now: Long): Int
 }

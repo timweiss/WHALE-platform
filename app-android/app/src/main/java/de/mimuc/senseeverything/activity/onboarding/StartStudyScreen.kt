@@ -48,6 +48,7 @@ import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckRe
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
 import de.mimuc.senseeverything.workers.enqueueOldDataCheckWorker
+import de.mimuc.senseeverything.workers.enqueueUnsatisfiedSensorReadingsCleanupWorker
 import de.mimuc.senseeverything.workers.enqueuePendingQuestionnaireUploadWorker
 import de.mimuc.senseeverything.workers.enqueueSensorReadingsUploadWorker
 import de.mimuc.senseeverything.workers.enqueueUpdateQuestionnaireWorker
@@ -86,6 +87,7 @@ class StartStudyViewModel @Inject constructor(
                 WHALELog.d("StartStudyViewModel", "Loaded study: $study")
                 val token = dataStoreManager.tokenFlow.first()
                 enqueueSensorReadingsUploadWorker(context, token)
+                enqueueUnsatisfiedSensorReadingsCleanupWorker(context)
 
                 studyRepository.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)
