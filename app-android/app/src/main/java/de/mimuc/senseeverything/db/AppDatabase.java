@@ -8,12 +8,17 @@ import de.mimuc.senseeverything.db.models.GeneratedKey;
 import de.mimuc.senseeverything.db.models.GeneratedKeyDao;
 import de.mimuc.senseeverything.db.models.LogData;
 import de.mimuc.senseeverything.db.models.LogDataDao;
+import de.mimuc.senseeverything.db.models.LogDataFlag;
+import de.mimuc.senseeverything.db.models.LogDataFlagStatus;
 import de.mimuc.senseeverything.db.models.NotificationTrigger;
 import de.mimuc.senseeverything.db.models.NotificationTriggerDao;
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire;
 import de.mimuc.senseeverything.db.models.PendingQuestionnaireDao;
 import de.mimuc.senseeverything.db.models.ScheduledAlarm;
 import de.mimuc.senseeverything.db.models.ScheduledAlarmDao;
+import de.mimuc.senseeverything.db.models.SensorUploadDao;
+import de.mimuc.senseeverything.db.models.SensorUploadPolicy;
+import de.mimuc.senseeverything.db.models.SensorUploadRequirement;
 import de.mimuc.senseeverything.db.models.SnapshotBatch;
 import de.mimuc.senseeverything.db.models.SnapshotBatchDao;
 import de.mimuc.senseeverything.db.models.SocialNetworkContact;
@@ -26,8 +31,11 @@ import de.mimuc.senseeverything.db.models.SocialNetworkContactDao;
         SocialNetworkContact.class,
         NotificationTrigger.class,
         ScheduledAlarm.class,
-        SnapshotBatch.class
-}, version = 21, autoMigrations = {@AutoMigration(from = 17, to = 18), @AutoMigration(from = 18, to = 19), @AutoMigration(from = 19, to = 20), @AutoMigration(from = 20, to = 21)}, exportSchema = true)
+        SnapshotBatch.class,
+        LogDataFlag.class,
+        SensorUploadRequirement.class,
+        SensorUploadPolicy.class
+}, views = {LogDataFlagStatus.class}, version = 22, autoMigrations = {@AutoMigration(from = 17, to = 18), @AutoMigration(from = 18, to = 19), @AutoMigration(from = 19, to = 20), @AutoMigration(from = 20, to = 21), @AutoMigration(from = 21, to = 22)}, exportSchema = true)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract LogDataDao logDataDao();
 
@@ -42,4 +50,6 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract ScheduledAlarmDao scheduledAlarmDao();
 
     public abstract SnapshotBatchDao snapshotBatchDao();
+
+    public abstract SensorUploadDao sensorUploadDao();
 }

@@ -1,0 +1,1 @@
+alter table studies add column sensor_upload_config jsonb default null;

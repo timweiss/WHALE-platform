@@ -3,7 +3,9 @@ package de.mimuc.senseeverything.db.models
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -15,17 +17,20 @@ interface LogDataDao {
     @Insert
     fun insertAll(vararg logDatas: LogData?)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertFlags(vararg flags: LogDataFlag)
+
     // id breaks ties between rows with the same timestamp, so batches have a defined order
-    @Query("SELECT * FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC, id ASC LIMIT :n")
-    fun getNextNUnsyncedBefore(n: Int, cutoffTimestamp: Long): List<LogData>
+    @Query("SELECT logdata.* FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC, id ASC LIMIT :n")
+    fun getNextNUnsyncedBeforeWithFlags(n: Int, cutoffTimestamp: Long): List<LogData>
 
     @get:Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE")
     val unsyncedCount: Long
 
-    @Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp")
+    @Query("SELECT COUNT(*) FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp")
     fun getUnsyncedCountBefore(cutoffTimestamp: Long): Long
 
-    @Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE AND timestamp <= :cutoffTimestamp")
+    @Query("SELECT COUNT(*) FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp")
     fun getUnsyncedCountBeforeFlow(cutoffTimestamp: Long): Flow<Long>
 
     @get:Query("SELECT * FROM logdata ORDER BY timestamp DESC LIMIT 1")

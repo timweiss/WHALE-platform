@@ -13,6 +13,18 @@ export interface Study {
   completionTracking: CompletionTracking | null;
   dataProtectionNotice: string | null;
   embeddedInfoUrl: string | null;
+  sensorUploadConfig: SensorUploadConfig[] | null;
+}
+
+/**
+ * Selectively upload sensor readings.
+ * The app will only upload readings for the sensor when all required flags are set.
+ * Otherwise, the readings will be cleared after the specified number of days.
+ */
+export interface SensorUploadConfig {
+  sensorType: string;
+  clearAfterDays: number;
+  requiredFlags: string[];
 }
 
 interface StudyRow {
@@ -27,6 +39,7 @@ interface StudyRow {
   completion_tracking: CompletionTracking | null;
   data_protection_notice: string | null;
   embedded_info_url: string | null;
+  sensor_upload_config: SensorUploadConfig[];
 }
 
 export enum InteractionWidgetStrategy {
@@ -155,11 +168,12 @@ export class StudyRepository extends Repository implements IStudyRepository {
       | 'durationDays'
       | 'allocationStrategy'
       | 'completionTracking'
+      | 'sensorUploadConfig'
     >,
   ): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO studies (name, enrolment_key, description, contact_email, max_enrolments, duration_days, allocation_strategy, completion_tracking) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+        'INSERT INTO studies (name, enrolment_key, description, contact_email, max_enrolments, duration_days, allocation_strategy, completion_tracking, sensor_upload_config) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
         [
           study.name,
           study.enrolmentKey,
@@ -169,6 +183,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
           study.durationDays,
           study.allocationStrategy,
           study.completionTracking,
+          study.sensorUploadConfig,
         ],
       );
       return this.studyFromRow(res.rows[0]);
@@ -180,7 +195,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
   async updateStudy(study: Study): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5, completion_tracking=$6, description=$7, contact_email=$8 WHERE id = $9 RETURNING *',
+        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5, completion_tracking=$6, description=$7, contact_email=$8, sensor_upload_config=$9 WHERE id = $10 RETURNING *',
         [
           study.name,
           study.enrolmentKey,
@@ -190,6 +205,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
           study.completionTracking,
           study.description,
           study.contactEmail,
+          study.sensorUploadConfig,
           study.id,
         ],
       );
@@ -243,6 +259,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
       completionTracking: row.completion_tracking,
       dataProtectionNotice: row.data_protection_notice,
       embeddedInfoUrl: row.embedded_info_url,
+      sensorUploadConfig: row.sensor_upload_config,
     };
   }
 

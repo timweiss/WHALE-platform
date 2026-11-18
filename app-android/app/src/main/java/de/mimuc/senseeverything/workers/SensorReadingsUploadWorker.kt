@@ -99,18 +99,23 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
         var totalSynced = 0L
 
         while (!isStopped) {
-            val batch = database.logDataDao().getNextNUnsyncedBefore(BATCH_SIZE, cutoffTimestamp)
+            val batch = database.logDataDao().getNextNUnsyncedBeforeWithFlags(BATCH_SIZE, cutoffTimestamp)
             if (batch.isEmpty()) {
                 WHALELog.i(TAG, "Completed Sensor Reading Sync")
                 return Result.success()
             }
 
-            val uploadResult = try { upload(batch, token) } catch (e: Exception) {
+            val uploadResult = try {
+                upload(batch, token)
+            } catch (e: Exception) {
                 return resultForUploadError(e, totalSynced)
             }
 
-            WHALELog.i(TAG, "Uploaded ${uploadResult.totalItems} items in ${uploadResult.chunksUploaded} chunk(s), " +
-                    "total size: ${uploadResult.totalBytesUploaded} bytes, fast path: ${uploadResult.usedFastPath}")
+            WHALELog.i(
+                TAG,
+                "Uploaded ${uploadResult.totalItems} items in ${uploadResult.chunksUploaded} chunk(s), " +
+                        "total size: ${uploadResult.totalBytesUploaded} bytes, fast path: ${uploadResult.usedFastPath}"
+            )
 
             logDroppedItems(uploadResult, batch)
 
@@ -179,10 +184,12 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
             e is NetworkError || e is TimeoutError -> {
                 Result.retry()
             }
+
             e is ClientError && e.networkResponse.statusCode == 429 -> {
                 WHALELog.w(TAG, "Rate limited, rescheduling upload with total $currentTotalSynced")
                 Result.retry()
             }
+
             e is ClientError -> {
                 val message = e.networkResponse.data.decodeToString()
                 WHALELog.e(
@@ -191,6 +198,7 @@ class SensorReadingsUploadWorker @AssistedInject constructor(
                 )
                 Result.failure()
             }
+
             else -> {
                 WHALELog.e(
                     TAG,

@@ -48,6 +48,7 @@ import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudyByEnrolmentKey
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyRepository
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,7 +91,8 @@ fun OnboardingStep.startedButIncomplete(): Boolean {
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     application: Application,
-    private val dataStoreManager: DataStoreManager
+    private val dataStoreManager: DataStoreManager,
+    private val studyRepository: StudyRepository
 ) : AndroidViewModel(application) {
     private val _step = MutableStateFlow(OnboardingStep.WELCOME)
     val step: StateFlow<OnboardingStep> get() = _step
@@ -183,7 +185,7 @@ class OnboardingViewModel @Inject constructor(
         val study = loadStudyByEnrolmentKey(client, enrolmentKey)
 
         if (study != null) {
-            dataStoreManager.saveStudy(study)
+            studyRepository.saveStudy(study)
             dataStoreManager.saveStudyId(study.id)
 
             _isLoading.value = false

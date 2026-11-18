@@ -50,6 +50,7 @@ import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyRepository
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
@@ -97,7 +98,8 @@ class StudyEnrolment : ComponentActivity() {
 class EnrolmentViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val studyRepository: StudyRepository
 ) : AndroidViewModel(application) {
     private val _isEnrolled = MutableStateFlow(false)
     val isEnrolled: StateFlow<Boolean> get() = _isEnrolled
@@ -141,7 +143,7 @@ class EnrolmentViewModel @Inject constructor(
             if (study != null) {
                 _study.value = study
 
-                dataStoreManager.saveStudy(study)
+                studyRepository.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
             }

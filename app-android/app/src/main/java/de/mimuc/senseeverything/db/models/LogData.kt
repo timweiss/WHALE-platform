@@ -21,7 +21,7 @@ class LogData(
     var data: String?,
     var hasFile: Boolean,
     var filePath: String?,
-    var localId: String?,
+    var localId: String?
 ) {
     // For creating new rows from app code; @JvmOverloads keeps the 3- and 5-arg forms Java callers use.
     @Ignore
@@ -31,7 +31,7 @@ class LogData(
         sensorName: String?,
         data: String?,
         hasFile: Boolean = false,
-        filePath: String? = null,
+        filePath: String? = null
     ) : this(
         id = 0,
         timestamp = timestamp,
@@ -40,6 +40,6 @@ class LogData(
         data = data,
         hasFile = hasFile,
         filePath = filePath,
-        localId = UUID.randomUUID().toString(),
+        localId = UUID.randomUUID().toString()
     )
 }

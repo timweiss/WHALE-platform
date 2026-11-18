@@ -72,6 +72,7 @@ import de.mimuc.senseeverything.api.model.EnrolmentResponse
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.getEnrolmentInfo
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyRepository
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.currentStudyDay
 import de.mimuc.senseeverything.db.AppDatabase
@@ -120,7 +121,8 @@ class StudyInfo : ComponentActivity() {
 class StudyInfoViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val studyRepository: StudyRepository
 ) : AndroidViewModel(application) {
     private val _enrolmentId = MutableStateFlow("")
     val enrolmentId: StateFlow<String> get() = _enrolmentId
@@ -188,7 +190,7 @@ class StudyInfoViewModel @Inject constructor(
             dataStoreManager.saveParticipantId(enrolmentId)
             dataStoreManager.saveStudyState(StudyState.CANCELLED)
             if (study != null) {
-                dataStoreManager.saveStudy(study)
+                studyRepository.saveStudy(study)
             }
 
             // 3. pop back to main activity after all operations are complete

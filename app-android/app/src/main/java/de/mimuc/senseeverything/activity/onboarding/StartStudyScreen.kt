@@ -30,6 +30,7 @@ import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.fetchAndPersistQuestionnaires
 import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyRepository
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.db.AppDatabase
@@ -63,6 +64,7 @@ class StartStudyViewModel @Inject constructor(
     application: Application,
     private val dataStoreManager: DataStoreManager,
     private val database: AppDatabase,
+    private val studyRepository: StudyRepository
 ) : AndroidViewModel(application) {
     private val _pending = MutableStateFlow(false)
     val pending: StateFlow<Boolean> get() = _pending
@@ -85,7 +87,7 @@ class StartStudyViewModel @Inject constructor(
                 val token = dataStoreManager.tokenFlow.first()
                 enqueueSensorReadingsUploadWorker(context, token)
 
-                dataStoreManager.saveStudy(study)
+                studyRepository.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)
                 dataStoreManager.saveRemainingStudyDays(study.durationDays)
                 dataStoreManager.saveSensitiveDataSalt(generateSensitiveDataSalt())

@@ -38,6 +38,7 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.api.ApiClient
 import de.mimuc.senseeverything.api.loadStudyByEnrolmentKey
 import de.mimuc.senseeverything.data.DataStoreManager
+import de.mimuc.senseeverything.data.StudyRepository
 import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,7 +48,8 @@ import javax.inject.Inject
 @HiltViewModel
 class WelcomeScreenViewModel @Inject constructor(
     application: Application,
-    val dataStoreManager: DataStoreManager
+    val dataStoreManager: DataStoreManager,
+    private val studyRepository: StudyRepository
 ) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> get() = _isLoading
@@ -66,7 +68,7 @@ class WelcomeScreenViewModel @Inject constructor(
             val study = loadStudyByEnrolmentKey(client, enrolmentKey)
 
             if (study != null) {
-                dataStoreManager.saveStudy(study)
+                studyRepository.saveStudy(study)
                 dataStoreManager.saveStudyId(study.id)
                 continueOnSuccess()
             } else {
