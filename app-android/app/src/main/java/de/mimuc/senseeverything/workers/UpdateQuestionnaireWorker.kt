@@ -64,9 +64,11 @@ class UpdateQuestionnaireWorker @AssistedInject constructor(
 }
 
 fun enqueueUpdateQuestionnaireWorker(context: Context) {
+    // No charging constraint: once this worker is in the foreground, WorkManager re-checks charging
+    // in-process with a stricter definition than JobScheduler (plugged in but charging paused counts
+    // as not charging) and stops it, while JobScheduler restarts it immediately.
     val constraints = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.CONNECTED)
-        .setRequiresCharging(true)
         .build()
 
     val updateQuestionnairesRequest = PeriodicWorkRequestBuilder<UpdateQuestionnaireWorker>(1, TimeUnit.DAYS)
