@@ -1,5 +1,6 @@
 package de.mimuc.senseeverything.api.model.ema
 
+import de.mimuc.senseeverything.service.accessibility.ScreenshotRating
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -19,6 +20,7 @@ enum class QuestionnaireElementType(val apiName: String) {
     @SerialName("external_questionnaire_link") EXTERNAL_QUESTIONNAIRE_LINK("external_questionnaire_link"),
     @SerialName("social_network_entry") SOCIAL_NETWORK_ENTRY("social_network_entry"),
     @SerialName("social_network_rating") SOCIAL_NETWORK_RATING("social_network_rating"),
+    @SerialName("screenshot_rating") SCREENSHOT_RATING("screenshot_rating"),
     @SerialName("circumplex") CIRCUMPLEX("circumplex"),
     @SerialName("likert_scale_label") LIKERT_SCALE_LABEL("likert_scale_label"),
     @SerialName("button_group") BUTTON_GROUP("button_group"),
@@ -64,6 +66,7 @@ sealed class QuestionnaireElement {
             is LikertScaleLabelElement -> QuestionnaireElementType.LIKERT_SCALE_LABEL
             is ButtonGroupElement -> QuestionnaireElementType.BUTTON_GROUP
             is TimeInputElement -> QuestionnaireElementType.TIME_INPUT
+            is ScreenshotRatingElement -> QuestionnaireElementType.SCREENSHOT_RATING
             is MalformedElement -> QuestionnaireElementType.MALFORMED
         }
 }
@@ -182,6 +185,19 @@ data class SocialNetworkRatingConfiguration(
     val ratingQuestionnaireId: Int
 )
 
+
+@Serializable
+@SerialName("screenshot_rating")
+data class ScreenshotRatingElement(
+    val configuration: ScreenshotRatingConfiguration
+) : QuestionnaireElement()
+
+@Serializable
+data class ScreenshotRatingConfiguration(
+    val packageRatingQuestionnaires: Map<String, Int>
+)
+
+
 @Serializable
 @SerialName("circumplex")
 data class CircumplexElement(
@@ -270,6 +286,7 @@ val questionnaireElementModule = SerializersModule {
         subclass(ButtonGroupElement::class)
         subclass(TimeInputElement::class)
         subclass(MalformedElement::class)
+        subclass(ScreenshotRatingElement::class)
     }
 }
 

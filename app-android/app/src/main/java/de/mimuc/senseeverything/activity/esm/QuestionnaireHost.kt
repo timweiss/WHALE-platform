@@ -34,6 +34,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.mimuc.senseeverything.R
+import de.mimuc.senseeverything.activity.esm.screenshot.ScreenshotRatingElementComponent
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkEntryElementComponent
 import de.mimuc.senseeverything.activity.esm.socialnetwork.SocialNetworkRatingElementComponent
 import de.mimuc.senseeverything.api.model.CheckboxGroupValue
@@ -41,6 +42,7 @@ import de.mimuc.senseeverything.api.model.CircumplexValue
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.QuantityEntryValue
 import de.mimuc.senseeverything.api.model.RadioGroupValue
+import de.mimuc.senseeverything.api.model.ScreenshotRatingValue
 import de.mimuc.senseeverything.api.model.SliderValue
 import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
 import de.mimuc.senseeverything.api.model.SocialNetworkRatingValue
@@ -55,6 +57,7 @@ import de.mimuc.senseeverything.api.model.ema.QuantityEntryElement
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElement
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.ema.RadioGroupElement
+import de.mimuc.senseeverything.api.model.ema.ScreenshotRatingElement
 import de.mimuc.senseeverything.api.model.ema.SliderElement
 import de.mimuc.senseeverything.api.model.ema.SocialNetworkEntryElement
 import de.mimuc.senseeverything.api.model.ema.SocialNetworkRatingElement
@@ -430,6 +433,19 @@ fun QuestionnaireElement(
                     onValueChange(
                         element.id,
                         SocialNetworkRatingValue(element.id, element.name, newValue)
+                    )
+                }
+            )
+        }
+
+        QuestionnaireElementType.SCREENSHOT_RATING -> {
+            ScreenshotRatingElementComponent(
+                element = element as ScreenshotRatingElement,
+                value = (elementValue as ScreenshotRatingValue).values,
+                onValueChange = { newValue ->
+                    onValueChange(
+                        element.id,
+                        ScreenshotRatingValue(element.id, element.name, newValue)
                     )
                 }
             )

@@ -49,27 +49,25 @@ class ScreenshotPeriodEndTest {
     }
 
     @Test
-    fun nextAlarmIsTheNextPeriodEnd() {
+    fun nextPeriodEndIsAfterNow() {
         val schedule = listOf(period(0, hour), period(hour, 5 * hour))
-        val ratings = mapOf(hour to listOf(ScreenshotRating(completed = false, validUntil = 6 * hour)))
 
-        assertEquals(5 * hour, nextScreenshotAlarm(schedule, listOf(hour), ratings, now = 2 * hour))
+        assertEquals(5 * hour, nextScreenshotPeriodEnd(schedule, now = 2 * hour))
+        assertNull(nextScreenshotPeriodEnd(schedule, now = 5 * hour))
+        assertNull(nextScreenshotPeriodEnd(schedule = null, now = 0))
     }
 
     @Test
-    fun afterTheLastPeriodTheAlarmWaitsForTheRatingToExpire() {
-        val schedule = listOf(period(0, hour))
+    fun deletionCheckWaitsForTheRatingToExpire() {
         val ratings = mapOf(hour to listOf(ScreenshotRating(completed = false, validUntil = 3 * hour)))
 
-        assertEquals(3 * hour, nextScreenshotAlarm(schedule, listOf(hour), ratings, now = 2 * hour))
+        assertEquals(3 * hour, nextScreenshotDeletionCheck(listOf(hour), ratings, now = 2 * hour))
     }
 
     @Test
-    fun afterTheLastPeriodTheAlarmWaitsForTheGraceTime() {
-        val schedule = listOf(period(0, hour))
-
-        assertEquals(hour + grace, nextScreenshotAlarm(schedule, listOf(hour), emptyMap(), now = hour))
-        assertNull(nextScreenshotAlarm(schedule, emptyList(), emptyMap(), now = hour + grace))
+    fun deletionCheckWaitsForTheGraceTime() {
+        assertEquals(hour + grace, nextScreenshotDeletionCheck(listOf(hour), emptyMap(), now = hour))
+        assertNull(nextScreenshotDeletionCheck(emptyList(), emptyMap(), now = hour + grace))
     }
 
     @Test

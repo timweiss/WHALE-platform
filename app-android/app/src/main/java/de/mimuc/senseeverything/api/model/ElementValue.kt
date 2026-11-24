@@ -101,6 +101,25 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
                         elementId, elementName, ratings
                     )
                 }
+                QuestionnaireElementType.SCREENSHOT_RATING -> {
+                    val ratingsJson = valueJson.getJSONObject("ratings")
+                    val ratings = mutableMapOf<String, Map<Int, ElementValue>>()
+
+                    for (key in ratingsJson.keys()) {
+                        val entryJson = ratingsJson.getJSONObject(key)
+                        val entryRatings = mutableMapOf<Int, ElementValue>()
+                        for (k in entryJson.keys()) {
+                            val valueJson = entryJson.getJSONObject(k)
+                            val value = fromJson(valueJson)
+                            entryRatings[k.toInt()] = value
+                        }
+                        ratings[key] = entryRatings
+                    }
+
+                    ScreenshotRatingValue(
+                        elementId, elementName, ratings
+                    )
+                }
                 QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(
                     elementId, elementName,
                     Pair(valueJson.getDouble("x"), valueJson.getDouble("y"))
@@ -190,6 +209,34 @@ class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: 
                 entryJson.put(k.toString(), v.valueAsJsonObject())
             }
             ratingsJson.put(key.toString(), entryJson)
+        }
+        json.put("ratings", ratingsJson)
+        return json
+    }
+}
+
+
+class ScreenshotRatingValue(elementId: Int, elementName: String, var values: Map<String, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SOCIAL_NETWORK_RATING) {
+    override fun isAnswered(): Boolean {
+        // either no screenshots exist (empty) or all need to be answered (so value is present) for it to be valid
+        return values.isEmpty() || values.entries.all { it.value.isNotEmpty() }
+    }
+
+    override fun getSerializedValue(): String {
+        return values.entries.joinToString(",") { (key, value) ->
+            "$key:${value.entries.joinToString(",") { (_, v) -> "${v.elementName}:${v.getSerializedValue()}" }}"
+        }
+    }
+
+    override fun valueAsJsonObject(): JSONObject {
+        val json = JSONObject()
+        val ratingsJson = JSONObject()
+        for ((key, value) in values) {
+            val entryJson = JSONObject()
+            for ((k, v) in value) {
+                entryJson.put(k.toString(), v.valueAsJsonObject())
+            }
+            ratingsJson.put(key, entryJson)
         }
         json.put("ratings", ratingsJson)
         return json

@@ -19,6 +19,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.File
 import javax.inject.Inject
 
 /** What a rating questionnaire refers to, stored as the pending questionnaire's context. */
@@ -48,14 +49,19 @@ fun screenshotPeriodsToDelete(
     end <= now - SCREENSHOT_DELETE_GRACE_MS && ratings[end].orEmpty().none { it.isOpen(now) }
 }
 
-/** When the receiver has to run next: the next period end, a rating's expiry, or the end of a grace time. */
-fun nextScreenshotAlarm(
-    schedule: List<ScreenshotPeriod>?,
+/** When the next period ends, which is when its rating has to be requested. */
+fun nextScreenshotPeriodEnd(schedule: List<ScreenshotPeriod>?, now: Long): Long? =
+    schedule?.map { it.end }?.filter { it > now }?.minOrNull()
+
+/**
+ * When a prompted period may become deletable without anything else waking the receiver: an open
+ * rating expires, or a grace time ends. A completed rating is only noticed on the next run.
+ */
+fun nextScreenshotDeletionCheck(
     requested: List<Long>,
     ratings: Map<Long, List<ScreenshotRating>>,
     now: Long
 ): Long? = listOfNotNull(
-    schedule?.map { it.end }?.filter { it > now }?.minOrNull(),
     requested.flatMap { ratings[it].orEmpty() }
         .filter { it.isOpen(now) && it.validUntil != -1L }
         .minOfOrNull { it.validUntil },
@@ -63,10 +69,14 @@ fun nextScreenshotAlarm(
 ).minOrNull()
 
 /**
- * Runs at every period end (see [planScreenshotPeriods]), so the rating questionnaire and the
- * period share one clock. For each ended period not prompted yet, it emits [EVENT] if the period has
- * samples; a questionnaire with an event trigger for it rates exactly that period, valid from its end.
- * Afterwards it deletes the periods whose rating is no longer open and schedules itself again.
+ * Two steps, each telling when it has to run next; the receiver schedules itself for the earlier time.
+ *
+ * 1. [requestRatings], at every period end (see [planScreenshotPeriods]), so the rating questionnaire
+ *    and the period share one clock. For each ended period not prompted yet, it emits [EVENT] if the
+ *    period has samples; a questionnaire with an event trigger for it rates exactly that period, valid
+ *    from its end. Its [ScreenshotRatingContext] names the period.
+ * 2. [deleteClosedPeriods], when a rating expires or a grace time ends: deletes the prompted periods
+ *    whose rating is no longer open (see [screenshotPeriodsToDelete]).
  *
  * Runs in the main process. Idempotent, so it also catches up after a reboot.
  */
@@ -97,6 +107,25 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
             val schedule = dataStoreManager.screenshotScheduleFlow.first()
             val now = System.currentTimeMillis()
 
+            requestRatings(context, root, database, dataStoreManager, now)
+            val nextDeletionCheck = withContext(Dispatchers.IO) { deleteClosedPeriods(root, schedule, database, now) }
+
+            val next = listOfNotNull(nextScreenshotPeriodEnd(schedule, now), nextDeletionCheck).minOrNull()
+            if (next != null) {
+                setAlarm(context, next)
+            } else {
+                WHALELog.i(TAG, "No further period end or rating to wait for")
+            }
+        }
+
+        /** Step 1: emits [EVENT] once for every ended period. */
+        private suspend fun requestRatings(
+            context: Context,
+            root: File,
+            database: AppDatabase,
+            dataStoreManager: DataStoreManager,
+            now: Long
+        ) {
             val unprompted = withContext(Dispatchers.IO) {
                 ScreenshotStore.periodEnds(root).filter { it <= now && !ScreenshotStore.isRatingRequested(root, it) }
             }
@@ -115,23 +144,26 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
                 // after the event: a crash in between prompts twice rather than never
                 withContext(Dispatchers.IO) { ScreenshotStore.markRatingRequested(root, end) }
             }
+        }
 
-            val next = withContext(Dispatchers.IO) {
-                val ratings = ratingsByPeriod(database)
-                val requested = ScreenshotStore.periodEnds(root).filter { ScreenshotStore.isRatingRequested(root, it) }
-                val deleted = screenshotPeriodsToDelete(requested, ratings, now)
-                deleted.forEach {
-                    WHALELog.i(TAG, "Deleting period $it, its rating is no longer open")
-                    ScreenshotStore.deletePeriod(root, it, schedule)
-                }
-                nextScreenshotAlarm(schedule, requested - deleted.toSet(), ratings, now)
+        /**
+         * Step 2: deletes the prompted periods whose rating is no longer open. Only prompted ones, so
+         * a period is never deleted before its rating was requested. Returns when to check again.
+         */
+        private fun deleteClosedPeriods(
+            root: File,
+            schedule: List<ScreenshotPeriod>?,
+            database: AppDatabase,
+            now: Long
+        ): Long? {
+            val ratings = ratingsByPeriod(database)
+            val requested = ScreenshotStore.periodEnds(root).filter { ScreenshotStore.isRatingRequested(root, it) }
+            val deleted = screenshotPeriodsToDelete(requested, ratings, now)
+            deleted.forEach {
+                WHALELog.i(TAG, "Deleting period $it, its rating is no longer open")
+                ScreenshotStore.deletePeriod(root, it, schedule)
             }
-
-            if (next != null) {
-                setAlarm(context, next)
-            } else {
-                WHALELog.i(TAG, "No further period end or rating to wait for")
-            }
+            return nextScreenshotDeletionCheck(requested - deleted.toSet(), ratings, now)
         }
 
         /** Ratings by period end; questionnaires with another module's context are skipped. */
