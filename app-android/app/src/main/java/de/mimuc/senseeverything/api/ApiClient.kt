@@ -9,6 +9,7 @@ import com.android.volley.Response
 import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.nio.charset.Charset
@@ -162,12 +163,15 @@ class ApiClient private constructor(context: Context) {
     /**
      * GET request with kotlinx.serialization support using a custom JSON instance
      * Deserializes the JSON response to the specified type
+     *
+     * Cancelling the calling coroutine cancels the Volley request, so a stopped worker does not
+     * keep sending requests.
      */
     suspend inline fun <reified T> getSerialized(
         url: String,
         headers: Map<String, String> = emptyMap(),
         json: Json
-    ): T = suspendCoroutine { continuation ->
+    ): T = suspendCancellableCoroutine { continuation ->
         val request = object : Request<String>(Method.GET, url, Response.ErrorListener { error ->
             continuation.resumeWithException(error)
         }) {
@@ -201,6 +205,7 @@ class ApiClient private constructor(context: Context) {
             }
         }
 
+        continuation.invokeOnCancellation { request.cancel() }
         addToRequestQueue(request)
     }
 

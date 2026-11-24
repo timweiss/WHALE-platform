@@ -11,6 +11,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.logging.WHALELog
+import kotlin.coroutines.cancellation.CancellationException
 
 fun backgroundWorkForegroundInfo(
     notificationId: Int,
@@ -57,6 +58,10 @@ fun makeForegroundInfo(
 suspend fun CoroutineWorker.setForegroundIfAllowed(foregroundInfo: ForegroundInfo) {
     try {
         setForeground(foregroundInfo)
+    } catch (e: CancellationException) {
+        // CancellationException extends IllegalStateException, so it has to be rethrown before
+        // the catch below swallows it: otherwise a worker that WorkManager stopped keeps running
+        throw e
     } catch (e: IllegalStateException) {
         // ForegroundServiceStartNotAllowedException is an IllegalStateException
         WHALELog.w(javaClass.simpleName, "Could not run as foreground service, continuing in background: ${e.message}")

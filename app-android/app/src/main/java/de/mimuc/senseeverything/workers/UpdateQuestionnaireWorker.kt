@@ -17,8 +17,10 @@ import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.persistQuestionnaireElementContent
 import de.mimuc.senseeverything.helpers.backgroundWorkForegroundInfo
 import de.mimuc.senseeverything.helpers.setForegroundIfAllowed
+import de.mimuc.senseeverything.logging.WHALELog
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltWorker
 class UpdateQuestionnaireWorker @AssistedInject constructor(
@@ -33,20 +35,31 @@ class UpdateQuestionnaireWorker @AssistedInject constructor(
                 NotificationManager
 
     override suspend fun doWork(): Result {
-        val studyId = dataStoreManager.studyIdFlow.first()
+        WHALELog.i(TAG, "started (runAttemptCount=$runAttemptCount)")
+        try {
+            val studyId = dataStoreManager.studyIdFlow.first()
 
-        setForegroundIfAllowed(
-            backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
-        )
+            setForegroundIfAllowed(
+                backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
+            )
 
-        val fullQuestionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, ApiClient.getInstance(applicationContext))
-        persistQuestionnaireElementContent(applicationContext, fullQuestionnaires)
+            val fullQuestionnaires = fetchAndPersistQuestionnaires(studyId, dataStoreManager, ApiClient.getInstance(applicationContext))
+            persistQuestionnaireElementContent(applicationContext, fullQuestionnaires)
 
-        return if (fullQuestionnaires.isNotEmpty()) {
-            Result.success()
-        } else {
-            Result.failure()
+            return if (fullQuestionnaires.isNotEmpty()) {
+                Result.success()
+            } else {
+                Result.failure()
+            }
+        } catch (e: CancellationException) {
+            // stopReason is one of WorkInfo.STOP_REASON_*, e.g. 6 = STOP_REASON_CONSTRAINT_CHARGING
+            WHALELog.w(TAG, "stopped by WorkManager (stopReason=$stopReason, runAttemptCount=$runAttemptCount)")
+            throw e
         }
+    }
+
+    companion object {
+        private const val TAG = "UpdateQuestionnaireWorker"
     }
 }
 
