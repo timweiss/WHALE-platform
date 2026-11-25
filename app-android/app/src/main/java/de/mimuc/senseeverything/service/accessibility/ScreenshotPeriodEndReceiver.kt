@@ -24,7 +24,20 @@ import javax.inject.Inject
 
 /** What a rating questionnaire refers to, stored as the pending questionnaire's context. */
 @Serializable
-data class ScreenshotRatingContext(val screenshotPeriodEnd: Long)
+data class ScreenshotRatingContext(val screenshotPeriodEnd: Long) {
+    fun toJson(): String = json.encodeToString(this)
+
+    companion object {
+        private val json = Json { ignoreUnknownKeys = true }
+
+        /** Null if there is no context or it is another module's. */
+        fun fromJson(contextJson: String?): ScreenshotRatingContext? = try {
+            contextJson?.let { json.decodeFromString<ScreenshotRatingContext>(it) }
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+    }
+}
 
 /** The rating state of one pending questionnaire that refers to a period. */
 data class ScreenshotRating(val completed: Boolean, val validUntil: Long) {
@@ -100,8 +113,6 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
         // one fixed alarm: scheduling the next one replaces it
         val REQUEST_CODE = ScheduledAlarm.generateRequestCode("ScreenshotPeriodEndReceiver", "next")
 
-        private val json = Json { ignoreUnknownKeys = true }
-
         suspend fun handle(context: Context, database: AppDatabase, dataStoreManager: DataStoreManager) {
             val root = ScreenshotStore.root(context)
             val schedule = dataStoreManager.screenshotScheduleFlow.first()
@@ -136,7 +147,7 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
                     EsmHandler.handleEvent(
                         EVENT, null, null, context, dataStoreManager, database,
                         validFrom = end,
-                        contextJson = json.encodeToString(ScreenshotRatingContext(end))
+                        contextJson = ScreenshotRatingContext(end).toJson()
                     )
                 } else {
                     WHALELog.i(TAG, "Not requesting rating of period $end, it has no samples")
@@ -169,11 +180,7 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
         /** Ratings by period end; questionnaires with another module's context are skipped. */
         private fun ratingsByPeriod(database: AppDatabase): Map<Long, List<ScreenshotRating>> =
             database.pendingQuestionnaireDao().getWithContext().mapNotNull { pending ->
-                val ratingContext = try {
-                    json.decodeFromString<ScreenshotRatingContext>(pending.contextJson!!)
-                } catch (e: IllegalArgumentException) {
-                    return@mapNotNull null
-                }
+                val ratingContext = ScreenshotRatingContext.fromJson(pending.contextJson) ?: return@mapNotNull null
                 ratingContext.screenshotPeriodEnd to ScreenshotRating(
                     pending.status == PendingQuestionnaireStatus.COMPLETED,
                     pending.validUntil

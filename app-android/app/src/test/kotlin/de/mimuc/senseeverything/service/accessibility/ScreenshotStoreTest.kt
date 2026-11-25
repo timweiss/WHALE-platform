@@ -25,12 +25,12 @@ class ScreenshotStoreTest {
         val store = open()
         val image = capture(store)
         store.setItemsSeen(app, 7)
-        store.commit(app, 2, image, timestamp = 42L, signature = "abc")
+        store.commit(app, 2, image, timestamp = 42L, signature = "abc", snapshotId = "snapshot")
 
         val reservoir = open().reservoir(app)
         assertEquals(7, reservoir.itemsSeen)
         assertNull(reservoir.slots[0])
-        assertEquals(ScreenshotStore.Sample(image.name, 42L, "abc"), reservoir.slots[2])
+        assertEquals(ScreenshotStore.Sample(image.name, 42L, "abc", "snapshot"), reservoir.slots[2])
         assertTrue(image.exists())
     }
 
@@ -38,9 +38,9 @@ class ScreenshotStoreTest {
     fun replacingDeletesTheOldImage() {
         val store = open()
         val first = capture(store)
-        store.commit(app, 0, first, 1L, "a")
+        store.commit(app, 0, first, 1L, "a", snapshotId = "snapshot")
         val second = capture(store)
-        store.commit(app, 0, second, 2L, "b")
+        store.commit(app, 0, second, 2L, "b", snapshotId = "snapshot")
 
         assertFalse(first.exists())
         assertEquals(second.name, store.reservoir(app).slots[0]?.file)
@@ -60,7 +60,7 @@ class ScreenshotStoreTest {
     fun unreadableStateStartsEmptyAndDeletesImages() {
         val store = open()
         val image = capture(store)
-        store.commit(app, 0, image, 1L, "a")
+        store.commit(app, 0, image, 1L, "a", snapshotId = "snapshot")
         File(image.parentFile, "state.json").writeText("{broken")
 
         assertEquals(ScreenshotStore.Reservoir(), open().reservoir(app))
@@ -93,7 +93,7 @@ class ScreenshotStoreTest {
         val store = open()
         store.setItemsSeen(app, 5)
         store.recordDropped(app)
-        store.commit(app, 0, capture(store), 1L, "a")
+        store.commit(app, 0, capture(store), 1L, "a", snapshotId = "snapshot")
         val schedule = listOf(ScreenshotPeriod(0L, periodEnd, "baseline", mapOf(app to 10)))
         val lines = mutableListOf<String>()
 
@@ -125,12 +125,12 @@ class ScreenshotStoreTest {
     fun readAllListsCommittedSamplesWithoutDeletingOthers() {
         val store = open()
         val committed = capture(store)
-        store.commit(app, 1, committed, 42L, "abc")
+        store.commit(app, 1, committed, 42L, "abc", snapshotId = "snapshot")
         val inFlight = capture(store)
 
         val samples = ScreenshotStore.readAll(root)
         assertEquals(
-            listOf(ScreenshotStore.StoredSample(periodEnd, app, 1, ScreenshotStore.Sample(committed.name, 42L, "abc"), committed)),
+            listOf(ScreenshotStore.StoredSample(periodEnd, app, 1, ScreenshotStore.Sample(committed.name, 42L, "abc", "snapshot"), committed)),
             samples
         )
         assertTrue(inFlight.exists())

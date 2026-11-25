@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.service.accessibility.model
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 /**
  * Lightweight representation of a screen state and optional interaction.
@@ -12,10 +13,13 @@ data class ScreenSnapshot(
     val appPackage: String,
     val framework: String,
     val skeleton: TreeSkeleton,
-    val interaction: InteractionEvent? = null
+    val interaction: InteractionEvent? = null,
+    /** uploaded with the tree; a screenshot of this screen keeps it, so its rating can be joined to the tree */
+    val snapshotId: String = UUID.randomUUID().toString()
 ) {
     fun toJson(): JSONObject {
         return JSONObject().apply {
+            put("snapshotId", snapshotId)
             put("timestamp", timestamp)
             put("appPackage", appPackage)
             put("framework", framework)
@@ -33,7 +37,8 @@ data class ScreenSnapshot(
                 skeleton = TreeSkeleton.fromJson(json.getJSONObject("skeleton")),
                 interaction = if (json.has("interaction")) {
                     InteractionEvent.fromJson(json.getJSONObject("interaction"))
-                } else null
+                } else null,
+                snapshotId = json.getString("snapshotId")
             )
         }
     }

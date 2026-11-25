@@ -64,6 +64,7 @@ class QuestionnaireRuleEvaluator(var rules: List<QuestionnaireRule>) {
             QuestionnaireElementType.TIME_INPUT -> (value as TimeInputValue).value.toString()
             QuestionnaireElementType.EXTERNAL_QUESTIONNAIRE_LINK -> null
             QuestionnaireElementType.SOCIAL_NETWORK_RATING -> null
+            QuestionnaireElementType.SCREENSHOT_RATING -> null
             QuestionnaireElementType.CIRCUMPLEX -> null
             QuestionnaireElementType.LIKERT_SCALE_LABEL -> null
             QuestionnaireElementType.MALFORMED -> null

@@ -139,14 +139,16 @@ class ScreenshotStore(
          * process (debug or rating UI): unlike [reservoir], it never deletes files. An image can still
          * disappear between listing and reading it, if sampling replaces it meanwhile.
          */
-        fun readAll(root: File): List<StoredSample> = periodEnds(root).flatMap { periodEnd ->
+        fun readAll(root: File): List<StoredSample> = periodEnds(root).flatMap { readPeriod(root, it) }
+
+        /** The samples of one period, read-only like [readAll]; empty if the period was deleted. */
+        fun readPeriod(root: File, periodEnd: Long): List<StoredSample> =
             readReservoirs(periodDir(root, periodEnd)).flatMap { (packageName, reservoir) ->
                 val packageDir = File(periodDir(root, periodEnd), packageName)
                 reservoir.slots.mapIndexedNotNull { slot, sample ->
                     sample?.let { StoredSample(periodEnd, packageName, slot, it, File(packageDir, it.file)) }
                 }
             }
-        }
 
         /** Read-only, skips apps whose state can't be read. */
         private fun readReservoirs(periodDir: File): List<Pair<String, Reservoir>> {
@@ -174,7 +176,9 @@ class ScreenshotStore(
         val file: String,
         /** the [de.mimuc.senseeverything.service.accessibility.model.ScreenSnapshot.timestamp] of the UI tree */
         val timestamp: Long,
-        val signature: String
+        val signature: String,
+        /** the [de.mimuc.senseeverything.service.accessibility.model.ScreenSnapshot.snapshotId] of the UI tree */
+        val snapshotId: String
     )
 
     /**
@@ -223,12 +227,12 @@ class ScreenshotStore(
     }
 
     /** Puts [image] (from [newImageFile]) into [slot], replacing and deleting the image there. */
-    fun commit(packageName: String, slot: Int, image: File, timestamp: Long, signature: String) {
+    fun commit(packageName: String, slot: Int, image: File, timestamp: Long, signature: String, snapshotId: String) {
         val current = reservoir(packageName)
         val slots = current.slots.toMutableList()
         while (slots.size <= slot) slots.add(null)
         val replaced = slots[slot]
-        slots[slot] = Sample(image.name, timestamp, signature)
+        slots[slot] = Sample(image.name, timestamp, signature, snapshotId)
 
         save(packageName, current.copy(slots = slots))
         replaced?.let { File(packageDir(packageName), it.file).delete() }

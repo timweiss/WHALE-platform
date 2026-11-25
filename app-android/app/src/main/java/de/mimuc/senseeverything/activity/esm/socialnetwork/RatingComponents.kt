@@ -188,11 +188,24 @@ fun AccordionItem(
     content: @Composable () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(true) }
+    AccordionItem(title, expanded, onToggle = { expanded = !expanded }, enabled, icon, content)
+}
+
+/** The caller holds the expanded state, e.g. to keep only one item open. */
+@Composable
+fun AccordionItem(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    enabled: Boolean = true,
+    icon: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
     Column {
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(4.dp))
-                .clickable { expanded = !expanded }
+                .clickable { onToggle() }
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween

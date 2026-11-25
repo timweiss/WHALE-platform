@@ -50,7 +50,8 @@ class SnapshotBatchEncoderTest {
         appPackage = "com.instagram.android",
         framework = "VIEW",
         skeleton = TreeSkeleton("abc123", listOf(node(0, withOptionals), node(1, withOptionals))),
-        interaction = if (withOptionals) InteractionEvent(InteractionType.TAP, 1, 0.5f, 0.75f) else null
+        interaction = if (withOptionals) InteractionEvent(InteractionType.TAP, 1, 0.5f, 0.75f) else null,
+        snapshotId = "snapshot"
     )
 
     private fun assertEncodesLikeToJson(snapshots: List<ScreenSnapshot>) {

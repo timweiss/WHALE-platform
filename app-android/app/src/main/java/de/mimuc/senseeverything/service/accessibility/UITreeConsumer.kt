@@ -413,7 +413,8 @@ class UITreeConsumer : AccessibilityLoggingConsumer {
                                             slot,
                                             screenshotFile,
                                             eventTime,
-                                            skeleton.signature
+                                            skeleton.signature,
+                                            snapshot.snapshotId
                                         )
                                     }
                                 }

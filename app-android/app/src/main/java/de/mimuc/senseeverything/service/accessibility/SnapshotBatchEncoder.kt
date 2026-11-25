@@ -40,6 +40,7 @@ object SnapshotBatchEncoder {
 
     private fun writeSnapshot(json: StreamingJson, snapshot: ScreenSnapshot) {
         json.beginObject()
+        json.key("snapshotId").string(snapshot.snapshotId)
         json.key("timestamp").number(snapshot.timestamp)
         json.key("appPackage").string(snapshot.appPackage)
         json.key("framework").string(snapshot.framework)

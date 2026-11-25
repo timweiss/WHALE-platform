@@ -74,7 +74,7 @@ class ScreenshotPeriodEndTest {
     fun ratingRequestedMarkerAndSampleCount() {
         val store = ScreenshotStore(root, hour, log = {})
         val image = store.newImageFile(app).apply { writeText("image") }
-        store.commit(app, 0, image, timestamp = 42L, signature = "abc")
+        store.commit(app, 0, image, timestamp = 42L, signature = "abc", snapshotId = "snapshot")
 
         assertEquals(1, ScreenshotStore.sampleCount(root, hour))
         assertEquals(0, ScreenshotStore.sampleCount(root, 2 * hour))

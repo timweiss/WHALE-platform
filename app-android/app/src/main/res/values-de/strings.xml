@@ -116,6 +116,9 @@
     <string name="onboarding_data_protection_header">Bitte sorgfältig lesen</string>
     <string name="onboarding_data_protection_not_available">Für diese Studie wurde kein Datenschutzhinweis ausgefüllt.</string>
     <string name="onboarding_data_protection_accept">Ich habe den Datenschutzhinweis gelesen und akzeptiere ihn.</string>
+    <string name="screenshot_rating_loading">Screenshots werden geladen…</string>
+    <string name="screenshot_rating_empty">Es gibt keine Screenshots zu bewerten.</string>
+    <string name="screenshot_rating_image_unavailable">Dieser Screenshot ist nicht mehr verfügbar.</string>
     <string name="questionnaire_element_quantity_valid_range">Bitte geben Sie einen Wert zwischen %1$d und %2$d ein.</string>
 
     <!-- Permission names and descriptions -->

@@ -216,7 +216,7 @@ class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: 
 }
 
 
-class ScreenshotRatingValue(elementId: Int, elementName: String, var values: Map<String, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SOCIAL_NETWORK_RATING) {
+class ScreenshotRatingValue(elementId: Int, elementName: String, var values: Map<String, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SCREENSHOT_RATING) {
     override fun isAnswered(): Boolean {
         // either no screenshots exist (empty) or all need to be answered (so value is present) for it to be valid
         return values.isEmpty() || values.entries.all { it.value.isNotEmpty() }
@@ -234,7 +234,8 @@ class ScreenshotRatingValue(elementId: Int, elementName: String, var values: Map
         for ((key, value) in values) {
             val entryJson = JSONObject()
             for ((k, v) in value) {
-                entryJson.put(k.toString(), v.valueAsJsonObject())
+                // the full element, fromJson needs its type to restore it
+                entryJson.put(k.toString(), v.toJson())
             }
             ratingsJson.put(key, entryJson)
         }
@@ -350,6 +351,7 @@ fun emptyValueForElement(element: QuestionnaireElement): ElementValue {
         QuestionnaireElementType.QUANTITY_ENTRY -> QuantityEntryValue(element.id, element.name, "")
         QuestionnaireElementType.SOCIAL_NETWORK_ENTRY -> SocialNetworkEntryValue(element.id, element.name, emptyList())
         QuestionnaireElementType.SOCIAL_NETWORK_RATING -> SocialNetworkRatingValue(element.id, element.name, emptyMap())
+        QuestionnaireElementType.SCREENSHOT_RATING -> ScreenshotRatingValue(element.id, element.name, emptyMap())
         QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(element.id, element.name, (0.0 to 0.0))
         QuestionnaireElementType.BUTTON_GROUP -> ButtonGroupValue(element.id, element.name, "")
         QuestionnaireElementType.TIME_INPUT -> TimeInputValue(element.id, element.name, (-1 to -1))
