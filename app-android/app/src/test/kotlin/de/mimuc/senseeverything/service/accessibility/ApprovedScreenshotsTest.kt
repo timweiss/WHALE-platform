@@ -14,6 +14,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -64,6 +65,27 @@ class ApprovedScreenshotsTest {
 
         assertEquals(first, ApprovedScreenshots.toLogData(sample("a"), image, now = 2L).localId)
         assertNotEquals(first, ApprovedScreenshots.toLogData(sample("b"), image, now = 1L).localId)
+    }
+
+    @Test
+    fun onlyOldImagesWithoutReadingAreDeleted() {
+        val hour = 3_600_000L
+        val now = 1_800_000_000_000L
+        fun image(name: String, age: Long) = File(dir, name).apply {
+            writeText("image")
+            setLastModified(now - age)
+        }
+        val referenced = image("referenced.jpg", 2 * hour)
+        val orphan = image("orphan.jpg", 2 * hour)
+        // its reading may be about to be added
+        val recent = image("recent.jpg", hour / 2)
+
+        assertEquals(1, ApprovedScreenshots.deleteUnreferenced(dir, setOf(referenced.path), now))
+        assertTrue(referenced.exists())
+        assertTrue(recent.exists())
+        assertFalse(orphan.exists())
+        // nothing was ever approved
+        assertEquals(0, ApprovedScreenshots.deleteUnreferenced(File(dir, "missing"), emptySet(), now))
     }
 
     @Test

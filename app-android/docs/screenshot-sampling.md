@@ -1,8 +1,9 @@
 # Screenshot sampling
 
 Takes a random sample of screenshots per app that participants rate in the evening. Each screenshot
-belongs to exactly one logged UI tree (same app, timestamp and signature). Screenshots stay on the
-device; only counts and the list of sampled screens are uploaded.
+belongs to exactly one logged UI tree (same app, timestamp and signature). Counts and the list of
+sampled screens are uploaded. A screenshot itself only leaves the device if the participant approves
+it in its rating (see [Upload approval](#upload-approval)).
 
 ## How it works
 
@@ -108,7 +109,8 @@ sampling summary: periodEnd=<epoch ms> package=<app> itemsSeen=<t> itemsDropped=
 - **Internal storage:** private to the app, so no other app can read the files.
 - **Not backed up:** `noBackupFilesDir` is excluded from Auto Backup and from device-to-device
   transfer.
-- **Never uploaded:** no upload or FileProvider path covers this directory.
+- **Never uploaded from here:** no upload or FileProvider path covers this directory. Approved
+  screenshots are copied out of it (see [Upload approval](#upload-approval)).
 - **Replaced images** are deleted immediately. Files the state doesn't reference (left over after
   a crash) are deleted when the state is loaded.
 - **Deletion:** a period is deleted once its rating is no longer open (see [Rating](#rating)).
@@ -216,6 +218,36 @@ schedules again each time:
 - **Rating UI:** reads the period's samples with `ScreenshotStore.readAll`, filtered by the
   context's `screenshotPeriodEnd`. *TODO:* a questionnaire element for it.
 
+## Upload approval
+
+The questionnaire embedded in a screenshot's rating may ask whether the screenshot may be uploaded. Its
+rules decide, per screenshot:
+
+```json
+{ "name": "upload approved",
+  "conditions": { "operator": "and",
+    "conditions": [{ "fieldName": "approval", "comparator": "equals", "expectedValue": 1 }] },
+  "actions": [{ "type": "approve_screenshot_upload" }] }
+```
+
+- **Use `equals`.** `not_equals` also matches an unanswered question, so it needs a second `and`
+  condition with the comparator `answered` on the same field. `answered` takes no `expectedValue`; a
+  comparison without one never matches. A slider at 0 counts as unanswered.
+- **Never approved:** screenshots without a rating, and by rules without conditions.
+- **Only this action** has a meaning in embedded rules, others are ignored.
+- **When:** when the whole rating questionnaire is completed. An abandoned one uploads nothing.
+- **Kept for upload:** approved images are copied to `noBackupFilesDir/approved_screenshots/`, as their
+  period may be deleted from then on. Each gets a `Screenshot` sensor reading with the flag
+  `upload_approved`. Without approval there is no reading, so a missing `sensorUploadConfig` uploads
+  nothing else. If `Screenshot` is listed there, it must require no other flag.
+- **Upload:** by `SensorReadingsUploadWorker` after the other readings, like every reading with
+  a file (`hasFile`), one request each to `/v1/reading/file`. Image and reading are deleted once the server confirmed that both are stored.
+- **Errors:** network errors, 429 and 5xx are retried; other errors (e.g. 401, 403, 404) end the run and
+  keep the screenshot for the next one. If the server rejects it for good (400, 413, 415) or the image
+  is gone, image and reading are deleted and the loss is logged.
+- **Deletion:** cancelling or removing the enrolment deletes approved screenshots not uploaded yet.
+  `UnsatisfiedSensorReadingsCleanupWorker` deletes images without a reading. It stops at the study end.
+
 ## Code
 
 | File | Role |
@@ -227,4 +259,7 @@ schedules again each time:
 | `service/accessibility/ScreenshotCapturer.kt` | screenshot, downscaling, JPEG, stats |
 | `service/accessibility/ScreenshotPeriodEndReceiver.kt` | final sample, rating event, deletion, period end alarm |
 | `service/accessibility/ScreenshotSampleReading.kt` | the final sample as a sensor reading |
+| `service/accessibility/ScreenshotApproval.kt` | which screenshots are approved for upload |
+| `service/accessibility/ApprovedScreenshots.kt` | approved images and their readings |
+| `workers/SensorReadingsUploadWorker.kt` | uploads them |
 | `res/xml/accessibility_service_config*.xml` | `canTakeScreenshot="true"` |

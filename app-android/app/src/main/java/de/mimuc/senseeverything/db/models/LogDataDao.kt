@@ -37,9 +37,16 @@ interface LogDataDao {
     @Query("DELETE FROM logdata WHERE sensorName = :sensorName")
     fun deleteBySensor(sensorName: String)
 
+    // Rows with a file are uploaded one by one, see getNextUnsyncedWithFileBefore.
     // id breaks ties between rows with the same timestamp, so batches have a defined order
-    @Query("SELECT logdata.* FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC, id ASC LIMIT :n")
+    @Query("SELECT logdata.* FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp AND hasFile = FALSE ORDER BY timestamp ASC, id ASC LIMIT :n")
     fun getNextNUnsyncedBeforeWithFlags(n: Int, cutoffTimestamp: Long): List<LogData>
+
+    @Query("SELECT logdata.* FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp AND hasFile = TRUE ORDER BY timestamp ASC, id ASC LIMIT 1")
+    fun getNextUnsyncedWithFileBefore(cutoffTimestamp: Long): LogData?
+
+    @Query("SELECT filePath FROM logdata WHERE sensorName = :sensorName AND filePath IS NOT NULL")
+    fun getFilePaths(sensorName: String): List<String>
 
     @get:Query("SELECT COUNT(*) FROM logdata WHERE synced = FALSE")
     val unsyncedCount: Long

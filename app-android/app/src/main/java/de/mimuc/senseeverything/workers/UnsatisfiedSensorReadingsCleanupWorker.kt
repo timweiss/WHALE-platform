@@ -11,6 +11,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.logging.WHALELog
+import de.mimuc.senseeverything.service.accessibility.ApprovedScreenshots
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -18,7 +19,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Deletes sensor readings that never got all their required upload flags within the sensor's
  * SensorUploadPolicy.clearAfterDays. Runs without a network constraint, so the retention limit holds
- * even when the upload worker (Wi-Fi only) doesn't run.
+ * even when the upload worker (Wi-Fi only) doesn't run. Also deletes the images of deleted screenshot readings.
  */
 @HiltWorker
 class UnsatisfiedSensorReadingsCleanupWorker @AssistedInject constructor(
@@ -36,6 +37,8 @@ class UnsatisfiedSensorReadingsCleanupWorker @AssistedInject constructor(
             try {
                 val deleted = database.logDataDao().deleteExpiredUnsatisfied(System.currentTimeMillis())
                 WHALELog.i(WORKER_TAG, "Deleted $deleted expired readings with unsatisfied upload flags")
+                val deletedImages = ApprovedScreenshots.deleteUnreferenced(applicationContext, database)
+                WHALELog.i(WORKER_TAG, "Deleted $deletedImages approved screenshots without a reading")
                 Result.success()
             } catch (e: Exception) {
                 WHALELog.e(WORKER_TAG, "Error deleting expired unsatisfied readings: $e")

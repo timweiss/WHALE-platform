@@ -1,6 +1,7 @@
 package de.mimuc.senseeverything.api
 
 import android.content.Context
+import com.android.volley.DefaultRetryPolicy
 import com.android.volley.NetworkResponse
 import com.android.volley.ParseError
 import com.android.volley.Request
@@ -12,6 +13,8 @@ import com.android.volley.toolbox.Volley
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.MultipartBody
+import okio.Buffer
 import java.nio.charset.Charset
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -21,6 +24,8 @@ class ApiClient private constructor(context: Context) {
     private val requestQueue: RequestQueue = Volley.newRequestQueue(context.applicationContext)
 
     companion object {
+        private const val FILE_TIMEOUT_MS = 30_000
+
         @Volatile
         private var INSTANCE: ApiClient? = null
 
@@ -148,6 +153,40 @@ class ApiClient private constructor(context: Context) {
             }
         }
 
+        addToRequestQueue(request)
+    }
+
+    /**
+     * POST request with a multipart body, e.g. a file. Cancelling the calling coroutine cancels the request.
+     */
+    suspend fun postMultipart(
+        url: String,
+        body: MultipartBody,
+        headers: Map<String, String> = emptyMap()
+    ): Unit = suspendCancellableCoroutine { continuation ->
+        val bytes = Buffer().also { body.writeTo(it) }.readByteArray()
+
+        val request = object : Request<Unit>(Method.POST, url, Response.ErrorListener { error ->
+            continuation.resumeWithException(error)
+        }) {
+            override fun getHeaders(): Map<String, String> = headers
+
+            // includes the boundary
+            override fun getBodyContentType(): String = body.contentType().toString()
+
+            override fun getBody(): ByteArray = bytes
+
+            override fun parseNetworkResponse(response: NetworkResponse): Response<Unit> =
+                Response.success(Unit, null)
+
+            override fun deliverResponse(response: Unit) {
+                continuation.resume(Unit)
+            }
+        }
+        // Volley's default of 2.5 s is short for a file on a slow connection
+        request.retryPolicy = DefaultRetryPolicy(FILE_TIMEOUT_MS, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT)
+
+        continuation.invokeOnCancellation { request.cancel() }
         addToRequestQueue(request)
     }
 

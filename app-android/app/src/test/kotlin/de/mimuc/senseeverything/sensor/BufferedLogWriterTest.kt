@@ -26,6 +26,8 @@ class BufferedLogWriterTest {
         override fun exists(sensorName: String, localId: String): Boolean = false
         override fun deleteBySensor(sensorName: String) {}
         override fun getNextNUnsyncedBeforeWithFlags(n: Int, cutoffTimestamp: Long): List<LogData> = emptyList()
+        override fun getNextUnsyncedWithFileBefore(cutoffTimestamp: Long): LogData? = null
+        override fun getFilePaths(sensorName: String): List<String> = emptyList()
         override val unsyncedCount: Long get() = 0
         override fun getUnsyncedCountBefore(cutoffTimestamp: Long): Long = 0
         override fun hasUnsyncedBefore(cutoffTimestamp: Long): Boolean = false

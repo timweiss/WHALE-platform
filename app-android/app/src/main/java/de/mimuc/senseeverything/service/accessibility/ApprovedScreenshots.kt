@@ -19,6 +19,8 @@ object ApprovedScreenshots {
     /** The only flag these readings get, so a sensorUploadConfig for them must not require others. */
     const val FLAG_UPLOAD_APPROVED = "upload_approved"
 
+    private const val UNREFERENCED_GRACE_MS = 60 * 60_000L
+
     @Serializable
     private data class Data(
         val snapshotId: String,
@@ -58,6 +60,16 @@ object ApprovedScreenshots {
     ).apply {
         localId = UUID.nameUUIDFromBytes("$SENSOR_NAME:${sample.sample.snapshotId}".toByteArray()).toString()
     }
+
+    /** Deletes images without a reading: its row expired, or a crash came before it was added. */
+    fun deleteUnreferenced(context: Context, database: AppDatabase): Int =
+        deleteUnreferenced(root(context), database.logDataDao().getFilePaths(SENSOR_NAME).toSet(), System.currentTimeMillis())
+
+    /** Recent images are kept, [keep] adds the reading only after the image. */
+    fun deleteUnreferenced(root: File, referenced: Set<String>, now: Long): Int =
+        root.listFiles().orEmpty()
+            .filter { it.path !in referenced && it.lastModified() < now - UNREFERENCED_GRACE_MS }
+            .count { it.delete() }
 
     /** When the participant cancels or the enrolment is removed: also what is approved but not uploaded yet. */
     fun deleteAll(context: Context, database: AppDatabase) {

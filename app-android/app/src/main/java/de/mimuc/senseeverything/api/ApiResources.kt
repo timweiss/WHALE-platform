@@ -31,6 +31,10 @@ class ApiResources {
             return "${API_BASE}/reading/batch"
         }
 
+        fun sensorReadingWithFile(): String {
+            return "${API_BASE}/reading/file"
+        }
+
         fun questionnaires(studyId: Int) : String {
             return "$API_BASE/study/$studyId/questionnaire"
         }
