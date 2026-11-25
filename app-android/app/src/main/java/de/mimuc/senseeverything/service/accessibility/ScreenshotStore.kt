@@ -146,6 +146,10 @@ class ScreenshotStore(
                 }
             }
 
+        /** The reservoirs of one period by package, read-only like [readAll]; empty if the period was deleted. */
+        fun readPeriodReservoirs(root: File, periodEnd: Long): Map<String, Reservoir> =
+            readReservoirs(periodDir(root, periodEnd)).toMap()
+
         /** Read-only, skips apps whose state can't be read. */
         private fun readReservoirs(periodDir: File): List<Pair<String, Reservoir>> {
             val packageDirs = periodDir.listFiles()?.filter { it.isDirectory }?.sortedBy { it.name } ?: emptyList()

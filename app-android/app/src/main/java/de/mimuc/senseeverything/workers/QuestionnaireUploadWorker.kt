@@ -41,7 +41,6 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
                 NotificationManager
 
     override suspend fun doWork(): Result {
-        val questionnaireAnswers = inputData.getString("questionnaireAnswers") ?: ""
         val questionnaireId = inputData.getInt("questionnaireId", -1)
         val studyId = inputData.getInt("studyId", -1)
         val userToken = inputData.getString("userToken") ?: ""
@@ -52,7 +51,7 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
             backgroundWorkForegroundInfo(notificationId, applicationContext, notificationManager)
         )
 
-        if (questionnaireAnswers.isEmpty() || questionnaireId == -1 || studyId == -1 || userToken.isEmpty()) {
+        if (questionnaireId == -1 || studyId == -1 || userToken.isEmpty()) {
             return Result.failure()
         }
 
@@ -70,7 +69,7 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
                 val apiClient = ApiClient.getInstance(applicationContext)
                 uploadQuestionnaireAnswer(
                     apiClient,
-                    questionnaireAnswers,
+                    pendingQuestionnaire.elementValuesJson ?: "[]",
                     questionnaireId,
                     studyId,
                     userToken,
@@ -126,16 +125,18 @@ class QuestionnaireUploadWorker @AssistedInject constructor(
     }
 }
 
+/**
+ * Uploads the answers saved in the pending questionnaire, so it has to be marked as completed before.
+ * They aren't passed as input data, which WorkManager limits to 10 KB; many screenshot ratings exceed that.
+ */
 fun enqueueQuestionnaireUploadWorker(
     context: Context,
-    questionnaireAnswers: String,
     questionnaireId: Int,
     studyId: Int,
     userToken: String,
     pendingQuestionnaireId: UUID?
 ) {
     val data = workDataOf(
-        "questionnaireAnswers" to questionnaireAnswers,
         "questionnaireId" to questionnaireId,
         "studyId" to studyId,
         "userToken" to userToken,

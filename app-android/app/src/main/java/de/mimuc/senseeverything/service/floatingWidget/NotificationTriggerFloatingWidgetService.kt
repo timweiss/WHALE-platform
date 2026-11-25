@@ -224,7 +224,6 @@ class NotificationTriggerFloatingWidgetService : LifecycleService(), SavedStateR
 
             enqueueQuestionnaireUploadWorker(
                 this@NotificationTriggerFloatingWidgetService.applicationContext,
-                pendingQuestionnaire.elementValuesJson!!,
                 currentQuestionnaire.questionnaire.id,
                 currentQuestionnaire.questionnaire.studyId,
                 userToken,

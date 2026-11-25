@@ -60,14 +60,18 @@ sample, whether or not it is rated:
 
 ```json
 { "periodEnd": 1764090000000,
-  "samples": [{ "snapshotId": "…", "packageName": "com.instagram.android", "timestamp": 1764080000000 }] }
+  "apps": [{ "packageName": "com.instagram.android", "itemsSeen": 120, "itemsDropped": 1,
+             "samples": [{ "snapshotId": "…", "timestamp": 1764080000000 }] }] }
 ```
 
 - **`snapshotId`** is the UI tree's `snapshotId` and the key of the screenshot's rating. Every listed
   screen without a rating was sampled but not rated.
+- **`itemsSeen`, `itemsDropped`** mean the same as in the [summary log line](#counts), as of when the
+  reading is written. If a screenshot still in flight then fails, the log line counts that screen as
+  dropped and the reading as seen.
 - **When it's written:** by `ScreenshotPeriodEndReceiver`, once per period, before the rating event.
-  After a reboot it catches up. `samples` is empty if every selected screen was dropped. A period
-  without a sampled app has no reading.
+  After a reboot it catches up. An app's `samples` is empty if every selected screen was dropped. A
+  period without a logged screen of a configured app has no reading.
 - **Duplicates:** the reading's `localId` follows from `periodEnd`, so the server keeps one.
 - **Upload:** it must not be listed in the study's `sensorUploadConfig`, as nothing sets its flags.
 - **Known gaps:** a period that hasn't ended when the participant cancels has no reading. The last

@@ -410,7 +410,6 @@ class QuestionnaireViewModel @Inject constructor(
             WHALELog.d("Questionnaire", "Answers: " + makeAnswerJsonArray())
             enqueueQuestionnaireUploadWorker(
                 context,
-                makeAnswerJsonArray(),
                 questionnaire.value.questionnaire.id,
                 studyId,
                 token,

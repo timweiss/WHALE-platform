@@ -23,25 +23,37 @@ class ScreenshotSampleReadingTest {
         store.sample(0, "replaced", 1L)
         store.sample(1, "older", 2L)
         store.sample(0, "newer", 3L)
+        store.setItemsSeen(app, 4)
+        store.recordDropped(app)
 
-        val row = ScreenshotSampleReading.of(end, ScreenshotStore.readPeriod(root, end)).toLogData(now = 5_000L)
+        val reading = ScreenshotSampleReading.of(end, ScreenshotStore.readPeriodReservoirs(root, end))
+        val row = reading.toLogData(now = 5_000L)
+
+        assertEquals(2, reading.sampleCount)
 
         assertEquals("ScreenshotSample", row.sensorName)
         assertEquals(5_000L, row.timestamp)
         assertEquals(
-            """{"periodEnd":1000,"samples":[""" +
-                """{"snapshotId":"older","packageName":"$app","timestamp":2},""" +
-                """{"snapshotId":"newer","packageName":"$app","timestamp":3}]}""",
+            """{"periodEnd":1000,"apps":[{"packageName":"$app","itemsSeen":3,"itemsDropped":1,"samples":[""" +
+                """{"snapshotId":"older","timestamp":2},{"snapshotId":"newer","timestamp":3}]}]}""",
             row.data
         )
         assertFalse(row.hasFile)
     }
 
     @Test
-    fun periodWithoutSamplesIsListedAsEmpty() {
-        val row = ScreenshotSampleReading.of(end, ScreenshotStore.readPeriod(root, end)).toLogData(now = 5_000L)
+    fun appWithoutSamplesKeepsItsCounts() {
+        val store = ScreenshotStore(root, end, log = {})
+        store.setItemsSeen(app, 1)
+        store.recordDropped(app)
 
-        assertEquals("""{"periodEnd":1000,"samples":[]}""", row.data)
+        val reading = ScreenshotSampleReading.of(end, ScreenshotStore.readPeriodReservoirs(root, end))
+
+        assertEquals(0, reading.sampleCount)
+        assertEquals(
+            """{"periodEnd":1000,"apps":[{"packageName":"$app","itemsSeen":0,"itemsDropped":1,"samples":[]}]}""",
+            reading.toLogData(now = 5_000L).data
+        )
     }
 
     @Test

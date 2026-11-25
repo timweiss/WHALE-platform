@@ -143,10 +143,10 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
             }
             for (end in unprompted) {
                 val samples = withContext(Dispatchers.IO) {
-                    val stored = ScreenshotStore.readPeriod(root, end)
+                    val reading = ScreenshotSampleReading.of(end, ScreenshotStore.readPeriodReservoirs(root, end))
                     // before the event: the period may be deleted without ever getting a questionnaire
-                    database.logDataDao().insertAll(ScreenshotSampleReading.of(end, stored).toLogData(now))
-                    stored.size
+                    database.logDataDao().insertAll(reading.toLogData(now))
+                    reading.sampleCount
                 }
                 if (samples > 0) {
                     WHALELog.i(TAG, "Requesting rating of period $end with $samples samples")
