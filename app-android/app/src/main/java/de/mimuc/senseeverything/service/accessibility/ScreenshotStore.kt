@@ -130,10 +130,6 @@ class ScreenshotStore(
             File(periodDir(root, periodEnd), RATING_REQUESTED_FILE).createNewFile()
         }
 
-        /** Filled slots of all apps in the period, read-only like [readAll]. */
-        fun sampleCount(root: File, periodEnd: Long): Int =
-            readReservoirs(periodDir(root, periodEnd)).sumOf { (_, reservoir) -> reservoir.slots.count { it != null } }
-
         /**
          * Lists the samples of all periods without opening a store, so it is safe to call from another
          * process (debug or rating UI): unlike [reservoir], it never deletes files. An image can still

@@ -2,7 +2,7 @@
 
 Takes a random sample of screenshots per app that participants rate in the evening. Each screenshot
 belongs to exactly one logged UI tree (same app, timestamp and signature). Screenshots stay on the
-device; only counts are uploaded.
+device; only counts and the list of sampled screens are uploaded.
 
 ## How it works
 
@@ -52,6 +52,29 @@ the reservoir is filling. A rough estimate from a first test is under 1% of an a
 day. The real share is reported for every app and period (see below).
 
 ## Data for the analysis
+
+### Final sample
+
+For each ended period with a store on disk, one `ScreenshotSample` sensor reading lists the final
+sample, whether or not it is rated:
+
+```json
+{ "periodEnd": 1764090000000,
+  "samples": [{ "snapshotId": "…", "packageName": "com.instagram.android", "timestamp": 1764080000000 }] }
+```
+
+- **`snapshotId`** is the UI tree's `snapshotId` and the key of the screenshot's rating. Every listed
+  screen without a rating was sampled but not rated.
+- **When it's written:** by `ScreenshotPeriodEndReceiver`, once per period, before the rating event.
+  After a reboot it catches up. `samples` is empty if every selected screen was dropped. A period
+  without a sampled app has no reading.
+- **Duplicates:** the reading's `localId` follows from `periodEnd`, so the server keeps one.
+- **Upload:** it must not be listed in the study's `sensorUploadConfig`, as nothing sets its flags.
+- **Known gaps:** a period that hasn't ended when the participant cancels has no reading. The last
+  period ends after the study end; its reading is only uploaded automatically if it is written before
+  the final upload one day after the study end.
+
+### Counts
 
 For each ended period, one log line per app goes to the diagnostic log, which is uploaded:
 
@@ -171,8 +194,8 @@ event trigger, so the notification and the period end share one clock and can't 
 
 `ScreenshotPeriodEndReceiver` (main process) runs at every period end, from one alarm that it
 schedules again each time:
-1. **Prompt:** for every ended period on disk that wasn't prompted yet, it emits
-   `screenshot_period_ended` if the period has samples. Periods without samples get no
+1. **Prompt:** for every ended period on disk that wasn't prompted yet, it logs the
+   [final sample](#final-sample) and emits `screenshot_period_ended` if the period has samples. Periods without samples get no
    questionnaire. The questionnaire is bound to exactly that period: its pending questionnaire has
    the context `{"screenshotPeriodEnd": <periodEnd>}` and is valid from the period end for the
    trigger's `validDuration`. A marker file `rating_requested` records that the period was handled.
@@ -200,5 +223,6 @@ schedules again each time:
 | `service/accessibility/ScreenshotPeriods.kt` | finds and opens the running planned period |
 | `service/accessibility/ScreenshotStore.kt` | reservoir state on disk, period summaries, read-only listing |
 | `service/accessibility/ScreenshotCapturer.kt` | screenshot, downscaling, JPEG, stats |
-| `service/accessibility/ScreenshotPeriodEndReceiver.kt` | rating event, deletion, period end alarm |
+| `service/accessibility/ScreenshotPeriodEndReceiver.kt` | final sample, rating event, deletion, period end alarm |
+| `service/accessibility/ScreenshotSampleReading.kt` | the final sample as a sensor reading |
 | `res/xml/accessibility_service_config*.xml` | `canTakeScreenshot="true"` |

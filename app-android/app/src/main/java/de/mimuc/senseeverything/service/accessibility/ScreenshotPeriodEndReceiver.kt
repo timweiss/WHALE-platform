@@ -85,9 +85,10 @@ fun nextScreenshotDeletionCheck(
  * Two steps, each telling when it has to run next; the receiver schedules itself for the earlier time.
  *
  * 1. [requestRatings], at every period end (see [planScreenshotPeriods]), so the rating questionnaire
- *    and the period share one clock. For each ended period not prompted yet, it emits [EVENT] if the
- *    period has samples; a questionnaire with an event trigger for it rates exactly that period, valid
- *    from its end. Its [ScreenshotRatingContext] names the period.
+ *    and the period share one clock. For each ended period not prompted yet, it logs the final sample
+ *    ([ScreenshotSampleReading], also if empty) and emits [EVENT] if the period has samples; a
+ *    questionnaire with an event trigger for it rates exactly that period, valid from its end. Its
+ *    [ScreenshotRatingContext] names the period.
  * 2. [deleteClosedPeriods], when a rating expires or a grace time ends: deletes the prompted periods
  *    whose rating is no longer open (see [screenshotPeriodsToDelete]).
  *
@@ -129,7 +130,7 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
             }
         }
 
-        /** Step 1: emits [EVENT] once for every ended period. */
+        /** Step 1: logs the final sample and emits [EVENT], once for every ended period. */
         private suspend fun requestRatings(
             context: Context,
             root: File,
@@ -141,7 +142,12 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
                 ScreenshotStore.periodEnds(root).filter { it <= now && !ScreenshotStore.isRatingRequested(root, it) }
             }
             for (end in unprompted) {
-                val samples = withContext(Dispatchers.IO) { ScreenshotStore.sampleCount(root, end) }
+                val samples = withContext(Dispatchers.IO) {
+                    val stored = ScreenshotStore.readPeriod(root, end)
+                    // before the event: the period may be deleted without ever getting a questionnaire
+                    database.logDataDao().insertAll(ScreenshotSampleReading.of(end, stored).toLogData(now))
+                    stored.size
+                }
                 if (samples > 0) {
                     WHALELog.i(TAG, "Requesting rating of period $end with $samples samples")
                     EsmHandler.handleEvent(
@@ -152,7 +158,7 @@ class ScreenshotPeriodEndReceiver : BroadcastReceiver() {
                 } else {
                     WHALELog.i(TAG, "Not requesting rating of period $end, it has no samples")
                 }
-                // after the event: a crash in between prompts twice rather than never
+                // after the reading and the event: a crash in between repeats them rather than losing them
                 withContext(Dispatchers.IO) { ScreenshotStore.markRatingRequested(root, end) }
             }
         }
