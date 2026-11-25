@@ -93,6 +93,12 @@ const dummyStudy = {
   contactEmail: 'email',
 };
 
+// required for every phase, null: nothing beyond the default is collected
+const noSensorSettings = {
+  uiTreeTextSettings: null,
+  screenshotSettings: null,
+};
+
 async function initializeBetweenGroupsStudy() {
   const token = generateAdminToken();
 
@@ -113,12 +119,14 @@ async function initializeBetweenGroupsStudy() {
           fromDay: 0,
           durationDays: 3,
           interactionWidgetStrategy: 'Disabled',
+          sensorSettings: noSensorSettings,
         },
         {
           internalName: 'treatment',
           fromDay: 3,
           durationDays: 4,
           interactionWidgetStrategy: 'Bucketed',
+          sensorSettings: noSensorSettings,
         },
       ],
     });
@@ -135,12 +143,14 @@ async function initializeBetweenGroupsStudy() {
           fromDay: 0,
           durationDays: 4,
           interactionWidgetStrategy: 'Bucketed',
+          sensorSettings: noSensorSettings,
         },
         {
           internalName: 'baseline',
           fromDay: 4,
           durationDays: 3,
           interactionWidgetStrategy: 'Disabled',
+          sensorSettings: noSensorSettings,
         },
       ],
     });
@@ -229,12 +239,14 @@ test('study experimental group should have phases', async () => {
           fromDay: 0,
           durationDays: 3,
           interactionWidgetStrategy: 'Disabled',
+          sensorSettings: noSensorSettings,
         },
         {
           internalName: 'treatment',
           fromDay: 3,
           durationDays: 4,
           interactionWidgetStrategy: 'Bucketed',
+          sensorSettings: noSensorSettings,
         },
       ],
     });
@@ -667,6 +679,7 @@ async function createStudyWithGroup(
           fromDay: 0,
           durationDays: 7,
           interactionWidgetStrategy: 'Disabled',
+          sensorSettings: noSensorSettings,
         },
       ],
     });
@@ -1066,6 +1079,7 @@ test('should allocate groups by allocation order, not creation order', async () 
             fromDay: 0,
             durationDays: 7,
             interactionWidgetStrategy: strategy,
+            sensorSettings: noSensorSettings,
           },
         ],
       });
