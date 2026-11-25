@@ -157,7 +157,6 @@ Currently, sampling is manually started. It is managed by [SamplingManager](app/
     * Sensors are only stopped through `stop` when the entire sampling process is stopped (through the UI)
 
 #### Components
-* [AudioSampleService](app/src/main/java/de/mimuc/senseeverything/sensor/implementation/AudioSampleSensor.java): Will record audio until it is stopped again
 * [SingletonSensorList](app/src/main/java/de/mimuc/senseeverything/sensor/SingletonSensorList.java): For long-running tasks, we want to reuse the existing sensor instances, and clean them up manually
 
 ## Sensors

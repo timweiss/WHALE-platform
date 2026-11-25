@@ -77,10 +77,6 @@ public abstract class AbstractSensor implements Serializable  {
 		getWriter().add(new LogData(timestamp, SENSOR_NAME + "+" + subsensor, data));
     }
 
-	protected void onLogDataItemWithFile(Long timestamp, String data, String fileName) {
-		getWriter().add(new LogData(timestamp, SENSOR_NAME, data, true, fileName));
-	}
-
 	/** Writes queued rows now, e.g. when a sensor stops. */
 	protected void flushLogData() {
 		getWriter().flush();
