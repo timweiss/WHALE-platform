@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 
 @Serializable
 data class QuestionnaireRule(
@@ -31,13 +32,14 @@ enum class LogicalOperator {
 data class Condition(
     val fieldName: String,
     val comparator: Comparator,
-    val expectedValue: JsonElement // any JSON type
+    val expectedValue: JsonElement = JsonNull // any JSON type
 )
 
 @Serializable
 enum class Comparator {
     @SerialName("equals") EQUALS,
-    @SerialName("not_equals") NOT_EQUALS
+    @SerialName("not_equals") NOT_EQUALS,
+    @SerialName("answered") ANSWERED,
 }
 
 
@@ -66,6 +68,14 @@ data class UpdateNextNotificationTrigger(
     val requireSameTimeBucket: Boolean,
     val maxDistanceMinutes: Int
 ) : Action()
+
+/**
+ * Only has a meaning in the rules of a questionnaire embedded in a screenshot rating, where it applies to
+ * the rated screenshot (see [de.mimuc.senseeverything.service.accessibility.approvedScreenshots]).
+ */
+@Serializable
+@SerialName("approve_screenshot_upload")
+data object ApproveScreenshotUpload : Action()
 
 val ruleJson = Json {
     prettyPrint = true

@@ -22,6 +22,9 @@ class BufferedLogWriterTest {
 
         override val all: List<LogData> get() = inserts.flatten().filterNotNull()
         override fun insertFlags(vararg flags: LogDataFlag) {}
+        override fun insert(logData: LogData): Long = 0
+        override fun exists(sensorName: String, localId: String): Boolean = false
+        override fun deleteBySensor(sensorName: String) {}
         override fun getNextNUnsyncedBeforeWithFlags(n: Int, cutoffTimestamp: Long): List<LogData> = emptyList()
         override val unsyncedCount: Long get() = 0
         override fun getUnsyncedCountBefore(cutoffTimestamp: Long): Long = 0

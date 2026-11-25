@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
 import de.mimuc.senseeverything.api.model.ema.Action
+import de.mimuc.senseeverything.api.model.ema.ApproveScreenshotUpload
 import de.mimuc.senseeverything.api.model.ema.OpenQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.PutNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.UpdateNextNotificationTrigger
@@ -72,6 +73,9 @@ class QuestionnaireRuleActionReceiver : BroadcastReceiver() {
                     context.applicationContext,
                     database
                 )
+            }
+            is ApproveScreenshotUpload -> {
+                WHALELog.w("QuestionnaireRuleActionReceiver", "Ignoring screenshot approval outside of a screenshot rating")
             }
         }
     }

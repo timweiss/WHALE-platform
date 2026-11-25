@@ -34,6 +34,7 @@ import de.mimuc.senseeverything.R
 import de.mimuc.senseeverything.activity.ui.theme.AppandroidTheme
 import de.mimuc.senseeverything.api.model.ElementValue
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
+import de.mimuc.senseeverything.api.model.ema.ScreenshotRatingElement
 import de.mimuc.senseeverything.api.model.ema.emptyQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -45,6 +46,7 @@ import de.mimuc.senseeverything.helpers.LogServiceHelper
 import de.mimuc.senseeverything.helpers.QuestionnaireRuleEvaluator
 import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.esm.clearReminderNotification
+import de.mimuc.senseeverything.service.accessibility.keepApprovedScreenshots
 import de.mimuc.senseeverything.workers.enqueueQuestionnaireUploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -400,6 +402,19 @@ class QuestionnaireViewModel @Inject constructor(
 
             // Set flag before marking completed to prevent self-triggered auto-close
             isCompletingLocally = true
+
+            // before completing: a completed rating's period, with its images, may be deleted
+            val screenshotRatingElements = questionnaire.value.elements.filterIsInstance<ScreenshotRatingElement>()
+            if (screenshotRatingElements.any()) {
+                keepApprovedScreenshots(
+                    context.applicationContext,
+                    database,
+                    dataStoreManager,
+                    pendingQuestionnaire.contextJson,
+                    screenshotRatingElements,
+                    elementValues.value
+                )
+            }
 
             withContext(Dispatchers.IO) {
                 pendingQuestionnaire.markCompleted(database, answerValues(elementValues.value))

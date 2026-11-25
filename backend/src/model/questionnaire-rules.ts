@@ -4,16 +4,23 @@ import { z } from 'zod';
 const LogicalOperatorSchema = z.enum(['and', 'or']);
 
 // Comparison operators
-const ComparatorSchema = z.enum(['equals', 'not_equals']);
+const ComparatorSchema = z.enum(['equals', 'not_equals', 'answered']);
 
 // Individual condition schema
-const ConditionSchema = z.object({
-  fieldName: z.string().min(1, 'Field name cannot be empty'),
-  comparator: ComparatorSchema,
-  expectedValue: z
-    .union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.any())])
-    .describe('The value to compare against - can be any JSON type'),
-});
+const ConditionSchema = z
+  .object({
+    fieldName: z.string().min(1, 'Field name cannot be empty'),
+    comparator: ComparatorSchema,
+    expectedValue: z
+      .union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.any())])
+      .optional()
+      .describe('The value to compare against, not used by answered'),
+  })
+  // the app never matches a comparison without a value
+  .refine((c) => c.comparator === 'answered' || c.expectedValue != null, {
+    message: 'Expected value is required to compare',
+    path: ['expectedValue'],
+  });
 
 const ConditionGroupSchema = z.object({
   operator: LogicalOperatorSchema.default('and'),
@@ -31,6 +38,10 @@ const ActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('put_notification_trigger'),
     triggerId: z.number(),
+  }),
+
+  z.object({
+    type: z.literal('approve_screenshot_upload'),
   }),
 ]);
 

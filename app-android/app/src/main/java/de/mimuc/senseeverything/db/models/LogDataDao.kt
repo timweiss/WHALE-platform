@@ -20,6 +20,23 @@ interface LogDataDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertFlags(vararg flags: LogDataFlag)
 
+    @Insert
+    fun insert(logData: LogData): Long
+
+    @Query("SELECT EXISTS (SELECT 1 FROM logdata WHERE sensorName = :sensorName AND localId = :localId)")
+    fun exists(sensorName: String, localId: String): Boolean
+
+    /** Adds the row together with its flag, unless the sensor already has a row with that localId. */
+    @Transaction
+    fun insertOnceWithFlag(logData: LogData, flag: String) {
+        if (exists(logData.sensorName!!, logData.localId!!)) return
+        insertFlags(LogDataFlag(insert(logData).toInt(), flag))
+    }
+
+    // LogDataFlag rows go via ON DELETE CASCADE
+    @Query("DELETE FROM logdata WHERE sensorName = :sensorName")
+    fun deleteBySensor(sensorName: String)
+
     // id breaks ties between rows with the same timestamp, so batches have a defined order
     @Query("SELECT logdata.* FROM logdata JOIN log_data_flag_status fs ON logdata.id=fs.logDataId WHERE fs.flagsSatisfied = TRUE AND synced = FALSE AND timestamp <= :cutoffTimestamp ORDER BY timestamp ASC, id ASC LIMIT :n")
     fun getNextNUnsyncedBeforeWithFlags(n: Int, cutoffTimestamp: Long): List<LogData>

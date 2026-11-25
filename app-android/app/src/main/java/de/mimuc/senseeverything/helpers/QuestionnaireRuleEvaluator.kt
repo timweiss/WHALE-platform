@@ -11,10 +11,12 @@ import de.mimuc.senseeverything.api.model.SocialNetworkEntryValue
 import de.mimuc.senseeverything.api.model.TextEntryValue
 import de.mimuc.senseeverything.api.model.TimeInputValue
 import de.mimuc.senseeverything.api.model.ema.Action
+import de.mimuc.senseeverything.api.model.ema.Comparator
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireRule
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
 import de.mimuc.senseeverything.service.esm.QuestionnaireRuleActionReceiver
+import kotlinx.serialization.json.JsonNull
 
 class QuestionnaireRuleEvaluator(var rules: List<QuestionnaireRule>) {
     fun evaluate(elementValues: Map<Int, ElementValue>): Map<String, List<Action>> {
@@ -22,18 +24,25 @@ class QuestionnaireRuleEvaluator(var rules: List<QuestionnaireRule>) {
 
         for (rule in rules) {
             val conditionsMet = rule.conditions.conditions.map { condition ->
-                val elementValue =
-                    elementValues.entries.find { it.value.elementName == condition.fieldName }?.value.let {
-                        elementValueAsString(it)
-                    }
-                        ?: return@map false
+                val elementValue = elementValues.entries.find { it.value.elementName == condition.fieldName }?.value ?: return@map false
+
+                if (condition.comparator == Comparator.ANSWERED) {
+                    return@map elementValue.isAnswered()
+                }
+
+                // a forgotten expected value must not make NOT_EQUALS match every answer
+                if (condition.expectedValue is JsonNull) return@map false
+
+                val elementValueString = elementValueAsString(elementValue) ?: return@map false
 
                 when (condition.comparator) {
-                    de.mimuc.senseeverything.api.model.ema.Comparator.EQUALS -> elementValue == condition.expectedValue.toString()
+                    Comparator.EQUALS -> elementValueString == condition.expectedValue.toString()
                         .trim('"')
 
-                    de.mimuc.senseeverything.api.model.ema.Comparator.NOT_EQUALS -> elementValue != condition.expectedValue.toString()
+                    Comparator.NOT_EQUALS -> elementValueString != condition.expectedValue.toString()
                         .trim('"')
+
+                    Comparator.ANSWERED -> elementValue.isAnswered() // handled above already
                 }
             }
 
