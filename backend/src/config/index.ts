@@ -14,6 +14,8 @@ export const Config = {
     // The default covers nginx on the same host, also when the API runs in a
     // Docker container (requests then arrive from the bridge network).
     trustProxy: process.env.APP_TRUST_PROXY || 'loopback, uniquelocal',
+    // folder for uploaded files, has to be writable and persistent
+    uploadLocation: process.env.APP_UPLOAD_LOCATION || './uploads',
   },
   database: {
     connectionString: process.env.DB_CONNECTION || 'localhost:5432',

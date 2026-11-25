@@ -1,5 +1,7 @@
 import { Express } from 'express';
 import { authenticate, RequestUser } from '../middleware/authenticate';
+import { uploadSingle } from '../middleware/upload';
+import { storeUpload } from '../data/uploadStorage';
 import { ISensorReadingRepository } from '../data/sensorReadingRepository';
 import { IEnrolmentRepository } from '../data/enrolmentRepository';
 import { Observability } from '../o11y';
@@ -11,6 +13,28 @@ import { SensorReadingJobData } from '../queues/sensorReadingQueue';
 
 // the app uploads at most 200 readings per request
 const ReadingBatchRequestBody = z.array(ClientSensorReading).max(1000);
+
+// the request's one text field, a reading as JSON
+const ReadingWithFileRequestBody = z.object({
+  reading: z
+    .string()
+    .transform((value, ctx) => {
+      try {
+        return JSON.parse(value) as unknown;
+      } catch {
+        ctx.addIssue({ code: 'custom', message: 'Invalid JSON' });
+        return z.NEVER;
+      }
+    })
+    .pipe(ClientSensorReading),
+});
+
+const JPEG_SIGNATURE = Buffer.from([0xff, 0xd8, 0xff]);
+
+// by content, the declared type is up to the client
+function isJpeg(content: Buffer) {
+  return content.subarray(0, JPEG_SIGNATURE.length).equals(JPEG_SIGNATURE);
+}
 
 export function createReadingController(
   sensorReadingRepository: ISensorReadingRepository,
@@ -90,6 +114,51 @@ export function createReadingController(
       res.status(500).send({ error: 'Error creating readings' });
     }
   });
+
+  // a reading with a file is not queued: after a 2xx, the app deletes its copy,
+  // so both have to be stored by then
+  app.post(
+    '/v1/reading/file',
+    authenticate,
+    uploadSingle('file'),
+    async (req, res) => {
+      const parsed = ReadingWithFileRequestBody.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .send({ error: 'Invalid request', details: parsed.error });
+      }
+      if (!req.file) {
+        return res.status(400).send({ error: 'No file uploaded' });
+      }
+      if (!isJpeg(req.file.buffer)) {
+        return res.status(415).send({ error: 'Only JPEG files are accepted' });
+      }
+
+      const enrolment = await enrolmentRepository.getEnrolmentById(
+        (req.user as RequestUser).enrolmentId,
+      );
+      if (!enrolment) {
+        return res.status(403).send({ error: 'Enrolment not found' });
+      }
+
+      // the name follows from the reading (its localId is a validated UUID), so
+      // a retry replaces the file instead of adding another one
+      const filename = `${parsed.data.reading.localId.toLowerCase()}.jpg`;
+      const path = `${enrolment.id}/${filename}`;
+
+      // file first: a failure before the insert leaves a file that the retry
+      // replaces, never a reading without its file
+      await storeUpload(path, req.file.buffer);
+      await sensorReadingRepository.createSensorReadingWithFile(
+        enrolment.id,
+        parsed.data.reading,
+        { filename, path },
+      );
+
+      res.status(201).json({});
+    },
+  );
 
   observability.logger.info('loaded reading controller');
 }

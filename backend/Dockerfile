@@ -25,6 +25,10 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /home/node/app/dist ./dist
 
+# mount a volume here; a new named volume takes over the owner of this folder
+ENV APP_UPLOAD_LOCATION=/home/node/app/uploads
+RUN mkdir uploads && chown node:node uploads
+
 USER node
 
 EXPOSE 3000

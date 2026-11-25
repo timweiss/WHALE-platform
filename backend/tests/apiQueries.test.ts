@@ -1,5 +1,8 @@
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { usePool } from '../src/config/database';
 import { makeExpressApp } from '../src';
 import { Config } from '../src/config';
@@ -373,6 +376,165 @@ test('should create a batch of sensor readings', async () => {
   );
   expect(rows.rows).toHaveLength(2);
   expect(rows.rows[0]).toMatchObject({ sensor_type: 'type', data: 'data' });
+});
+
+describe('sensor reading with a file', () => {
+  const originalLocation = Config.app.uploadLocation;
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+
+  beforeEach(async () => {
+    Config.app.uploadLocation = await mkdtemp(path.join(tmpdir(), 'uploads-'));
+  });
+
+  afterEach(async () => {
+    await rm(Config.app.uploadLocation, { recursive: true });
+    Config.app.uploadLocation = originalLocation;
+  });
+
+  function upload(token: string, reading: unknown, file: Buffer = jpeg) {
+    return request(app)
+      .post('/v1/reading/file')
+      .set({ Authorization: 'Bearer ' + token })
+      .field(
+        'reading',
+        typeof reading === 'string' ? reading : JSON.stringify(reading),
+      )
+      .attach('file', file, { filename: '../../evil.jpg' });
+  }
+
+  async function storedFiles() {
+    const entries = await readdir(Config.app.uploadLocation, {
+      recursive: true,
+      withFileTypes: true,
+    });
+    return entries.filter((e) => e.isFile()).map((e) => e.name);
+  }
+
+  async function storedRows() {
+    const res = await pool.query(
+      'SELECT r.enrolment_id, r.local_id, r.sensor_type, f.filename, f.path FROM sensor_readings r LEFT JOIN upload_files f ON f.reading_id = r.id',
+    );
+    return res.rows;
+  }
+
+  async function enrol() {
+    await initializeBetweenGroupsStudy();
+    return enrolParticipant();
+  }
+
+  test('should store the reading and the file', async () => {
+    const { token } = await enrol();
+    const reading = makeReading({ sensorType: 'Screenshot' });
+
+    const res = await upload(token, reading);
+
+    expect(res.statusCode).toBe(201);
+    const rows = await storedRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      local_id: reading.localId,
+      sensor_type: 'Screenshot',
+      filename: `${reading.localId}.jpg`,
+      path: `${rows[0].enrolment_id}/${reading.localId}.jpg`,
+    });
+    expect(
+      await readFile(path.join(Config.app.uploadLocation, rows[0].path)),
+    ).toEqual(jpeg);
+  });
+
+  test('should store it once when the upload is repeated', async () => {
+    const { token } = await enrol();
+    const reading = makeReading();
+
+    expect((await upload(token, reading)).statusCode).toBe(201);
+    expect((await upload(token, reading)).statusCode).toBe(201);
+
+    expect(await storedRows()).toHaveLength(1);
+    expect(await storedFiles()).toEqual([`${reading.localId}.jpg`]);
+  });
+
+  test('should add the file to a reading that was uploaded without it', async () => {
+    const { token } = await enrol();
+    const reading = makeReading();
+    await request(app)
+      .post('/v1/reading/batch')
+      .set({ Authorization: 'Bearer ' + token })
+      .send([reading]);
+
+    expect((await upload(token, reading)).statusCode).toBe(201);
+
+    const rows = await storedRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].filename).toBe(`${reading.localId}.jpg`);
+  });
+
+  test('should keep the files of two participants apart', async () => {
+    const first = await enrol();
+    const second = await enrolParticipant();
+    const reading = makeReading();
+    const other = Buffer.from([...jpeg, 4]);
+
+    expect((await upload(first.token, reading)).statusCode).toBe(201);
+    expect((await upload(second.token, reading, other)).statusCode).toBe(201);
+
+    const contents = await Promise.all(
+      (await storedRows()).map((r) =>
+        readFile(path.join(Config.app.uploadLocation, r.path)),
+      ),
+    );
+    expect(contents).toHaveLength(2);
+    expect(contents).toEqual(expect.arrayContaining([jpeg, other]));
+  });
+
+  test('should reject invalid requests without storing anything', async () => {
+    const { token } = await enrol();
+    const cases: [number, () => request.Test][] = [
+      [400, () => upload(token, 'not json')],
+      [400, () => upload(token, makeReading({ localId: '../../evil' }))],
+      [400, () => upload(token, makeReading()).field('another', 'field')],
+      [415, () => upload(token, makeReading(), Buffer.from('text'))],
+      [
+        413,
+        () =>
+          upload(
+            token,
+            makeReading(),
+            Buffer.concat([jpeg, Buffer.alloc(1024 * 1024)]),
+          ),
+      ],
+      [
+        400,
+        () =>
+          request(app)
+            .post('/v1/reading/file')
+            .set({ Authorization: 'Bearer ' + token })
+            .field('reading', JSON.stringify(makeReading())),
+      ],
+      [
+        400,
+        () =>
+          request(app)
+            .post('/v1/reading/file')
+            .set({ Authorization: 'Bearer ' + token })
+            .send(makeReading()),
+      ],
+      [401, () => upload('invalid', makeReading())],
+      [403, () => upload(unknownEnrolmentToken(), makeReading())],
+    ];
+
+    for (const [status, send] of cases) {
+      expect((await send()).statusCode).toBe(status);
+    }
+    expect(await storedRows()).toHaveLength(0);
+    expect(await storedFiles()).toHaveLength(0);
+  });
+
+  function unknownEnrolmentToken() {
+    return jwt.sign(
+      { role: 'participant', enrolmentId: 2_000_000_000 },
+      Config.auth.jwtSecret,
+    );
+  }
 });
 
 test('should fetch questionnaires in a study', async () => {

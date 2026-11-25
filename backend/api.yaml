@@ -511,6 +511,45 @@ paths:
           description: The sensor readings were not allowed (participant not enrolled).
         '401':
           description: The participant is not authenticated.
+  /reading/file:
+    post:
+      description:
+        Adds a sensor reading together with its file. Both are stored when the request succeeds. Can be
+        repeated, a reading is identified by the enrolment and its localId.
+      tags:
+        - reading
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - reading
+                - file
+              properties:
+                reading:
+                  type: string
+                  description: The sensor reading (sensorType, data, timestamp, localId) as JSON.
+                file:
+                  type: string
+                  format: binary
+                  description: A JPEG image of at most 1 MB.
+      security:
+        - token: [ ]
+      responses:
+        '201':
+          description: The sensor reading and its file are stored.
+        '400':
+          description: The request was invalid (missing data).
+        '401':
+          description: The participant is not authenticated.
+        '403':
+          description: The sensor reading was not allowed (participant not enrolled).
+        '413':
+          description: The file is too large.
+        '415':
+          description: The file is not a JPEG image.
 
 components:
   securitySchemes:
