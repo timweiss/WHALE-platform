@@ -74,9 +74,7 @@ sample, whether or not it is rated:
   period without a logged screen of a configured app has no reading.
 - **Duplicates:** the reading's `localId` follows from `periodEnd`, so the server keeps one.
 - **Upload:** it must not be listed in the study's `sensorUploadConfig`, as nothing sets its flags.
-- **Known gaps:** a period that hasn't ended when the participant cancels has no reading. The last
-  period ends after the study end; its reading is only uploaded automatically if it is written before
-  the final upload one day after the study end.
+- **Known gaps:** a period that hasn't ended when the participant cancels has no reading.
 
 ### Counts
 
@@ -116,7 +114,7 @@ sampling summary: periodEnd=<epoch ms> package=<app> itemsSeen=<t> itemsDropped=
 - **Deletion:** a period is deleted once its rating is no longer open (see [Rating](#rating)).
   Screenshots never carry over to the next rating. `ScreenshotStore.deleteAll` deletes everything
   when the participant cancels or the enrolment is removed. The natural study end deletes nothing
-  by itself: the last period ends after it and may still be rated.
+  by itself: the last period may still be rated.
 
 ## Performance (first test, low-spec device)
 
@@ -162,8 +160,8 @@ period of the study as absolute timestamps and saves them to the DataStore (`scr
   the sample non-uniform. Only the next period uses the new phase's settings and rating time.
 - Days of a phase without screenshot settings (or with an invalid rating time), gaps between
   phases and the time after the last phase get no period. Planning continues at the next midnight.
-- The period that starts after the last rating time of the last study day ends at the first rating
-  time on the day after.
+- A period that would end after the study end is not planned. Nothing is sampled after the last rating
+  time before the study end, as it would only be rated after the study.
 
 The schedule is the only place that holds a period's settings: it is planned once and never
 changes. After a process restart, the period's store continues with its state on disk. Reporting

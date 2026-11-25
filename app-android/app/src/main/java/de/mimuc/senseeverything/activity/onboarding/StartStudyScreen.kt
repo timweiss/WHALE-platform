@@ -126,16 +126,18 @@ class StartStudyViewModel @Inject constructor(
                 val phaseSchedules = reschedulePhaseChanges(context, database, dataStoreManager)
                 dataStoreManager.savePhaseSchedules(phaseSchedules)
 
+                val studyEndTimestamp = phaseSchedules.lastOrNull()?.endTimestamp
+                    ?: (startedTimestamp + study.durationDays.days.inWholeMilliseconds)
+
                 val screenshotSchedule = planScreenshotPeriods(
                     startedTimestamp,
+                    studyEndTimestamp,
                     dataStoreManager.studyPhasesFlow.first() ?: emptyList()
                 )
                 logScreenshotSchedule(screenshotSchedule)
                 dataStoreManager.saveScreenshotSchedule(screenshotSchedule)
                 ScreenshotPeriodEndReceiver.handle(context.applicationContext, database, dataStoreManager)
 
-                val studyEndTimestamp = phaseSchedules.lastOrNull()?.endTimestamp
-                    ?: (startedTimestamp + study.durationDays.days.inWholeMilliseconds)
                 scheduleStudyEndAlarm(context, studyEndTimestamp, database)
                 dataStoreManager.saveTimestampStudyEnd(studyEndTimestamp)
                 PeriodicServiceHealthcheckReceiver.schedule(context)

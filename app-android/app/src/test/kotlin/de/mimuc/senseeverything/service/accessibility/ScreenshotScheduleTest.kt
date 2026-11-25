@@ -35,22 +35,21 @@ class ScreenshotScheduleTest {
             }, null)
         )
 
-    private fun plan(studyStart: String, vararg phases: ExperimentalGroupPhase) =
-        planScreenshotPeriods(at(studyStart), phases.toList(), zone, warn = {})
+    private fun plan(studyStart: String, studyEnd: String, vararg phases: ExperimentalGroupPhase) =
+        planScreenshotPeriods(at(studyStart), at(studyEnd), phases.toList(), zone, warn = {})
 
     /** start, end and phase of each period, for readable assertions */
     private fun List<ScreenshotPeriod>.summary() = map { Triple(it.start, it.end, it.phaseName) }
 
     @Test
     fun periodsRunFromRatingTimeToRatingTime() {
-        val periods = plan("2026-11-03T14:00", phase("baseline", 0, 2, listOf("20:00")))
+        val periods = plan("2026-11-03T14:00", "2026-11-05T00:00", phase("baseline", 0, 2, listOf("20:00")))
 
         assertEquals(
             listOf(
                 Triple(at("2026-11-03T14:00"), at("2026-11-03T20:00"), "baseline"),
-                Triple(at("2026-11-03T20:00"), at("2026-11-04T20:00"), "baseline"),
-                // starts on the last study day, so it runs until that day's rating time on the next day
-                Triple(at("2026-11-04T20:00"), at("2026-11-05T20:00"), "baseline")
+                // the one until 20:00 on the next day would end after the study
+                Triple(at("2026-11-03T20:00"), at("2026-11-04T20:00"), "baseline")
             ),
             periods.summary()
         )
@@ -58,8 +57,29 @@ class ScreenshotScheduleTest {
     }
 
     @Test
+    fun ratingTimesBeforeAStudyEndWithinTheDayAreKept() {
+        // a study with a single phase ends at the time of day it started
+        val periods = plan("2026-11-03T14:00", "2026-11-04T14:02", phase("baseline", 0, 1, listOf("13:00", "20:00")))
+
+        assertEquals(
+            listOf(
+                Triple(at("2026-11-03T14:00"), at("2026-11-03T20:00"), "baseline"),
+                Triple(at("2026-11-03T20:00"), at("2026-11-04T13:00"), "baseline")
+            ),
+            periods.summary()
+        )
+    }
+
+    @Test
+    fun ratingTimeAtTheStudyEndIsKept() {
+        val periods = plan("2026-11-03T14:00", "2026-11-03T20:00", phase("baseline", 0, 1, listOf("20:00")))
+
+        assertEquals(listOf(Triple(at("2026-11-03T14:00"), at("2026-11-03T20:00"), "baseline")), periods.summary())
+    }
+
+    @Test
     fun studyStartAfterTheRatingTimeOpensAPeriodUntilTheNextDay() {
-        val periods = plan("2026-11-03T21:00", phase("baseline", 0, 1, listOf("20:00")))
+        val periods = plan("2026-11-03T21:00", "2026-11-04T21:02", phase("baseline", 0, 1, listOf("20:00")))
 
         assertEquals(listOf(Triple(at("2026-11-03T21:00"), at("2026-11-04T20:00"), "baseline")), periods.summary())
     }
@@ -67,9 +87,9 @@ class ScreenshotScheduleTest {
     @Test
     fun periodKeepsTheSettingsOfThePhaseItStartedIn() {
         val periods = plan(
-            "2026-11-03T14:00",
+            "2026-11-03T14:00", "2026-11-07T00:00",
             phase("baseline", 0, 2, listOf("20:00"), sampleSize = 10),
-            phase("treatment", 2, 1, listOf("18:00"), sampleSize = 3)
+            phase("treatment", 2, 2, listOf("18:00"), sampleSize = 3)
         )
 
         assertEquals(
@@ -89,7 +109,7 @@ class ScreenshotScheduleTest {
     @Test
     fun daysWithoutSettingsAndGapsGetNoPeriod() {
         val periods = plan(
-            "2026-11-03T14:00",
+            "2026-11-03T14:00", "2026-11-07T00:00",
             phase("baseline", 0, 1, listOf("20:00")),
             phase("washout", 1, 1, null),
             // day 2 belongs to no phase
@@ -100,8 +120,7 @@ class ScreenshotScheduleTest {
             listOf(
                 Triple(at("2026-11-03T14:00"), at("2026-11-03T20:00"), "baseline"),
                 Triple(at("2026-11-03T20:00"), at("2026-11-04T20:00"), "baseline"),
-                Triple(at("2026-11-06T00:00"), at("2026-11-06T20:00"), "treatment"),
-                Triple(at("2026-11-06T20:00"), at("2026-11-07T20:00"), "treatment")
+                Triple(at("2026-11-06T00:00"), at("2026-11-06T20:00"), "treatment")
             ),
             periods.summary()
         )
@@ -110,14 +129,13 @@ class ScreenshotScheduleTest {
     @Test
     fun severalRatingTimesSplitTheDay() {
         // unsorted on purpose
-        val periods = plan("2026-11-03T14:00", phase("baseline", 0, 2, listOf("20:00", "13:00")))
+        val periods = plan("2026-11-03T14:00", "2026-11-05T00:00", phase("baseline", 0, 2, listOf("20:00", "13:00")))
 
         assertEquals(
             listOf(
                 Triple(at("2026-11-03T14:00"), at("2026-11-03T20:00"), "baseline"),
                 Triple(at("2026-11-03T20:00"), at("2026-11-04T13:00"), "baseline"),
-                Triple(at("2026-11-04T13:00"), at("2026-11-04T20:00"), "baseline"),
-                Triple(at("2026-11-04T20:00"), at("2026-11-05T13:00"), "baseline")
+                Triple(at("2026-11-04T13:00"), at("2026-11-04T20:00"), "baseline")
             ),
             periods.summary()
         )
@@ -125,14 +143,15 @@ class ScreenshotScheduleTest {
 
     @Test
     fun emptyRatingTimesAreTreatedLikeNoSettings() {
-        assertTrue(plan("2026-11-03T14:00", phase("baseline", 0, 2, emptyList())).isEmpty())
+        assertTrue(plan("2026-11-03T14:00", "2026-11-05T00:00", phase("baseline", 0, 2, emptyList())).isEmpty())
     }
 
     @Test
     fun invalidRatingTimeIsTreatedLikeNoSettings() {
         val warnings = mutableListOf<String>()
         val periods = planScreenshotPeriods(
-            at("2026-11-03T14:00"), listOf(phase("baseline", 0, 2, listOf("8 pm"))), zone, warn = { warnings.add(it) }
+            at("2026-11-03T14:00"), at("2026-11-05T00:00"), listOf(phase("baseline", 0, 2, listOf("8 pm"))), zone,
+            warn = { warnings.add(it) }
         )
 
         assertTrue(periods.isEmpty())
@@ -141,13 +160,13 @@ class ScreenshotScheduleTest {
 
     @Test
     fun withoutPhasesNothingIsPlanned() {
-        assertTrue(plan("2026-11-03T14:00").isEmpty())
+        assertTrue(plan("2026-11-03T14:00", "2026-11-05T00:00").isEmpty())
     }
 
     @Test
     fun ratingTimeFollowsDaylightSavingTime() {
         // clocks go back on 2026-10-25 in Berlin, so the second period is 25 hours long
-        val periods = plan("2026-10-24T14:00", phase("baseline", 0, 2, listOf("20:00")))
+        val periods = plan("2026-10-24T14:00", "2026-10-26T00:00", phase("baseline", 0, 2, listOf("20:00")))
 
         assertEquals(at("2026-10-25T20:00"), periods[1].end)
         assertEquals(25 * 3_600_000L, periods[1].end - periods[1].start)

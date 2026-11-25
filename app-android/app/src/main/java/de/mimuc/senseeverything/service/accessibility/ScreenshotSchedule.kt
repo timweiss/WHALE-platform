@@ -37,11 +37,15 @@ data class ScreenshotPeriod(
  * keeps them until the phase's next rating time, even if a phase change falls inside it. Days of a phase without
  * screenshot settings, gaps between phases and the time after the last phase get no period.
  *
+ * Periods that would end after [studyEnd] are left out: nothing is sampled that would only be rated after
+ * the study, so nothing is sampled after the last rating time before the study end.
+ *
  * Timestamps are absolute, computed in [zone]: if the participant changes time zones, the rating
  * time stays at the time of the zone the study started in.
  */
 fun planScreenshotPeriods(
     studyStart: Long,
+    studyEnd: Long,
     phases: List<ExperimentalGroupPhase>,
     zone: ZoneId = ZoneId.systemDefault(),
     warn: (String) -> Unit = { WHALELog.w(TAG, it) }
@@ -78,6 +82,7 @@ fun planScreenshotPeriods(
         // the next rating time today, or the first one tomorrow
         val end = times.map { cursor.with(it) }.firstOrNull { it.isAfter(cursor) }
             ?: cursor.toLocalDate().plusDays(1).atTime(times.first()).atZone(zone)
+        if (end.toInstant().toEpochMilli() > studyEnd) break
         periods.add(
             ScreenshotPeriod(
                 start = cursor.toInstant().toEpochMilli(),

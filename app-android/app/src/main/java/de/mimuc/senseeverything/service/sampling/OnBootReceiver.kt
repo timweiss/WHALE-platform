@@ -69,7 +69,7 @@ class OnBootReceiver: BroadcastReceiver() {
                 } else if (studyState == StudyState.ENDED) {
                     WHALELog.i("BootUpReceiver", "Study has ended, scheduling leftover questionnaires")
                     EsmHandler.rescheduleQuestionnaires(context, dataStoreManager, database)
-                    // the last period ends after the study, and its rating may still be open
+                    // the rating of the last period may still be open after the study
                     ScreenshotPeriodEndReceiver.handle(context, database, dataStoreManager)
                 } else {
                     WHALELog.i("BootUpReceiver", "Study was cancelled/did not start yet, not starting sampling")
