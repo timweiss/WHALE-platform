@@ -20,8 +20,8 @@ class ConversationDetectionWorkerTest {
         val silencePercentage = silence.length.toFloat() / total
 
         val result = percentagePerLabel(listOf(speech, music, silence))
-        assertEquals(speechPercentage, result["speech"])
-        assertEquals(musicPercentage, result["music"])
-        assertEquals(silencePercentage, result["silence"])
+        assertEquals(speechPercentage, result["speech/true"])
+        assertEquals(musicPercentage, result["music/false"])
+        assertEquals(silencePercentage, result["silence/false"])
     }
 }
