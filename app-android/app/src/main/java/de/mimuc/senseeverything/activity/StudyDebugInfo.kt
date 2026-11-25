@@ -46,6 +46,7 @@ import de.mimuc.senseeverything.api.model.ExperimentalGroupPhase
 import de.mimuc.senseeverything.api.model.InteractionWidgetDisplayStrategy
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetNotificationTrigger
 import de.mimuc.senseeverything.api.model.ema.EMAFloatingWidgetTriggerConfiguration
+import de.mimuc.senseeverything.api.model.ema.EventQuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.FullQuestionnaire
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
 import de.mimuc.senseeverything.data.DataStoreManager
@@ -63,7 +64,10 @@ import de.mimuc.senseeverything.helpers.DatabaseExporter
 import de.mimuc.senseeverything.helpers.ExportStatus
 import de.mimuc.senseeverything.helpers.getCurrentTimeBucket
 import de.mimuc.senseeverything.sensor.implementation.ConversationSensor
+import de.mimuc.senseeverything.service.accessibility.ScreenshotPeriodEndReceiver
+import de.mimuc.senseeverything.service.accessibility.ScreenshotRatingContext
 import de.mimuc.senseeverything.service.accessibility.ScreenshotStore
+import de.mimuc.senseeverything.service.esm.EsmHandler
 import de.mimuc.senseeverything.study.setStudyEndAlarm
 import de.mimuc.senseeverything.workers.UploadWorkTag
 import de.mimuc.senseeverything.workers.enqueueSinglePendingQuestionnaireUploadWorker
@@ -171,11 +175,38 @@ class StudyDebugInfoViewModel @Inject constructor(
         val options = BitmapFactory.Options().apply { inSampleSize = 4 }
         return ScreenshotStore.readAll(ScreenshotStore.root(application)).map { stored ->
             ScreenshotPreview(
-                group = "${stored.packageName}, period until ${dateFromTimestamp(stored.periodEnd)}",
+                periodEnd = stored.periodEnd,
+                packageName = stored.packageName,
                 caption = "#${stored.slot} ${dateFromTimestamp(stored.sample.timestamp)}",
                 // null if the image was replaced since listing
                 image = BitmapFactory.decodeFile(stored.image.path, options)?.asImageBitmap()
             )
+        }
+    }
+
+    /**
+     * Emits the event the [ScreenshotPeriodEndReceiver] emits at the period end, with the same context.
+     * Valid from now, as the period may still be running or have ended longer ago than the validity.
+     * Doesn't mark the period as prompted, so its regular rating is still requested.
+     */
+    fun requestScreenshotRating(periodEnd: Long) {
+        viewModelScope.launch {
+            val eventName = ScreenshotPeriodEndReceiver.EVENT
+            // handleEvent silently ignores events without a trigger
+            val hasTrigger = dataStoreManager.questionnairesFlow.first()
+                .flatMap { it.triggers }
+                .filterIsInstance<EventQuestionnaireTrigger>()
+                .any { it.configuration.eventName == eventName }
+            if (!hasTrigger) {
+                Toast.makeText(application, "No event trigger for $eventName", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            EsmHandler.handleEvent(
+                eventName, null, null, application, dataStoreManager, database,
+                contextJson = ScreenshotRatingContext(periodEnd).toJson()
+            )
+            Toast.makeText(application, "Emitted $eventName", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -284,7 +315,12 @@ class StudyDebugInfoViewModel @Inject constructor(
     }
 }
 
-class ScreenshotPreview(val group: String, val caption: String, val image: ImageBitmap?)
+class ScreenshotPreview(
+    val periodEnd: Long,
+    val packageName: String,
+    val caption: String,
+    val image: ImageBitmap?
+)
 
 @Composable
 fun StudyDebugInfoView(
@@ -415,24 +451,35 @@ fun StudyDebugInfoView(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Screenshot samples: ${screenshots.value.size}")
-        screenshots.value.groupBy { it.group }.forEach { (group, previews) ->
-            Text(group, modifier = Modifier.padding(top = 8.dp))
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        screenshots.value.groupBy { it.periodEnd }.forEach { (periodEnd, periodPreviews) ->
+            Text("Period until ${dateFromTimestamp(periodEnd)}", modifier = Modifier.padding(top = 16.dp))
+            Button(
+                onClick = {
+                    viewModel.requestScreenshotRating(periodEnd)
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                previews.forEach { preview ->
-                    Column {
-                        if (preview.image != null) {
-                            Image(
-                                bitmap = preview.image,
-                                contentDescription = preview.caption,
-                                modifier = Modifier.height(240.dp)
-                            )
-                        } else {
-                            Text("(replaced)")
+                Text("Rate this period")
+            }
+            periodPreviews.groupBy { it.packageName }.forEach { (packageName, previews) ->
+                Text(packageName, modifier = Modifier.padding(top = 8.dp))
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    previews.forEach { preview ->
+                        Column {
+                            if (preview.image != null) {
+                                Image(
+                                    bitmap = preview.image,
+                                    contentDescription = preview.caption,
+                                    modifier = Modifier.height(240.dp)
+                                )
+                            } else {
+                                Text("(replaced)")
+                            }
+                            Text(preview.caption, style = MaterialTheme.typography.labelSmall)
                         }
-                        Text(preview.caption, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
