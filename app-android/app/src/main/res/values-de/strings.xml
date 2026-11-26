@@ -119,6 +119,19 @@
     <string name="screenshot_rating_loading">Screenshots werden geladen…</string>
     <string name="screenshot_rating_empty">Es gibt keine Screenshots zu bewerten.</string>
     <string name="screenshot_rating_image_unavailable">Dieser Screenshot ist nicht mehr verfügbar.</string>
+    <string name="screenshot_rating_position">Screenshot %1$d von %2$d</string>
+    <string name="screenshot_rating_rated">Bewertet</string>
+    <string name="screenshot_rating_previous">Vorheriger Screenshot</string>
+    <string name="screenshot_rating_next">Nächster Screenshot</string>
+    <string name="screenshot_rating_done_instruction">Vielen Dank! Bitte fahren Sie mit dem nächsten Schritt fort.</string>
+    <plurals name="screenshot_rating_left">
+        <item quantity="one">Noch %d offen</item>
+        <item quantity="other">Noch %d offen</item>
+    </plurals>
+    <plurals name="screenshot_rating_all_rated">
+        <item quantity="one">Der Screenshot ist bewertet</item>
+        <item quantity="other">Alle %d Screenshots bewertet</item>
+    </plurals>
     <string name="questionnaire_element_quantity_valid_range">Bitte geben Sie einen Wert zwischen %1$d und %2$d ein.</string>
 
     <!-- Permission names and descriptions -->
