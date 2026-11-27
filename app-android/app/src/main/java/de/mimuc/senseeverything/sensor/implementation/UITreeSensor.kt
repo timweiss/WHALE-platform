@@ -15,12 +15,15 @@ class UITreeSensor(applicationContext: Context, database: AppDatabase) :
 
     companion object {
         private const val serialVersionUID = 1L
+
+        /** sensorName of the readings; content extraction holds them back by this name */
+        const val NAME = "UITree"
     }
 
     init {
         m_IsRunning = false
         this.TAG = "UITreeSensor"
-        SENSOR_NAME = "UITree"
+        SENSOR_NAME = NAME
         FILE_NAME = "ui_tree.json"
         m_FileHeader = "" // JSON format, no CSV header needed
     }
