@@ -107,9 +107,15 @@ class ModelDownloadWorker @AssistedInject constructor(
  * Starts the model download unless one is already enqueued or running; after a finished one (also a
  * failed one) a new attempt starts, which is a no-op once the model is there.
  */
-fun enqueueModelDownload(context: Context, token: String, model: ContentExtractionModel) {
+fun enqueueModelDownload(
+    context: Context,
+    token: String,
+    model: ContentExtractionModel,
+    // REPLACE (debug "download now") restarts a waiting or running download; the .part file stays
+    policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP
+) {
     WorkManager.getInstance(context)
-        .enqueueUniqueWork(ModelDownloadWorker.UNIQUE_NAME, ExistingWorkPolicy.KEEP, modelDownloadRequest(token, model))
+        .enqueueUniqueWork(ModelDownloadWorker.UNIQUE_NAME, policy, modelDownloadRequest(token, model))
 }
 
 /** Also enqueued from the :extraction process through RemoteWorkManager, with the same unique name and policy. */

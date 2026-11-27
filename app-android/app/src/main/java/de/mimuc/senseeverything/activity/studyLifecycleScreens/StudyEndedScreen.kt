@@ -22,6 +22,7 @@ import de.mimuc.senseeverything.db.models.QuestionnaireInboxItem
 fun StudyEndedScreen(
     uploadWorkInfo: WorkInfo?,
     hasUnsyncedItems: Boolean,
+    contentExtractionPending: Boolean,
     questionnaireInboxItems: List<QuestionnaireInboxItem>,
     onOpenQuestionnaire: (QuestionnaireInboxItem) -> Unit,
     onOpenSettings: () -> Unit,
@@ -29,6 +30,12 @@ fun StudyEndedScreen(
 ) {
     Text(stringResource(R.string.main_study_ended_last_questionnaire_hint))
     Spacer(modifier = Modifier.height(8.dp))
+
+    if (contentExtractionPending) {
+        // the extraction continues in the nights after the study end, the trees upload afterwards
+        Text(stringResource(R.string.main_study_ended_content_extraction_pending))
+        Spacer(modifier = Modifier.height(8.dp))
+    }
 
     val workState = uploadWorkInfo?.state
     val isUploadActive = workState == WorkInfo.State.ENQUEUED || workState == WorkInfo.State.RUNNING

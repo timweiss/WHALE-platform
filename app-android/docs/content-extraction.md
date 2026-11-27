@@ -6,9 +6,7 @@ Gemma 4 E2B on LiteRT-LM. The pipeline is a port of the harness in ba-auswertung
 DEPLOYMENT.md there). Results and transcripts are uploaded as sensor readings, so they can be
 compared with the harness runs offline.
 
-Status: the pipeline port, the study configuration, the upload retention, the model download and the
-extraction worker exist; not yet run on a device. Onboarding notice and debug controls are open
-(`todo/content-extraction/`).
+Status: complete in code, not yet run on a device (`todo/content-extraction/`).
 
 ## Configuration
 
@@ -150,6 +148,25 @@ device (manufacturer, model, SoC, SDK, RAM).
 
 Energy only means something for runs on battery (`charging` false at start and end): the charge
 counter difference over the run. Scheduled runs happen while charging.
+
+## Participants and lab members
+
+- **Start screen:** in a study with `contentExtraction`, a notice before the start: part of the
+  screen content is analysed on the phone, a model of `model.sizeBytes` is downloaded over Wi-Fi
+  only, and the analysis runs at night while charging. Informational only: enrolling is opt-in
+  already.
+- **End screen:** while UI trees still wait for extraction after the study end, a note asks to keep
+  WHALE installed and charge the phone overnight. Checked when the screen loads (not live: a live
+  query would re-run on every sensor write).
+- **Debug settings** (`StudyDebugInfo`, "Content extraction"): model status (ready, or how much is
+  downloaded), the download work's state, progress, attempt and error, failed downloads, UI tree rows
+  waiting, the manual run's state and the last run (`content_extraction/last-run.json`, as the
+  reading itself is deleted once uploaded). Buttons:
+  - **Download model now:** clears the failure count and (re)starts the download (`REPLACE`; the
+    `.part` file is kept, so it resumes). Still Wi-Fi only.
+  - **Run extraction now:** a manual run (foreground, no night window or constraints), e.g. on
+    battery to measure power.
+  - **Refresh extraction status:** reloads files and counts.
 
 ## Code
 

@@ -27,6 +27,9 @@ object ModelStore {
 
     fun isReady(root: File, model: ContentExtractionModel): Boolean =
         modelFile(root, model.sha256).length() == model.sizeBytes
+
+    /** the last ContentExtractionRun reading, kept for the debug screen */
+    fun lastRunFile(root: File) = File(root, "last-run.json")
 }
 
 /**

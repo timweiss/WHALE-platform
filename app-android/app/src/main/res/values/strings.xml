@@ -247,4 +247,6 @@
     <string name="gen_close">Close</string>
     <string name="studyinfo_export_disclaimer">The data copy pursuant to Art. 15 GDPR (right to information) contains only “raw data” collected by the WHALE app and questionnaires.</string>
     <string name="onboarding_welcome_loading">Loading Onboarding...</string>
+    <string name="onboarding_start_study_content_extraction">This study analyses part of your screen content directly on your phone. For this, WHALE downloads a model of %1$s when you start the study, over Wi-Fi only. The analysis then runs at night while your phone is charging.</string>
+    <string name="main_study_ended_content_extraction_pending">Some of your data is still being analysed on your phone. This happens at night while your phone is charging. Please keep WHALE installed and charge your phone overnight until this note disappears.</string>
 </resources>

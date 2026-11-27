@@ -247,4 +247,6 @@
     <string name="gen_close">Schließen</string>
     <string name="studyinfo_export_disclaimer">Die Datenkopie nach Art. 15 DSGVO (Auskunftsrecht) enthält ausschließlich \"Rohdaten\", welche von der WHALE-App und Fragebögen erfasst wurden.</string>
     <string name="onboarding_welcome_loading">Anmeldung wird geladen...</string>
+    <string name="onboarding_start_study_content_extraction">Diese Studie wertet einen Teil Ihrer Bildschirminhalte direkt auf Ihrem Telefon aus. Dafür lädt WHALE beim Start der Studie ein Modell mit %1$s herunter, nur über WLAN. Die Auswertung läuft danach nachts, während Ihr Telefon lädt.</string>
+    <string name="main_study_ended_content_extraction_pending">Ein Teil Ihrer Daten wird noch auf Ihrem Telefon ausgewertet. Das geschieht nachts, während Ihr Telefon lädt. Bitte behalten Sie WHALE installiert und laden Sie Ihr Telefon über Nacht, bis dieser Hinweis verschwindet.</string>
 </resources>

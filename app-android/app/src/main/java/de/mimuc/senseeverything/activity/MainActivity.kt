@@ -72,8 +72,10 @@ import de.mimuc.senseeverything.api.loadStudy
 import de.mimuc.senseeverything.api.model.Study
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireTrigger
 import de.mimuc.senseeverything.api.model.ema.fullQuestionnaireJson
+import de.mimuc.senseeverything.contentextraction.FLAG_EXTRACTION_HANDLED
 import de.mimuc.senseeverything.data.DataStoreManager
 import de.mimuc.senseeverything.data.StudyRepository
+import de.mimuc.senseeverything.sensor.implementation.UITreeSensor
 import de.mimuc.senseeverything.data.StudyState
 import de.mimuc.senseeverything.db.AppDatabase
 import de.mimuc.senseeverything.db.models.PendingQuestionnaire
@@ -160,6 +162,10 @@ class StudyHomeViewModel @Inject constructor(
     private val _hasUnsyncedBeforeStudyEnd = MutableStateFlow(false)
     val hasUnsyncedBeforeStudyEnd: StateFlow<Boolean> get() = _hasUnsyncedBeforeStudyEnd
 
+    /** UI trees still wait for on-device content extraction; they upload once it has handled them. */
+    private val _contentExtractionPending = MutableStateFlow(false)
+    val contentExtractionPending: StateFlow<Boolean> get() = _contentExtractionPending
+
     val uploadWorkInfo: StateFlow<WorkInfo?> = WorkManager.getInstance(application)
         .getWorkInfosByTagFlow(UploadWorkTag.FINAL_UPLOAD_MANUAL.tag)
         .map { workInfos -> workInfos.firstOrNull() }
@@ -207,6 +213,9 @@ class StudyHomeViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 val studyEndTimestamp = dataStoreManager.timestampStudyEndFlow.first()
                 _hasUnsyncedBeforeStudyEnd.value = database.logDataDao().hasUnsyncedBefore(studyEndTimestamp)
+                // held-back trees don't count as unsynced above (their upload flag is missing)
+                _contentExtractionPending.value = dataStoreManager.studyFlow.first()?.contentExtraction != null &&
+                        database.logDataDao().countWithoutFlag(UITreeSensor.NAME, FLAG_EXTRACTION_HANDLED) > 0
             }
         }
     }
@@ -335,6 +344,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
     val studyState by viewModel.studyStateFlow.collectAsState()
     val hasPermissionIssues = viewModel.hasPermissionIssues.collectAsState()
     val hasUnsyncedBeforeEnd = viewModel.hasUnsyncedBeforeStudyEnd.collectAsState()
+    val contentExtractionPending = viewModel.contentExtractionPending.collectAsState()
     val uploadWorkInfo = viewModel.uploadWorkInfo.collectAsState()
     val duringStudyUploadWorkInfo = viewModel.duringStudyUploadWorkInfo.collectAsState()
     val hasStaleUnsyncedItems = viewModel.hasStaleUnsyncedItems.collectAsStateWithLifecycle()
@@ -436,6 +446,7 @@ fun StudyHome(viewModel: StudyHomeViewModel = viewModel()) {
                         StudyEndedScreen(
                             uploadWorkInfo = uploadWorkInfo.value,
                             hasUnsyncedItems = hasUnsyncedBeforeEnd.value,
+                            contentExtractionPending = contentExtractionPending.value,
                             questionnaireInboxItems = endedStudyInboxItems,
                             onOpenQuestionnaire = { viewModel.openPendingQuestionnaire(context, it) },
                             onOpenSettings = { viewModel.openSettings(context) },

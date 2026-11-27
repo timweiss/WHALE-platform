@@ -177,7 +177,10 @@ class ContentExtractionWorker @AssistedInject constructor(
             stopReason = if (isStopped) stopReason else null,
             device = Measurements.device(applicationContext)
         )
-        database.logDataDao().insert(LogData(reading.endedAt, SENSOR_CONTENT_EXTRACTION_RUN, Json.encodeToString(reading)))
+        val json = Json.encodeToString(reading)
+        database.logDataDao().insert(LogData(reading.endedAt, SENSOR_CONTENT_EXTRACTION_RUN, json))
+        // for the debug screen: the reading is deleted once it is uploaded
+        runCatching { ModelStore.lastRunFile(root).writeText(json) }
         WHALELog.i(
             TAG, "Run $runId: ${summary.outcome}, ${summary.rowsHandled} rows, ${summary.snapshotsExtracted} snapshots, " +
                     "${summary.calls} calls (${summary.callErrors} errors), backend ${summary.backend}"

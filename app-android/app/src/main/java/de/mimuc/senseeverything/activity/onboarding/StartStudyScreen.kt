@@ -2,6 +2,7 @@ package de.mimuc.senseeverything.activity.onboarding
 
 import android.app.Application
 import android.content.Context
+import android.text.format.Formatter
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -77,6 +78,17 @@ class StartStudyViewModel @Inject constructor(
 
     private val _errorCode = MutableStateFlow("")
     val errorCode: StateFlow<String> get() = _errorCode
+
+    /** size of the content extraction model the study downloads, null without content extraction */
+    private val _contentExtractionModelBytes = MutableStateFlow<Long?>(null)
+    val contentExtractionModelBytes: StateFlow<Long?> get() = _contentExtractionModelBytes
+
+    init {
+        viewModelScope.launch {
+            // saved at enrolment, before this screen
+            _contentExtractionModelBytes.value = dataStoreManager.studyFlow.first()?.contentExtraction?.model?.sizeBytes
+        }
+    }
 
     fun prepareStudy(context: Context, finish: () -> Unit) {
         viewModelScope.launch {
@@ -181,6 +193,7 @@ fun StartStudyScreen(
     val pending = viewModel.pending.collectAsState()
     val showErrorDialog = viewModel.showErrorDialog.collectAsState()
     val errorCode = viewModel.errorCode.collectAsState()
+    val modelBytes = viewModel.contentExtractionModelBytes.collectAsState()
 
     Column(
         modifier = Modifier
@@ -195,6 +208,11 @@ fun StartStudyScreen(
         )
         Spacer(modifier = Modifier.padding(12.dp))
         Text(stringResource(R.string.onboarding_start_study_everything_setup))
+        modelBytes.value?.let { bytes ->
+            Spacer(modifier = Modifier.padding(8.dp))
+            // e.g. "2.59 GB", in the device's locale
+            Text(stringResource(R.string.onboarding_start_study_content_extraction, Formatter.formatShortFileSize(context, bytes)))
+        }
 
         EnrolmentErrorDialog(showErrorDialog.value, errorCode.value) { viewModel.closeError() }
 
