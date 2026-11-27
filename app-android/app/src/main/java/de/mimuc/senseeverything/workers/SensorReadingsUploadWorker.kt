@@ -7,6 +7,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -47,7 +48,9 @@ import kotlin.time.toJavaDuration
 enum class UploadWorkTag(val tag: String) {
     IMMEDIATE_FROM_DEBUG("immediateFromDebugSettings"),
     FINAL_UPLOAD_MANUAL("finalReadingsUploadUserInitiated"),
-    STALE_UPLOAD_MANUAL("staleReadingsUploadUserInitiated")
+    STALE_UPLOAD_MANUAL("staleReadingsUploadUserInitiated"),
+    /** after the study end, once content extraction has handled the last UI trees; not shown in the UI */
+    FINAL_UPLOAD_AFTER_EXTRACTION("finalReadingsUploadAfterExtraction")
 }
 
 @Serializable
@@ -323,6 +326,16 @@ fun enqueueSingleSensorReadingsUploadWorker(
     expedited: Boolean,
     delay: Duration = 0.milliseconds
 ) {
+    WorkManager.getInstance(context).enqueue(singleSensorReadingsUploadRequest(token, workTag, expedited, delay))
+}
+
+/** Also enqueued from the :extraction process through RemoteWorkManager. */
+fun singleSensorReadingsUploadRequest(
+    token: String,
+    workTag: UploadWorkTag,
+    expedited: Boolean,
+    delay: Duration = 0.milliseconds
+): OneTimeWorkRequest {
     val data = workDataOf("token" to token)
 
     val constraintsBuilder = Constraints.Builder()
@@ -339,5 +352,5 @@ fun enqueueSingleSensorReadingsUploadWorker(
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
     }
 
-    WorkManager.getInstance(context).enqueue(uploadWorkRequestBuilder.build())
+    return uploadWorkRequestBuilder.build()
 }

@@ -37,6 +37,9 @@ class BufferedLogWriterTest {
         override fun deleteLogData(vararg logData: LogData?) {}
         override fun deleteAll() {}
         override fun deleteExpiredUnsatisfied(now: Long): Int = 0
+        override fun nextWithoutFlag(sensorName: String, flag: String): LogData? = null
+        override fun countWithoutFlag(sensorName: String, flag: String): Int = 0
+        override fun flagAll(sensorName: String, flag: String) {}
     }
 
     private val dao = FakeDao()

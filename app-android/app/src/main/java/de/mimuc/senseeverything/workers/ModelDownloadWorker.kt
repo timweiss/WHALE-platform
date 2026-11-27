@@ -7,6 +7,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -15,6 +16,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.mimuc.senseeverything.api.ApiResources
 import de.mimuc.senseeverything.api.model.ContentExtractionModel
+import de.mimuc.senseeverything.contentextraction.DownloadFailures
 import de.mimuc.senseeverything.contentextraction.DownloadResult
 import de.mimuc.senseeverything.contentextraction.ModelDownloader
 import de.mimuc.senseeverything.contentextraction.ModelStore
@@ -80,9 +82,11 @@ class ModelDownloadWorker @AssistedInject constructor(
             )
         }
 
+        val failures = DownloadFailures(root)
         return when (result) {
             DownloadResult.Ready -> {
                 WHALELog.i(TAG, "Model $sha256 downloaded and verified")
+                failures.clear()
                 Result.success()
             }
             is DownloadResult.Retry -> {
@@ -90,7 +94,9 @@ class ModelDownloadWorker @AssistedInject constructor(
                 Result.retry()
             }
             is DownloadResult.Failed -> {
-                WHALELog.e(TAG, "Model download failed: ${result.reason}")
+                // counted: after DownloadFailures.MAX the extraction gives up on the model
+                val state = failures.record(result.reason)
+                WHALELog.e(TAG, "Model download failed (${state.count} of ${DownloadFailures.MAX}): ${result.reason}")
                 Result.failure(workDataOf(OUTPUT_ERROR to result.reason))
             }
         }
@@ -102,12 +108,18 @@ class ModelDownloadWorker @AssistedInject constructor(
  * failed one) a new attempt starts, which is a no-op once the model is there.
  */
 fun enqueueModelDownload(context: Context, token: String, model: ContentExtractionModel) {
+    WorkManager.getInstance(context)
+        .enqueueUniqueWork(ModelDownloadWorker.UNIQUE_NAME, ExistingWorkPolicy.KEEP, modelDownloadRequest(token, model))
+}
+
+/** Also enqueued from the :extraction process through RemoteWorkManager, with the same unique name and policy. */
+fun modelDownloadRequest(token: String, model: ContentExtractionModel): OneTimeWorkRequest {
     val constraints = Constraints.Builder()
         .setRequiredNetworkType(NetworkType.UNMETERED)
         .setRequiresStorageNotLow(true)
         .build()
 
-    val request = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
+    return OneTimeWorkRequestBuilder<ModelDownloadWorker>()
         .addTag(ModelDownloadWorker.UNIQUE_NAME)
         .setInputData(
             workDataOf(
@@ -118,6 +130,4 @@ fun enqueueModelDownload(context: Context, token: String, model: ContentExtracti
         )
         .setConstraints(constraints)
         .build()
-
-    WorkManager.getInstance(context).enqueueUniqueWork(ModelDownloadWorker.UNIQUE_NAME, ExistingWorkPolicy.KEEP, request)
 }

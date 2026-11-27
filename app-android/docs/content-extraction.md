@@ -6,8 +6,9 @@ Gemma 4 E2B on LiteRT-LM. The pipeline is a port of the harness in ba-auswertung
 DEPLOYMENT.md there). Results and transcripts are uploaded as sensor readings, so they can be
 compared with the harness runs offline.
 
-Status: the pipeline port, the study configuration, the upload retention and the model download
-exist. Extraction worker, onboarding notice and debug controls are open (`todo/content-extraction/`).
+Status: the pipeline port, the study configuration, the upload retention, the model download and the
+extraction worker exist; not yet run on a device. Onboarding notice and debug controls are open
+(`todo/content-extraction/`).
 
 ## Configuration
 
@@ -60,8 +61,10 @@ handled them, using the flag-gated upload (`sensor_upload_requirement`, `LogData
 "Content extraction model").
 
 - **When:** enqueued when the study starts (`StartStudyScreen`), if the study has
-  `contentExtraction`. Unique work `contentExtractionModelDownload` with `KEEP`: enqueuing again
-  while one is pending does nothing, after a finished or failed one it starts a new attempt.
+  `contentExtraction`, and again by every extraction run that finds no model, so a failed download
+  is retried without anyone noticing it. Unique work `contentExtractionModelDownload` with `KEEP`:
+  enqueuing again while one is pending does nothing, after a finished or failed one it starts a
+  new attempt.
 - **Where:** `noBackupFilesDir/content_extraction/`. While downloading the file is
   `<sha256>.litertlm.part`; it is renamed to `<sha256>.litertlm` only after its SHA-256 matched, so
   that name means "verified" (`ModelStore.isReady`).
@@ -71,11 +74,82 @@ handled them, using the flag-gated upload (`sensor_upload_requirement`, `LogData
   A size in `Content-Range`/`Content-Length` that differs from the config fails before downloading.
 - **Retry** (WorkManager backoff, the `.part` file stays): network errors, 429/5xx, not enough space,
   stopped worker. **Failure** (reason in the work's output `error`, nothing kept): 401/403/404, size
-  or hash mismatch. A new enqueue then starts from scratch.
+  or hash mismatch. A new enqueue then starts from scratch. Failures are counted in
+  `content_extraction/download-failures.json` until a download succeeds; after 3 the extraction
+  stops asking for the model (a wrong hash in the study config would otherwise mean a new 2.6 GB
+  download every night).
 - Runs as a foreground service (data sync, generic notification) when Android allows it; otherwise
   in JobScheduler's ~10-minute windows, continuing each time. Progress: the work's progress
   `downloadedBytes`/`totalBytes`.
 - The model is not deleted at the study end: participants uninstall the app afterwards.
+
+## Extraction worker
+
+`ContentExtractionWorker` runs in its own process, `:extraction` (a `RemoteCoroutineWorker` hosted by
+`ContentExtractionWorkerService`): a native crash or OOM of the model runtime only ends that process,
+and CPU time and peak memory of a run cover only the extraction.
+
+- **Scheduled:** at night only (00:00–06:00 local time, `ExtractionWindow`), every 15 minutes while
+  the phone is charging, idle and the battery isn't low, so phones in use are never slowed down.
+  Enqueued when the study starts. Outside the window a run ends right away, and a running one stops
+  at 06:00. Not a foreground service: Android stops a run after about 10 minutes or when the phone
+  is used, and the next run continues the backlog.
+- **Study end:** the scheduled runs go on after the last sensing day until every UI tree is handled.
+  Then the run enqueues one more upload (`FINAL_UPLOAD_AFTER_EXTRACTION`, not shown on the end
+  screen) and cancels the scheduled extraction. Cancelling the participation stops the extraction
+  and the download right away (`cancelContentExtraction`).
+- **Manual:** `enqueueManualContentExtraction`, without constraints, as a foreground service, e.g. on
+  battery to measure power (debug settings, ticket 06).
+- **Model missing:** the run enqueues the download (`KEEP`: only if none is pending, so also after
+  a failed one) and ends; the rows wait. After 3 failed downloads (`DownloadFailures`) the model
+  counts as unavailable: the run flags every waiting row (outcome `model_unavailable`), so the trees
+  upload without results.
+- **One run at a time:** a lock file (`content_extraction/run.lock`), so a manual and a scheduled run
+  never load two models.
+- **Per row** (oldest first, a batch of up to four snapshots): snapshots of configured apps with
+  `isSampled(snapshotId, sampleRate)` are extracted, one call per segment. The readings and the row's
+  flag are written in one transaction; a run stopped in the middle of a row leaves the row for the
+  next run.
+- **Generation:** LiteRT-LM, GPU first and CPU if the GPU engine can't be created; greedy
+  (temperature 0), thinking off, output constrained to the JSON schema, 8192 tokens of context,
+  at most 4096 output tokens; a fresh conversation per call.
+- **Engine can't start** (on GPU and CPU): the run records why and flags every waiting row, so they
+  upload without results. The next run tries again.
+- **Crashes:** before starting the engine and before each row the run writes
+  `content_extraction/run-state.json`; a normal end or stop removes it. A file left behind means the
+  process died there. The same row twice: it is flagged with `crashed` readings and skipped. The
+  engine start twice: handled like "engine can't start".
+- **Sampling** is reproducible offline: a snapshot is extracted if
+  `(int.from_bytes(hashlib.sha256(snapshot_id.encode()).digest()[:8], "big") >> 11) / 2**53 < sampleRate`.
+
+## Readings
+
+`ContentExtraction`, one per extracted snapshot (`ContentExtractionReading`):
+
+| Field | Meaning |
+|---|---|
+| `runId` | the run's `ContentExtractionRun` reading |
+| `snapshotId`, `snapshotTimestamp`, `appPackage` | the UI tree snapshot (join with `UI_Tree_Skeletons`) |
+| `outcome` | `extracted`, or `crashed` (the process died on this row twice; no calls) |
+| `modelSha256`, `runtime`, `backend`, `rulesVersion` | what produced it (`litert-lm 0.20.0`, `gpu`/`cpu`, `v1`) |
+| `segmentationMode` | `anchor` or `whole` |
+| `calls[]` | per segment: `segment`, `templateHash`, the exact `prompt`, `rawOutput`, `error`, `wallMs`, `prefillTokens`, `decodeTokens`, `prefillTokensPerSecond`, `decodeTokensPerSecond`, `timeToFirstTokenSeconds` |
+| `items[]` | postprocessed items of all calls, each with `_segment` (as in the harness's `predictions.json`) |
+| `droppedItems` | items postprocessing removed |
+| `wallMs` | the snapshot's time from tree to items |
+
+`ContentExtractionRun`, one per run that started (or failed to start) the engine
+(`ContentExtractionRunReading`): `trigger` (`scheduled`/`manual`), `outcome` (`done`, `stopped`,
+`engine_failed`, `model_unavailable`), start and end time, `backend`, `gpuError` (why the CPU ran), `engineInitMs`,
+`engineErrors`, counts (`rowsHandled`, `rowsFlaggedWithoutExtraction`, `rowsCrashed`,
+`rowsUndecodable`, `snapshotsSeen`, `snapshotsOfConfiguredApps`, `snapshotsExtracted`, `calls`,
+`callErrors`), `cpuMs` (CPU time of the process), `peakRssKb` (VmHWM; reset at the run start if
+`peakRssReset`), `batteryStart`/`batteryEnd` (level, charge counter in µAh, charging), thermal
+status at start and end, `stopReason` (WorkManager's, when the system stopped the run) and the
+device (manufacturer, model, SoC, SDK, RAM).
+
+Energy only means something for runs on battery (`charging` false at start and end): the charge
+counter difference over the run. Scheduled runs happen while charging.
 
 ## Code
 
@@ -86,6 +160,12 @@ handled them, using the flag-gated upload (`sensor_upload_requirement`, `LogData
 | `contentextraction/UploadGating.kt` | the flag and the derived upload requirement |
 | `contentextraction/ModelDownload.kt` | `ModelStore` (files = state), `ModelDownloader` (resume, checks) |
 | `workers/ModelDownloadWorker.kt` | the worker and `enqueueModelDownload` |
+| `contentextraction/UiTreeBatch.kt` | stored UI tree batch to snapshots, sampling |
+| `contentextraction/Engine.kt` | `ExtractionEngine`, `LiteRtExtractionEngine` (settings, GPU/CPU) |
+| `contentextraction/ExtractionRunner.kt` | rows → readings + flag, crash markers, engine failure |
+| `contentextraction/RoomExtractionStore.kt` | the runner's database access |
+| `contentextraction/Readings.kt`, `Measurements.kt` | reading shapes, process/battery/thermal measurements |
+| `workers/ContentExtractionWorker.kt` | the worker in `:extraction`, its service, scheduling, lock |
 | `backend/src/controllers/contentExtraction.ts` | authenticated model endpoint |
 | `data/StudyRepository.kt` | `uploadConfigFor`: study upload config plus content extraction |
 | `api/model/Study.kt` | `ContentExtractionConfig` |

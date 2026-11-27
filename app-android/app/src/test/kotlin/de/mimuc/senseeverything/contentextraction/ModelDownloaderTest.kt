@@ -146,6 +146,20 @@ class ModelDownloaderTest {
     }
 
     @Test
+    fun failedDownloadsAreCountedUntilASuccessClearsThem() {
+        val failures = DownloadFailures(root)
+        assertEquals(0, failures.read().count)
+
+        repeat(DownloadFailures.MAX - 1) { failures.record("HTTP 404") }
+        assertFalse(failures.exhausted())
+        assertEquals(DownloadFailures.State(DownloadFailures.MAX, "SHA-256 mismatch"), failures.record("SHA-256 mismatch"))
+        assertTrue(failures.exhausted())
+
+        failures.clear()
+        assertEquals(0, failures.read().count)
+    }
+
+    @Test
     fun doesNothingWhenTheModelIsThere() {
         modelFile.writeBytes(bytes)
 

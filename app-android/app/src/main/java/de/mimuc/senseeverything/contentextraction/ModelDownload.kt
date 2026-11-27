@@ -2,6 +2,9 @@ package de.mimuc.senseeverything.contentextraction
 
 import android.content.Context
 import de.mimuc.senseeverything.api.model.ContentExtractionModel
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -24,6 +27,37 @@ object ModelStore {
 
     fun isReady(root: File, model: ContentExtractionModel): Boolean =
         modelFile(root, model.sha256).length() == model.sizeBytes
+}
+
+/**
+ * Failed download attempts ([DownloadResult.Failed]: 401/403/404, size or hash mismatch) since the last
+ * success, in `download-failures.json` next to the model. Transient problems ([DownloadResult.Retry])
+ * don't count. After [MAX] the model counts as unavailable: extraction can't run on this phone.
+ */
+class DownloadFailures(root: File) {
+    companion object {
+        const val MAX = 3
+    }
+
+    @Serializable
+    data class State(val count: Int, val lastReason: String?)
+
+    private val file = File(root, "download-failures.json")
+
+    fun read(): State = runCatching { Json.decodeFromString<State>(file.readText()) }.getOrNull() ?: State(0, null)
+
+    fun record(reason: String): State {
+        val next = State(read().count + 1, reason)
+        file.parentFile?.mkdirs()
+        file.writeText(Json.encodeToString(next))
+        return next
+    }
+
+    fun clear() {
+        file.delete()
+    }
+
+    fun exhausted(): Boolean = read().count >= MAX
 }
 
 sealed interface DownloadResult {

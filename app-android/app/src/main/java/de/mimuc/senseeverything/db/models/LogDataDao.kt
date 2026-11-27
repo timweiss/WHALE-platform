@@ -73,6 +73,30 @@ interface LogDataDao {
     @Query("DELETE FROM logdata")
     fun deleteAll()
 
+    // Content extraction: the oldest row of a sensor that doesn't have the flag yet
+    @Query("""
+        SELECT * FROM logdata WHERE sensorName = :sensorName
+          AND NOT EXISTS (SELECT 1 FROM LogDataFlag f WHERE f.logDataId = logdata.id AND f.flag = :flag)
+        ORDER BY timestamp ASC, id ASC LIMIT 1
+    """)
+    fun nextWithoutFlag(sensorName: String, flag: String): LogData?
+
+    @Query("""
+        SELECT COUNT(*) FROM logdata WHERE sensorName = :sensorName
+          AND NOT EXISTS (SELECT 1 FROM LogDataFlag f WHERE f.logDataId = logdata.id AND f.flag = :flag)
+    """)
+    fun countWithoutFlag(sensorName: String, flag: String): Int
+
+    @Query("INSERT OR IGNORE INTO LogDataFlag (logDataId, flag) SELECT id, :flag FROM logdata WHERE sensorName = :sensorName")
+    fun flagAll(sensorName: String, flag: String)
+
+    /** New readings and the flag of the row they came from, together or not at all. */
+    @Transaction
+    fun insertAndFlag(readings: List<LogData>, rowId: Int, flag: String) {
+        readings.forEach { insert(it) }
+        insertFlags(LogDataFlag(rowId, flag))
+    }
+
     // Rows whose sensor has a policy, still miss a required flag, and are older than the policy's
     // clearAfterDays. Sensors without a policy are never touched. LogDataFlag rows go via ON DELETE CASCADE.
     @Query("""

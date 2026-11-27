@@ -80,6 +80,7 @@ import de.mimuc.senseeverything.logging.WHALELog
 import de.mimuc.senseeverything.service.accessibility.ApprovedScreenshots
 import de.mimuc.senseeverything.service.accessibility.ScreenshotStore
 import de.mimuc.senseeverything.study.runStudyLifecycleCleanup
+import de.mimuc.senseeverything.workers.cancelContentExtraction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -180,6 +181,8 @@ class StudyInfoViewModel @Inject constructor(
         viewModelScope.launch {
             // 1. refactored endstudy method
             runStudyLifecycleCleanup(context, database, true)
+            // unlike at the study end, no extraction continues after a cancellation
+            cancelContentExtraction(context)
 
             // 2. save data still required to datastore
             val enrolmentId = dataStoreManager.participantIdFlow.first()

@@ -212,6 +212,14 @@
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
+        <!-- runs ContentExtractionWorker in its own process: a native crash or OOM of the model
+             runtime only ends this process, and its CPU and memory numbers cover only the extraction -->
+        <service
+            android:name=".workers.ContentExtractionWorkerService"
+            android:exported="false"
+            android:process=":extraction" />
+        <!-- the vendor libraries LiteRT's GPU backend loads (libOpenCL.so, ...) are declared by the
+             litert-api dependency's manifest -->
         <service
             android:name=".service.ActivityRecognitionIntentService"
             android:exported="false"
