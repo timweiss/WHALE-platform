@@ -47,6 +47,7 @@ import de.mimuc.senseeverything.service.esm.SamplingEventReceiver
 import de.mimuc.senseeverything.service.healthcheck.PeriodicServiceHealthcheckReceiver
 import de.mimuc.senseeverything.study.reschedulePhaseChanges
 import de.mimuc.senseeverything.study.scheduleStudyEndAlarm
+import de.mimuc.senseeverything.workers.enqueueModelDownload
 import de.mimuc.senseeverything.workers.enqueueOldDataCheckWorker
 import de.mimuc.senseeverything.workers.enqueueUnsatisfiedSensorReadingsCleanupWorker
 import de.mimuc.senseeverything.workers.enqueuePendingQuestionnaireUploadWorker
@@ -88,6 +89,7 @@ class StartStudyViewModel @Inject constructor(
                 val token = dataStoreManager.tokenFlow.first()
                 enqueueSensorReadingsUploadWorker(context, token)
                 enqueueUnsatisfiedSensorReadingsCleanupWorker(context)
+                study.contentExtraction?.let { enqueueModelDownload(context, token, it.model) }
 
                 studyRepository.saveStudy(study)
                 dataStoreManager.saveStudyDays(study.durationDays)

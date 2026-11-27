@@ -120,6 +120,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.1'
     // the real org.json for JVM tests, android.jar only has stubs; test-only, not in the APK
     testImplementation 'org.json:json:20231013'
+    // a local HTTP server for the model download tests; same version as okhttp
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 
     def composeBom = platform('androidx.compose:compose-bom:2025.06.01')
     implementation(composeBom)

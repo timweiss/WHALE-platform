@@ -6,8 +6,8 @@ Gemma 4 E2B on LiteRT-LM. The pipeline is a port of the harness in ba-auswertung
 DEPLOYMENT.md there). Results and transcripts are uploaded as sensor readings, so they can be
 compared with the harness runs offline.
 
-Status: the pipeline port, the study configuration and the upload retention exist. Model download,
-extraction worker, onboarding notice and debug controls are open (`todo/content-extraction/`).
+Status: the pipeline port, the study configuration, the upload retention and the model download
+exist. Extraction worker, onboarding notice and debug controls are open (`todo/content-extraction/`).
 
 ## Configuration
 
@@ -54,6 +54,29 @@ handled them, using the flag-gated upload (`sensor_upload_requirement`, `LogData
 - The app saves the study at enrolment and does not refresh it later (like `sensorUploadConfig`), so
   changing `contentExtraction` in the backend only affects new enrolments.
 
+## Model download
+
+`ModelDownloadWorker` gets the model from the study backend (setup there: `backend/README.md`,
+"Content extraction model").
+
+- **When:** enqueued when the study starts (`StartStudyScreen`), if the study has
+  `contentExtraction`. Unique work `contentExtractionModelDownload` with `KEEP`: enqueuing again
+  while one is pending does nothing, after a finished or failed one it starts a new attempt.
+- **Where:** `noBackupFilesDir/content_extraction/`. While downloading the file is
+  `<sha256>.litertlm.part`; it is renamed to `<sha256>.litertlm` only after its SHA-256 matched, so
+  that name means "verified" (`ModelStore.isReady`).
+- **Constraints:** Wi-Fi (unmetered) and storage not low; besides, the remaining bytes plus 256 MB
+  must be free, otherwise it waits.
+- **Resume:** a `.part` file is continued with a Range request (`206` appends, a `200` replaces it).
+  A size in `Content-Range`/`Content-Length` that differs from the config fails before downloading.
+- **Retry** (WorkManager backoff, the `.part` file stays): network errors, 429/5xx, not enough space,
+  stopped worker. **Failure** (reason in the work's output `error`, nothing kept): 401/403/404, size
+  or hash mismatch. A new enqueue then starts from scratch.
+- Runs as a foreground service (data sync, generic notification) when Android allows it; otherwise
+  in JobScheduler's ~10-minute windows, continuing each time. Progress: the work's progress
+  `downloadedBytes`/`totalBytes`.
+- The model is not deleted at the study end: participants uninstall the app afterwards.
+
 ## Code
 
 | File | Role |
@@ -61,6 +84,9 @@ handled them, using the flag-gated upload (`sensor_upload_requirement`, `LogData
 | `contentextraction/Model.kt`, `Preprocess.kt`, `Segmentation.kt`, `Serialize.kt`, `Prompt.kt`, `Postprocess.kt` | port of the harness pipeline |
 | `contentextraction/TreeLoader.kt` | snapshot node list (stored batch JSON) to tree; bounds as `Double` from the decimal text |
 | `contentextraction/UploadGating.kt` | the flag and the derived upload requirement |
+| `contentextraction/ModelDownload.kt` | `ModelStore` (files = state), `ModelDownloader` (resume, checks) |
+| `workers/ModelDownloadWorker.kt` | the worker and `enqueueModelDownload` |
+| `backend/src/controllers/contentExtraction.ts` | authenticated model endpoint |
 | `data/StudyRepository.kt` | `uploadConfigFor`: study upload config plus content extraction |
 | `api/model/Study.kt` | `ContentExtractionConfig` |
 | `scripts/export_content_extraction_golden.py` | golden files for the parity test, rendered hints |

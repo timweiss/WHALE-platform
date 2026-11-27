@@ -35,6 +35,10 @@ class ApiResources {
             return "${API_BASE}/reading/file"
         }
 
+        fun contentExtractionModel(sha256: String): String {
+            return "${API_BASE}/content-extraction/model/$sha256"
+        }
+
         fun questionnaires(studyId: Int) : String {
             return "$API_BASE/study/$studyId/questionnaire"
         }
