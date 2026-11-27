@@ -14,6 +14,20 @@ export interface Study {
   dataProtectionNotice: string | null;
   embeddedInfoUrl: string | null;
   sensorUploadConfig: SensorUploadConfig[] | null;
+  contentExtraction: ContentExtractionConfig | null;
+}
+
+/**
+ * On-device content extraction (app-android/docs/content-extraction.md). While it is set, the app
+ * holds UI tree readings back until its extraction worker has handled them.
+ */
+export interface ContentExtractionConfig {
+  // the .litertlm file the app downloads from this backend; identified by its SHA-256 (lowercase hex)
+  model: { sha256: string; sizeBytes: number };
+  // hint: the app's hint block as rendered by the harness, inserted into the prompt verbatim
+  packages: { packageName: string; hint: string | null }[];
+  // share of a configured app's snapshots that is extracted, (0, 1]
+  sampleRate: number;
 }
 
 /**
@@ -40,6 +54,7 @@ interface StudyRow {
   data_protection_notice: string | null;
   embedded_info_url: string | null;
   sensor_upload_config: SensorUploadConfig[];
+  content_extraction_config: ContentExtractionConfig | null;
 }
 
 export enum InteractionWidgetStrategy {
@@ -169,11 +184,12 @@ export class StudyRepository extends Repository implements IStudyRepository {
       | 'allocationStrategy'
       | 'completionTracking'
       | 'sensorUploadConfig'
+      | 'contentExtraction'
     >,
   ): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'INSERT INTO studies (name, enrolment_key, description, contact_email, max_enrolments, duration_days, allocation_strategy, completion_tracking, sensor_upload_config) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        'INSERT INTO studies (name, enrolment_key, description, contact_email, max_enrolments, duration_days, allocation_strategy, completion_tracking, sensor_upload_config, content_extraction_config) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
         [
           study.name,
           study.enrolmentKey,
@@ -184,6 +200,8 @@ export class StudyRepository extends Repository implements IStudyRepository {
           study.allocationStrategy,
           study.completionTracking,
           study.sensorUploadConfig,
+          // an object: pg sends it as JSON (undefined and null as NULL)
+          study.contentExtraction,
         ],
       );
       return this.studyFromRow(res.rows[0]);
@@ -195,7 +213,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
   async updateStudy(study: Study): Promise<Study> {
     try {
       const res = await this.pool.query(
-        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5, completion_tracking=$6, description=$7, contact_email=$8, sensor_upload_config=$9 WHERE id = $10 RETURNING *',
+        'UPDATE studies SET name = $1, enrolment_key = $2, max_enrolments = $3, duration_days=$4, allocation_strategy=$5, completion_tracking=$6, description=$7, contact_email=$8, sensor_upload_config=$9, content_extraction_config=$10 WHERE id = $11 RETURNING *',
         [
           study.name,
           study.enrolmentKey,
@@ -206,6 +224,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
           study.description,
           study.contactEmail,
           study.sensorUploadConfig,
+          study.contentExtraction,
           study.id,
         ],
       );
@@ -260,6 +279,7 @@ export class StudyRepository extends Repository implements IStudyRepository {
       dataProtectionNotice: row.data_protection_notice,
       embeddedInfoUrl: row.embedded_info_url,
       sensorUploadConfig: row.sensor_upload_config,
+      contentExtraction: row.content_extraction_config,
     };
   }
 

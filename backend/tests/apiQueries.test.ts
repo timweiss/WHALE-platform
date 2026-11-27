@@ -949,6 +949,77 @@ test('should fetch a study by enrolment key', async () => {
   expect(res.body).toMatchObject({ name: 'name' });
 });
 
+describe('content extraction config', () => {
+  const contentExtraction = {
+    model: { sha256: 'ab'.repeat(32), sizeBytes: 2588147712 },
+    packages: [
+      { packageName: 'com.instagram.android', hint: 'App-specific notes:\n' },
+      { packageName: 'com.zhiliaoapp.musically', hint: null },
+    ],
+  };
+
+  async function createStudy(body: object) {
+    return request(app)
+      .post('/v1/study')
+      .set({ Authorization: 'Bearer ' + generateAdminToken() })
+      .send(body);
+  }
+
+  test('should return it with the study, with sampleRate 1 by default', async () => {
+    const created = await createStudy({ ...dummyStudy, contentExtraction });
+    expect(created.statusCode).toBe(200);
+
+    const res = await request(app).get(`/v1/study/${created.body.id}`);
+    expect(res.body.contentExtraction).toEqual({
+      ...contentExtraction,
+      sampleRate: 1,
+    });
+  });
+
+  test('should be null for studies without it', async () => {
+    const created = await createStudy(dummyStudy);
+
+    const res = await request(app).get(`/v1/study/${created.body.id}`);
+    expect(res.body.contentExtraction).toBeNull();
+  });
+
+  test.each([
+    [
+      'a model hash that is not SHA-256 hex',
+      { model: { sha256: 'AB12', sizeBytes: 1 } },
+    ],
+    ['no packages', { packages: [] }],
+    ['a sample rate of 0', { sampleRate: 0 }],
+    ['a sample rate above 1', { sampleRate: 1.5 }],
+  ])('should reject %s', async (_, change) => {
+    const res = await createStudy({
+      ...dummyStudy,
+      contentExtraction: { ...contentExtraction, ...change },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('should be replaced by an update, and removed without it', async () => {
+    const created = await createStudy({ ...dummyStudy, contentExtraction });
+    const put = (body: object) =>
+      request(app)
+        .put(`/v1/study/${created.body.id}`)
+        .set({ Authorization: 'Bearer ' + generateAdminToken() })
+        .send(body);
+
+    const updated = await put({
+      ...dummyStudy,
+      contentExtraction: { ...contentExtraction, sampleRate: 0.25 },
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.body.contentExtraction.sampleRate).toBe(0.25);
+
+    const removed = await put(dummyStudy);
+    expect(removed.statusCode).toBe(200);
+    expect(removed.body.contentExtraction).toBeNull();
+  });
+});
+
 test('should reject malformed JSON with a JSON error', async () => {
   const res = await request(app)
     .post('/v1/enrolment')

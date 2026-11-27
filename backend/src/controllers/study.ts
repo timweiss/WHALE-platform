@@ -13,6 +13,26 @@ import { Config } from '../config';
 
 const StudyPath = z.object({ id: EntityId });
 
+// app-android/docs/content-extraction.md; absent or null: no content extraction
+const ContentExtractionBody = z
+  .object({
+    model: z.object({
+      sha256: z.string().regex(/^[0-9a-f]{64}$/),
+      sizeBytes: z.int().positive(),
+    }),
+    packages: z
+      .array(
+        z.object({
+          packageName: z.string().min(1),
+          hint: z.string().nullable(),
+        }),
+      )
+      .min(1),
+    sampleRate: z.number().gt(0).lte(1).default(1),
+  })
+  .nullable()
+  .optional();
+
 const CreateExperimentalGroupBody = z.object({
   internalName: z.string(),
   allocationOrder: z.int(),
@@ -56,6 +76,15 @@ export function createStudyController(
         .send({ error: 'Missing required fields (enrolmentKey or name)' });
     }
 
+    const contentExtraction = ContentExtractionBody.safeParse(
+      req.body.contentExtraction,
+    );
+    if (!contentExtraction.success) {
+      return res
+        .status(400)
+        .send({ error: 'Invalid content extraction configuration' });
+    }
+
     const existing = await studyRepository.getStudyByEnrolmentKey(
       req.body.enrolmentKey,
     );
@@ -65,7 +94,10 @@ export function createStudyController(
         .send({ error: 'Study with enrolment key already exists' });
     }
 
-    const study = await studyRepository.createStudy(req.body);
+    const study = await studyRepository.createStudy({
+      ...req.body,
+      contentExtraction: contentExtraction.data ?? null,
+    });
     res.json(study);
   });
 
@@ -81,9 +113,20 @@ export function createStudyController(
       return res.status(404).send({ error: 'Study not found' });
     }
 
-    // the id in the path is authoritative, not one in the body
+    const contentExtraction = ContentExtractionBody.safeParse(
+      req.body.contentExtraction,
+    );
+    if (!contentExtraction.success) {
+      return res
+        .status(400)
+        .send({ error: 'Invalid content extraction configuration' });
+    }
+
+    // the id in the path is authoritative, not one in the body. Like every
+    // field, a missing contentExtraction replaces the stored one (with null).
     const updatedStudy = await studyRepository.updateStudy({
       ...req.body,
+      contentExtraction: contentExtraction.data ?? null,
       id,
     });
     res.json(updatedStudy);
