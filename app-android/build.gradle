@@ -5,15 +5,22 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.23'
+        // Keep every Kotlin plugin version below equal. LiteRT-LM (on-device content extraction) ships
+        // Kotlin 2.4 metadata and brings stdlib 2.4; a compiler reads one version ahead, so it needs
+        // >= 2.3. Room and Hilt run on KSP for the same reason (see app/build.gradle). Hilt 2.58 is the
+        // last release for AGP 8; newer ones need AGP 9.
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21'
+        // only on Google's Maven, not the plugin portal the plugins block resolves from
+        classpath 'androidx.room:room-gradle-plugin:2.8.5'
     }
 }
 
 plugins {
-    id 'com.google.dagger.hilt.android' version '2.51.1' apply false
-    id 'org.jetbrains.kotlin.android' version '1.9.0' apply false
-    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.0'
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.0.0' apply false
+    id 'com.google.dagger.hilt.android' version '2.58' apply false
+    id 'org.jetbrains.kotlin.android' version '2.3.21' apply false
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.21'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.21' apply false
+    id 'com.google.devtools.ksp' version '2.3.14' apply false
 }
 
 allprojects {
@@ -34,7 +41,7 @@ allprojects {
         android_targetSdkVersion = 36
 
         // https://mvnrepository.com/artifact/com.google.code.gson/gson
-        gson_library_version = '2.11.0'
+        gson_library_version = '2.14.0'
         // https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp
         okhttp_library_version = '3.9.0'
     }

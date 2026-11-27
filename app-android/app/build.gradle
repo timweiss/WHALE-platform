@@ -1,7 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
+    id 'androidx.room'
     id 'com.google.dagger.hilt.android'
     id 'kotlin-parcelize'
     id 'kotlinx-serialization'
@@ -27,11 +28,6 @@ android {
             useSupportLibrary true
         }
 
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
-            }
-        }
         buildConfigField 'boolean', 'IS_DEBUG', 'false'
         // set per build via -PenrolmentSource=<source>, see scripts/build-source-apks.sh
         buildConfigField 'String', 'AUTO_ENROLMENT_SOURCE',
@@ -153,32 +149,42 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-service:2.9.3'
 
 
-    implementation 'androidx.room:room-runtime:2.7.2'
+    // Room and Hilt run on KSP: under kapt they read Kotlin metadata themselves (max. 2.3) and reject
+    // the stdlib 2.4 that LiteRT-LM brings.
+    implementation 'androidx.room:room-runtime:2.8.5'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.1'
-    kapt 'androidx.room:room-compiler:2.7.2'
+    ksp 'androidx.room:room-compiler:2.8.5'
     implementation 'com.android.volley:volley:1.2.1'
 
     implementation("androidx.datastore:datastore:1.1.7")
 
-    def hilt_version = "2.52"
+    def hilt_version = "2.58"
     implementation "com.google.dagger:hilt-android:$hilt_version"
-    kapt "com.google.dagger:hilt-compiler:$hilt_version"
-    kapt "androidx.hilt:hilt-compiler:1.2.0"
+    ksp "com.google.dagger:hilt-compiler:$hilt_version"
+    ksp "androidx.hilt:hilt-compiler:1.2.0"
     implementation "androidx.hilt:hilt-work:1.2.0"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
 
     implementation 'com.github.gkonovalov.android-vad:webrtc:2.0.6'
-    implementation 'com.github.gkonovalov.android-vad:yamnet:2.0.7'
+    implementation('com.github.gkonovalov.android-vad:yamnet:2.0.7') {
+        // LiteRT (litert-api, via LiteRT-LM) is TensorFlow Lite's successor and contains the same
+        // org.tensorflow.lite classes. YAMNet's Java side only needs DataType from them, whose API is
+        // unchanged; its inference runs in the task library's own native code.
+        exclude group: 'org.tensorflow', module: 'tensorflow-lite-api'
+    }
 
     implementation "androidx.cardview:cardview:1.0.0"
 
     def work_version = "2.10.2"
     implementation "androidx.work:work-runtime-ktx:$work_version"
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-core:1.4.1"
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0"
+
+    // on-device content extraction (Gemma 4 E2B); the model file is downloaded, not bundled
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.20.0'
 
     // ML Kit Barcode Scanning (bundled - works immediately without downloads)
     implementation 'com.google.mlkit:barcode-scanning:17.3.0'
@@ -190,7 +196,14 @@ dependencies {
     implementation "androidx.camera:camera-view:$camerax_version"
 }
 
-// Allow references to generated code
-kapt {
-    correctErrorTypes true
+// The aggregating task builds Hilt's components in a separate javac run, which reads Kotlin metadata
+// itself (max. 2.3) and fails on the stdlib 2.4 from LiteRT-LM. Without it the components are built in
+// the KSP run; a single-module app loses nothing.
+hilt {
+    enableAggregatingTask = false
+}
+
+// exported schemas; Room's auto-migrations are generated from them
+room {
+    schemaDirectory "$projectDir/schemas"
 }

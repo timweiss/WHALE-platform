@@ -62,7 +62,20 @@ class SnapshotBatchEncoderTest {
             .put("snapshots", JSONArray(snapshots.map { it.toJson() }))
         val actual = JSONObject(StringWriter().also { SnapshotBatchEncoder.writeBatch(it, timestamp, snapshots) }.toString())
 
-        assertTrue(expected.similar(actual), "encoder output differs from toJson()\nexpected: $expected\nactual:   $actual")
+        assertTrue(similar(expected, actual), "encoder output differs from toJson()\nexpected: $expected\nactual:   $actual")
+    }
+
+    /**
+     * org.json's JSONObject.similar(): since Kotlin 2.3 the compiler resolves org.json to android.jar's
+     * stub, which doesn't declare it, so it is rebuilt from methods both have. Numbers compare by value.
+     */
+    private fun similar(a: Any?, b: Any?): Boolean = when {
+        a is JSONObject && b is JSONObject ->
+            a.length() == b.length() && a.keys().asSequence().all { b.has(it) && similar(a.get(it), b.get(it)) }
+        a is JSONArray && b is JSONArray ->
+            a.length() == b.length() && (0 until a.length()).all { similar(a.get(it), b.get(it)) }
+        a is Number && b is Number -> a.toString().toBigDecimal().compareTo(b.toString().toBigDecimal()) == 0
+        else -> a == b
     }
 
     @Test
