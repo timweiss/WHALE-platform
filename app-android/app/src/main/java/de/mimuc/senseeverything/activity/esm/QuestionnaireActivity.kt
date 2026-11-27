@@ -381,9 +381,7 @@ class QuestionnaireViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             val pq = _pendingQuestionnaire.value
-            if (pq != null) {
-                pq.update(database, answerValues(values), page)
-            }
+            pq?.update(database, answerValues(values), page)
         }
     }
 

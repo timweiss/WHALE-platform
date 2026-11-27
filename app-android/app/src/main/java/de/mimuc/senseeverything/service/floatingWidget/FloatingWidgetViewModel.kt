@@ -39,6 +39,7 @@ class FloatingWidgetViewModel() : ViewModel() {
             initialValues[element.id] = emptyValueForElement(element)
         }
         _elementValues.value = initialValues
+        markStepDisplayed()
 
         _textReplacements.value = replacements
 
@@ -47,13 +48,10 @@ class FloatingWidgetViewModel() : ViewModel() {
 
     fun handleButtonSelection(buttonElement: ButtonGroupElement, selectedButton: String) {
         // Update the element value
-        val newValues = _elementValues.value.toMutableMap()
-        newValues[buttonElement.id] = ButtonGroupValue(
+        updateElementValue(
             buttonElement.id,
-            buttonElement.name,
-            selectedButton
+            ButtonGroupValue(buttonElement.id, buttonElement.name, selectedButton)
         )
-        _elementValues.value = newValues
 
         // Navigate to next step or complete
         val nextStep = buttonElement.configuration.options.firstOrNull { it.label == selectedButton }?.nextStep
@@ -65,6 +63,7 @@ class FloatingWidgetViewModel() : ViewModel() {
     }
 
     fun updateElementValue(elementId: Int, value: ElementValue) {
+        value.continueAnswerTime(_elementValues.value[elementId])
         val newValues = _elementValues.value.toMutableMap()
         newValues[elementId] = value
         _elementValues.value = newValues
@@ -72,7 +71,15 @@ class FloatingWidgetViewModel() : ViewModel() {
 
     private fun navigateToStep(step: Int) {
         _currentStep.value = step
+        markStepDisplayed()
         WHALELog.i("FloatingWidgetViewModel", "Navigated to step: $step")
+    }
+
+    /** Here and not in the composable: the overlay only changes steps through this ViewModel. */
+    private fun markStepDisplayed() {
+        val now = System.currentTimeMillis()
+        questionnaire?.elements?.filter { it.step == _currentStep.value }
+            ?.forEach { _elementValues.value[it.id]?.markDisplayed(now) }
     }
 
     private fun completeQuestionnaire() {

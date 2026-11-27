@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -107,9 +108,20 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     }
 
     fun setElementValue(elementId: Int, value: ElementValue) {
+        value.continueAnswerTime(_elementValues.value[elementId])
         _elementValues.value = _elementValues.value.toMutableMap().apply {
             put(elementId, value)
         }
+    }
+
+    /**
+     * Called whenever the current step comes into view, which also covers a nested host for a rating item
+     * being shown again. Stamps in place: nothing on screen reads the times, so the map isn't re-emitted.
+     */
+    fun markStepDisplayed() {
+        val now = System.currentTimeMillis()
+        questionnaire.elements.filter { it.step == _activeStep.value }
+            .forEach { _elementValues.value[it.id]?.markDisplayed(now) }
     }
 
     fun stepElementsAnswered(): Boolean {
@@ -151,16 +163,10 @@ class QuestionnaireHostViewModel @AssistedInject constructor(
     }
 
     private fun initializeValues() {
-        _elementValues.value = mutableMapOf()
-
         WHALELog.i("QuestionnaireHostViewModel", "Initial values set: ${initialValues.size}")
 
-        for (element in questionnaire.elements) {
-            val elementValue =
-                if (initialValues.contains(element.id)) initialValues.getValue(element.id) else emptyValueForElement(
-                    element
-                )
-            setElementValue(element.id, elementValue)
+        _elementValues.value = questionnaire.elements.associate { element ->
+            element.id to (initialValues[element.id] ?: emptyValueForElement(element))
         }
     }
 }
@@ -213,6 +219,10 @@ private fun QuestionnaireHostContent(
     } else {
         val maxStep = questionnaire.elements.maxOf { it.step }
         val currentStep by viewModel.activeStep.collectAsState()
+        // re-runs on step change and whenever the host enters composition again (paging back to a rating item)
+        LaunchedEffect(currentStep) {
+            viewModel.markStepDisplayed()
+        }
         val currentElements = remember(currentStep) {
             questionnaire.elements.filter { it.step == currentStep }
                 .sortedBy { it.position }

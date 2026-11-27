@@ -30,6 +30,14 @@ const QuestionnaireAnswerBody = z.object({
       elementId: z.number(),
       elementName: z.string(),
       value: z.string(),
+      answerTime: z
+        .object({
+          firstDisplayed: z.number().nullable(),
+          lastDisplayed: z.number().nullable(),
+          answered: z.number().nullable(),
+          updated: z.number().nullable(),
+        })
+        .nullable(),
     }),
   ),
 });

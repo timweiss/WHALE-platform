@@ -2,11 +2,32 @@ package de.mimuc.senseeverything.api.model
 
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElement
 import de.mimuc.senseeverything.api.model.ema.QuestionnaireElementType
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
 
 
 open class ElementValue(val elementId: Int, val elementName: String, val elementType: QuestionnaireElementType) {
+    /**
+     * Mutable because the value classes have no copy(): the UI creates a new value on each input,
+     * and [continueAnswerTime] carries the times over to it.
+     */
+    var answerTime: ElementAnswerTime? = null
+
+    fun markDisplayed(now: Long = System.currentTimeMillis()) {
+        answerTime = (answerTime ?: ElementAnswerTime()).markDisplayed(now)
+    }
+
+    /**
+     * For a value the user just entered, replacing [previous]: keeps its times, stamped as answered
+     * if this value counts as answered. Clearing an answer is not stamped.
+     */
+    fun continueAnswerTime(previous: ElementValue?, now: Long = System.currentTimeMillis()) {
+        val time = previous?.answerTime ?: ElementAnswerTime()
+        answerTime = if (isAnswered()) time.markAnswered(now) else time
+    }
+
     open fun getSerializedValue(): String {
         return ""
     }
@@ -22,6 +43,7 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
         json.put("value", getSerializedValue())
         json.put("valueJson", valueAsJsonObject())
         json.put("elementType", elementType.apiName)
+        answerTime?.let { json.put("answerTime", JSONObject(Json.encodeToString(it))) }
         return json
     }
 
@@ -103,6 +125,10 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
                     elementId, elementName, valueJson.getString("value")
                 )
                 else -> ElementValue(elementId, elementName, QuestionnaireElementType.MALFORMED)
+            }.also { value ->
+                json.optJSONObject("answerTime")?.let {
+                    value.answerTime = Json.decodeFromString<ElementAnswerTime>(it.toString())
+                }
             }
         }
     }
