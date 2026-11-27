@@ -42,6 +42,56 @@ module.exports = {
 allows us to utilize
 the socket connection.
 
+### Content extraction model
+
+Studies with on-device content extraction (`app-android/docs/content-extraction.md`) make the app
+download a 2.6 GB model from `GET /v1/content-extraction/model/<sha256>`, with the participant's
+token (any valid token; requests without one get 401). To provide it:
+
+1. Download the pinned file and check its hash:
+   ```sh
+   curl -L -o gemma-4-E2B-it.litertlm https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/2e12bfd869b2962984f97a1f2a26807316d534cc/gemma-4-E2B-it.litertlm
+   shasum -a 256 gemma-4-E2B-it.litertlm
+   # 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c, 2588147712 bytes
+   ```
+2. Store it as `<sha256>.litertlm` in `APP_MODEL_LOCATION` (default `./models`, relative to the
+   process's working directory).
+3. Put the hash and the size in bytes into the study's `contentExtraction.model`.
+
+Express sends the file with `res.sendFile`, including Range requests, so the app can resume. Behind
+nginx, keep nginx from buffering the response to a temporary file (it would stop at
+`proxy_max_temp_file_size`, 1 GB by default):
+
+```nginx
+location /v1/content-extraction/model/ {
+    proxy_pass http://127.0.0.1:50000;  # APP_PORT, as in the PM2 example above
+    proxy_buffering off;                # stream to the client as it is read
+}
+```
+
+**Later: let nginx send the file (X-Accel-Redirect).** Today Node streams every download. With
+X-Accel-Redirect, Express only checks the token and the hash, and nginx sends the file itself
+(including Range requests):
+
+1. nginx: an internal location for the model directory. `internal` means clients can't request it
+   directly, only through the header below.
+   ```nginx
+   location /internal/content-extraction-models/ {
+       internal;
+       alias /srv/whale/models/;  # = APP_MODEL_LOCATION; keep the trailing slashes
+   }
+   ```
+2. Express, in `src/controllers/contentExtraction.ts`: instead of `res.sendFile(...)`, check that
+   the file exists (`fs.access`, to keep the JSON 404 and the log line), then
+   ```ts
+   res.set('X-Accel-Redirect', `/internal/content-extraction-models/${sha256}.litertlm`);
+   res.set('Cache-Control', 'private, max-age=31536000, immutable');
+   res.end();
+   ```
+   Make it switchable (e.g. `APP_MODEL_ACCEL_REDIRECT=/internal/content-extraction-models/`; unset
+   keeps `sendFile`), so local runs and the tests work without nginx.
+3. The `proxy_buffering off` location above is then no longer needed.
+
 ## Configuration
 
 ### EMA/ESM

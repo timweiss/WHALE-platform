@@ -10,6 +10,7 @@ import { createESMConfigController } from './controllers/esmConfig';
 import { createESMAnswerController } from './controllers/esmResponse';
 import { initializeRepositories, Repositories } from './data/repositoryHelper';
 import { createCompletionController } from './controllers/completion';
+import { createContentExtractionController } from './controllers/contentExtraction';
 import { Observability, setupO11y } from './o11y';
 import {
   createSensorReadingQueue,
@@ -68,6 +69,7 @@ export function makeExpressApp(
     app,
     observability,
   );
+  createContentExtractionController(app, observability);
 
   app.use(createErrorHandler(observability));
 

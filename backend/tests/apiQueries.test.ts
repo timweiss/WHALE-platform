@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { randomUUID } from 'node:crypto';
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { usePool } from '../src/config/database';
@@ -1017,6 +1017,78 @@ describe('content extraction config', () => {
     const removed = await put(dummyStudy);
     expect(removed.statusCode).toBe(200);
     expect(removed.body.contentExtraction).toBeNull();
+  });
+});
+
+describe('content extraction model download', () => {
+  // a stand-in for the model, stored under its real hash
+  const model = randomBytes(64 * 1024);
+  const sha256 = createHash('sha256').update(model).digest('hex');
+  const url = `/v1/content-extraction/model/${sha256}`;
+  const originalLocation = Config.app.modelLocation;
+
+  beforeAll(async () => {
+    Config.app.modelLocation = await mkdtemp(path.join(tmpdir(), 'models-'));
+    await writeFile(
+      path.join(Config.app.modelLocation, `${sha256}.litertlm`),
+      model,
+    );
+  });
+
+  afterAll(async () => {
+    await rm(Config.app.modelLocation, { recursive: true });
+    Config.app.modelLocation = originalLocation;
+  });
+
+  const participantToken = () =>
+    jwt.sign({ role: 'participant', enrolmentId: 1 }, Config.auth.jwtSecret, {
+      expiresIn: '1d',
+    });
+
+  // the body as bytes, whatever the content type
+  const download = (path: string, headers: Record<string, string> = {}) =>
+    request(app)
+      .get(path)
+      .set({ Authorization: 'Bearer ' + participantToken(), ...headers })
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+  test('should require a token', async () => {
+    const res = await request(app).get(url);
+    expect(res.statusCode).toBe(401);
+  });
+
+  test('should reject anything but a SHA-256 as the name', async () => {
+    const res = await download('/v1/content-extraction/model/..%2Fsecret');
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('should answer 404 for a model it does not have', async () => {
+    const res = await download(
+      `/v1/content-extraction/model/${'0'.repeat(64)}`,
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
+  test('should send the whole file', async () => {
+    const res = await download(url);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['accept-ranges']).toBe('bytes');
+    expect(res.headers['cache-control']).toContain('private');
+    expect(Buffer.compare(res.body, model)).toBe(0);
+  });
+
+  test('should send the rest of the file for a range, to resume', async () => {
+    const res = await download(url, { Range: 'bytes=1000-' });
+    expect(res.statusCode).toBe(206);
+    expect(res.headers['content-range']).toBe(
+      `bytes 1000-${model.length - 1}/${model.length}`,
+    );
+    expect(Buffer.compare(res.body, model.subarray(1000))).toBe(0);
   });
 });
 

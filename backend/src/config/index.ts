@@ -16,6 +16,8 @@ export const Config = {
     trustProxy: process.env.APP_TRUST_PROXY || 'loopback, uniquelocal',
     // folder for uploaded files, has to be writable and persistent
     uploadLocation: process.env.APP_UPLOAD_LOCATION || './uploads',
+    // folder with the content extraction model files, named <sha256>.litertlm
+    modelLocation: process.env.APP_MODEL_LOCATION || './models',
   },
   database: {
     connectionString: process.env.DB_CONNECTION || 'localhost:5432',
