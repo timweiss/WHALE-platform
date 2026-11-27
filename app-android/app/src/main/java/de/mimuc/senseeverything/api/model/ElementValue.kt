@@ -82,44 +82,12 @@ open class ElementValue(val elementId: Int, val elementName: String, val element
                         (0 until entries.length()).map { index -> entries.getLong(index) }
                     }
                 )
-                QuestionnaireElementType.SOCIAL_NETWORK_RATING -> {
-                    val ratingsJson = valueJson.getJSONObject("ratings")
-                    val ratings = mutableMapOf<Int, Map<Int, ElementValue>>()
-
-                    for (key in ratingsJson.keys()) {
-                        val entryJson = ratingsJson.getJSONObject(key)
-                        val entryRatings = mutableMapOf<Int, ElementValue>()
-                        for (k in entryJson.keys()) {
-                            val valueJson = entryJson.getJSONObject(k)
-                            val value = fromJson(valueJson)
-                            entryRatings[k.toInt()] = value
-                        }
-                        ratings[key.toInt()] = entryRatings
-                    }
-
-                    SocialNetworkRatingValue(
-                        elementId, elementName, ratings
-                    )
-                }
-                QuestionnaireElementType.SCREENSHOT_RATING -> {
-                    val ratingsJson = valueJson.getJSONObject("ratings")
-                    val ratings = mutableMapOf<String, Map<Int, ElementValue>>()
-
-                    for (key in ratingsJson.keys()) {
-                        val entryJson = ratingsJson.getJSONObject(key)
-                        val entryRatings = mutableMapOf<Int, ElementValue>()
-                        for (k in entryJson.keys()) {
-                            val valueJson = entryJson.getJSONObject(k)
-                            val value = fromJson(valueJson)
-                            entryRatings[k.toInt()] = value
-                        }
-                        ratings[key] = entryRatings
-                    }
-
-                    ScreenshotRatingValue(
-                        elementId, elementName, ratings
-                    )
-                }
+                QuestionnaireElementType.SOCIAL_NETWORK_RATING -> SocialNetworkRatingValue(
+                    elementId, elementName, ItemRatingsValue.ratingsFromJson(valueJson).mapKeys { it.key.toInt() }
+                )
+                QuestionnaireElementType.SCREENSHOT_RATING -> ScreenshotRatingValue(
+                    elementId, elementName, ItemRatingsValue.ratingsFromJson(valueJson)
+                )
                 QuestionnaireElementType.CIRCUMPLEX -> CircumplexValue(
                     elementId, elementName,
                     Pair(valueJson.getDouble("x"), valueJson.getDouble("y"))
@@ -188,44 +156,27 @@ class SocialNetworkEntryValue(elementId: Int, elementName: String, var values: L
     }
 }
 
-class SocialNetworkRatingValue(elementId: Int, elementName: String, var values: Map<Int, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SOCIAL_NETWORK_RATING) {
+/**
+ * Ratings of several items (contacts, screenshots), each answered with its own hosted questionnaire.
+ * The item key [K] is stored as a JSON object key, so it has to survive a round trip through `toString()`.
+ */
+abstract class ItemRatingsValue<K>(
+    elementId: Int,
+    elementName: String,
+    elementType: QuestionnaireElementType,
+    var values: Map<K, Map<Int, ElementValue>>
+) : ElementValue(elementId, elementName, elementType) {
     override fun isAnswered(): Boolean {
-        // either no contacts exist (empty) or all need to be answered (so value is present) for it to be valid
+        // either no items exist (empty) or all need to be answered (so value is present) for it to be valid
         return values.isEmpty() || values.entries.all { it.value.isNotEmpty() }
     }
 
+    /**
+     * The same JSON as [valueAsJsonObject]: the backend only stores this string, and the nested answers
+     * can't be told apart in a flat format (checkbox lists, times and free text contain the separators).
+     */
     override fun getSerializedValue(): String {
-        return values.entries.joinToString(",") { (key, value) ->
-            "$key:${value.entries.joinToString(",") { (_, v) -> "${v.elementName}:${v.getSerializedValue()}" }}"
-        }
-    }
-
-    override fun valueAsJsonObject(): JSONObject {
-        val json = JSONObject()
-        val ratingsJson = JSONObject()
-        for ((key, value) in values) {
-            val entryJson = JSONObject()
-            for ((k, v) in value) {
-                entryJson.put(k.toString(), v.valueAsJsonObject())
-            }
-            ratingsJson.put(key.toString(), entryJson)
-        }
-        json.put("ratings", ratingsJson)
-        return json
-    }
-}
-
-
-class ScreenshotRatingValue(elementId: Int, elementName: String, var values: Map<String, Map<Int, ElementValue>>) : ElementValue(elementId, elementName, QuestionnaireElementType.SCREENSHOT_RATING) {
-    override fun isAnswered(): Boolean {
-        // either no screenshots exist (empty) or all need to be answered (so value is present) for it to be valid
-        return values.isEmpty() || values.entries.all { it.value.isNotEmpty() }
-    }
-
-    override fun getSerializedValue(): String {
-        return values.entries.joinToString(",") { (key, value) ->
-            "$key:${value.entries.joinToString(",") { (_, v) -> "${v.elementName}:${v.getSerializedValue()}" }}"
-        }
+        return valueAsJsonObject().toString()
     }
 
     override fun valueAsJsonObject(): JSONObject {
@@ -237,12 +188,31 @@ class ScreenshotRatingValue(elementId: Int, elementName: String, var values: Map
                 // the full element, fromJson needs its type to restore it
                 entryJson.put(k.toString(), v.toJson())
             }
-            ratingsJson.put(key, entryJson)
+            ratingsJson.put(key.toString(), entryJson)
         }
         json.put("ratings", ratingsJson)
         return json
     }
+
+    companion object {
+        /** Keyed as stored, the caller converts the keys back to its [K]. */
+        fun ratingsFromJson(valueJson: JSONObject): Map<String, Map<Int, ElementValue>> {
+            val ratingsJson = valueJson.getJSONObject("ratings")
+            return ratingsJson.keys().asSequence().associateWith { key ->
+                val entryJson = ratingsJson.getJSONObject(key)
+                entryJson.keys().asSequence().associate { k -> k.toInt() to ElementValue.fromJson(entryJson.getJSONObject(k)) }
+            }
+        }
+    }
 }
+
+/** Keyed by the contact's uid. */
+class SocialNetworkRatingValue(elementId: Int, elementName: String, values: Map<Int, Map<Int, ElementValue>>) :
+    ItemRatingsValue<Int>(elementId, elementName, QuestionnaireElementType.SOCIAL_NETWORK_RATING, values)
+
+/** Keyed by the screenshot's snapshotId. */
+class ScreenshotRatingValue(elementId: Int, elementName: String, values: Map<String, Map<Int, ElementValue>>) :
+    ItemRatingsValue<String>(elementId, elementName, QuestionnaireElementType.SCREENSHOT_RATING, values)
 
 class SliderValue(elementId: Int, elementName: String, var value: Double) : ElementValue(elementId, elementName, QuestionnaireElementType.SLIDER) {
     override fun isAnswered(): Boolean {
